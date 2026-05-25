@@ -291,18 +291,26 @@ with holdings_placeholder:
         label = f"{ticker.replace('.TW','')} {name}　{arrow}{abs(chg):.2f}%"
 
         with st.expander(label):
-            # ── Inline edit: shares + cost ─────────────────────────────────
-            saved = st.session_state.custom_holdings.get(ticker, {})
-            cur_shares = saved.get("shares", 0)
-            cur_cost   = saved.get("cost",   0)
-            e1, e2 = st.columns(2)
-            new_shares = e1.number_input("持股數", min_value=0.0, value=float(cur_shares),
-                                         step=1.0, key=f"sh_{ticker}", label_visibility="visible")
-            new_cost   = e2.number_input("買進均價", min_value=0.0, value=float(cur_cost),
-                                         step=0.1, key=f"co_{ticker}", label_visibility="visible")
-            if st.button("💾 儲存", key=f"save_{ticker}", use_container_width=True):
-                st.session_state.custom_holdings[ticker] = {"shares": new_shares, "cost": new_cost}
+            # ── Inline edit: hidden until toggled ─────────────────────────
+            edit_key = f"edit_open_{ticker}"
+            if edit_key not in st.session_state:
+                st.session_state[edit_key] = False
+            if st.button("✏️ 編輯持倉", key=f"editbtn_{ticker}", use_container_width=False):
+                st.session_state[edit_key] = not st.session_state[edit_key]
                 st.rerun()
+            if st.session_state[edit_key]:
+                saved = st.session_state.custom_holdings.get(ticker, {})
+                e1, e2 = st.columns(2)
+                new_shares = e1.number_input("持股數", min_value=0.0,
+                                             value=float(saved.get("shares", 0)),
+                                             step=1.0, key=f"sh_{ticker}")
+                new_cost   = e2.number_input("買進均價", min_value=0.0,
+                                             value=float(saved.get("cost", 0)),
+                                             step=0.1, key=f"co_{ticker}")
+                if st.button("💾 儲存", key=f"save_{ticker}", use_container_width=True):
+                    st.session_state.custom_holdings[ticker] = {"shares": new_shares, "cost": new_cost}
+                    st.session_state[edit_key] = False
+                    st.rerun()
 
             st.divider()
 
