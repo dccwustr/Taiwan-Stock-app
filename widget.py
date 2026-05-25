@@ -228,6 +228,68 @@ def fetch_moneydj_news() -> List[Dict]:
         pass
     return news
 
+# Exchange mapping: stocks on OTC (櫃買) vs TSE (上市)
+_OTC_STOCKS = {"3529.TW","6415.TW","8299.TW","2401.TW","6770.TW","3406.TW"}
+
+def fetch_live_prices(tickers: List[str]) -> Dict[str, Dict]:
+    """
+    Real-time prices via TWSE MIS API.
+    Returns price, change, change_pct, volume, limit_up, limit_down, last_time.
+    Falls back to yfinance previous close when market is closed or data unavailable.
+    """
+    result: Dict[str, Dict] = {}
+
+    # Build exchange-aware query string
+    tse_codes = [t.replace(".TW","") for t in tickers if t not in _OTC_STOCKS and not t.endswith(".TWO")]
+    otc_codes = [t.replace(".TW","") for t in tickers if t in _OTC_STOCKS]
+
+    def _parse_response(data: dict, exchange: str):
+        for item in data.get("msgArray", []):
+            code   = item.get("c", "")
+            ticker = code + ".TW"
+            if ticker not in tickers:
+                continue
+            z = item.get("z", "-")   # current deal price
+            y = item.get("y", "0")   # yesterday close
+            u = item.get("u", "-")   # limit up (漲停)
+            w = item.get("w", "-")   # limit down (跌停)
+            v = item.get("v", "0")   # volume (千股)
+            t = item.get("t", "")    # time
+            try:
+                prev   = float(y) if y and y != "-" else 0
+                curr   = float(z) if z and z != "-" else prev
+                chg    = curr - prev
+                chg_pct = (chg / prev * 100) if prev > 0 else 0
+                vol_k  = int(float(v)) if v and v != "-" else 0
+                result[ticker] = {
+                    "price":     curr,
+                    "prev":      prev,
+                    "chg":       chg,
+                    "chg_pct":   chg_pct,
+                    "volume":    vol_k,
+                    "limit_up":  float(u) if u and u != "-" else 0,
+                    "limit_down":float(w) if w and w != "-" else 0,
+                    "time":      t,
+                    "live":      z != "-",
+                }
+            except (ValueError, ZeroDivisionError):
+                pass
+
+    headers = {**HEADERS, "Referer": "https://mis.twse.com.tw/"}
+
+    for codes, prefix in [(tse_codes, "tse"), (otc_codes, "otc")]:
+        if not codes:
+            continue
+        ex_ch = "|".join(f"{prefix}_{c}.tw" for c in codes)
+        url   = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={ex_ch}&json=1&delay=0"
+        try:
+            r = requests.get(url, headers=headers, timeout=6)
+            _parse_response(r.json(), prefix)
+        except Exception:
+            pass
+
+    return result
+
 def fetch_twse_foreign_buying(date_str: Optional[str] = None) -> Dict[str, float]:
     """抓取外資買超資料（千張）"""
     if not date_str:

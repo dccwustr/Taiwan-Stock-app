@@ -18,7 +18,7 @@ from widget import (
     TECH_UNIVERSE, MY_HOLDINGS,
     fetch_cnyes_news, fetch_moneydj_news, fetch_twse_foreign_buying,
     fetch_twse_market_summary, fetch_prices_batch, analyze_catalysts,
-    get_catalyst_labels, score_stock, analyze_holdings,
+    get_catalyst_labels, score_stock, analyze_holdings, fetch_live_prices,
 )
 
 warnings.filterwarnings("ignore")
@@ -107,6 +107,36 @@ st.markdown("""
   }
   .h-name { font-size: 14px; color: #ccc; }
   .h-val  { font-size: 14px; font-weight: 600; }
+
+  /* Live price strip */
+  .live-strip {
+    background: #0d1117; border: 1px solid #252d45;
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;
+  }
+  .live-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 7px 0; border-bottom: 1px solid #1a1a2e;
+    flex-wrap: wrap;
+  }
+  .live-row:last-child { border-bottom: none; }
+  .live-code  { font-size: 15px; font-weight: 700; color: #e0e0e0; min-width: 100px; }
+  .live-price { font-size: 22px; font-weight: 700; min-width: 90px; }
+  .live-chg   { font-size: 14px; font-weight: 600; min-width: 90px; }
+  .live-meta  { font-size: 12px; color: #555; flex: 1; }
+  .live-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 7px;
+    border-radius: 4px; background: #ef535033; color: #ef5350;
+    animation: pulse 2s infinite;
+  }
+  .closed-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 7px;
+    border-radius: 4px; background: #33333355; color: #666;
+  }
+  .limit-up   { background:#ef5350; color:#fff; border-radius:4px; padding:1px 6px; font-size:11px; }
+  .limit-near { background:#ff6d00; color:#fff; border-radius:4px; padding:1px 6px; font-size:11px; }
+  @keyframes pulse {
+    0%,100% { opacity:1; } 50% { opacity:0.5; }
+  }
 
   /* News */
   .news-line {
@@ -231,6 +261,82 @@ def supply_chips(supply):
 
 def conf_color(s):
     return "#00c853" if s >= 80 else ("#ffd54f" if s >= 60 else "#ef5350")
+
+# ── Live price strip (auto-refreshes every 30s during market hours) ──────────
+from datetime import timezone, timedelta as _td
+
+def _is_market_open() -> bool:
+    tw = datetime.now(tz=timezone(_td(hours=8)))
+    return tw.weekday() < 5 and (
+        (tw.hour == 9 and tw.minute >= 0) or
+        (10 <= tw.hour <= 12) or
+        (tw.hour == 13 and tw.minute <= 30)
+    )
+
+@st.fragment(run_every="30s" if _is_market_open() else None)
+def live_price_strip(pick_tickers):
+    tickers = [p["ticker"] for p in pick_tickers]
+    live    = fetch_live_prices(tickers)
+    is_open = _is_market_open()
+
+    rows_html = ""
+    for p in pick_tickers:
+        t   = p["ticker"]
+        d   = live.get(t)
+        name = p["name"]
+        code = t.replace(".TW", "")
+
+        if d and (d["live"] or d["price"] > 0):
+            price   = d["price"]
+            chg     = d["chg"]
+            chg_pct = d["chg_pct"]
+            lu      = d["limit_up"]
+            vol     = d["volume"]
+            upd     = d["time"] or "--:--"
+
+            up        = chg >= 0
+            p_color   = "#ef5350" if up else "#00c853"
+            arrow     = "▲" if up else "▼"
+            chg_str   = f"{arrow} {abs(chg):.1f} ({abs(chg_pct):.2f}%)"
+            vol_str   = f"{vol:,}千股" if vol else ""
+
+            is_limit  = lu > 0 and abs(price - lu) < 0.01
+            near_limit = lu > 0 and chg_pct >= 8 and not is_limit
+            limit_tag = ""
+            if is_limit:   limit_tag = '<span class="limit-up">漲停🔥</span>'
+            elif near_limit: limit_tag = '<span class="limit-near">近漲停⚡</span>'
+
+            live_ind = ('<span class="live-badge">● LIVE</span>' if is_open and d["live"]
+                        else '<span class="closed-badge">收盤</span>')
+
+            rows_html += f"""
+<div class="live-row">
+  <span class="live-code">{code} {name}</span>
+  <span class="live-price" style="color:{p_color}">{price:.2f}</span>
+  <span class="live-chg"  style="color:{p_color}">{chg_str}</span>
+  <span class="live-meta">{vol_str}　{limit_tag}　更新 {upd}</span>
+  {live_ind}
+</div>"""
+        else:
+            rows_html += f"""
+<div class="live-row">
+  <span class="live-code">{code} {name}</span>
+  <span class="live-price" style="color:#555">—</span>
+  <span class="live-chg"  style="color:#555">等待開盤</span>
+  <span class="live-meta"></span>
+  <span class="closed-badge">未開盤</span>
+</div>"""
+
+    refresh_note = "每30秒自動更新" if is_open else "非交易時段"
+    st.markdown(
+        f'<div class="live-strip">'
+        f'<div style="font-size:12px;color:#555;margin-bottom:6px">📡 即時股價　{refresh_note}</div>'
+        f'{rows_html}</div>',
+        unsafe_allow_html=True
+    )
+
+if picks:
+    live_price_strip(picks)
 
 # ── Stock cards ───────────────────────────────────────────────────────────────
 if not picks:
