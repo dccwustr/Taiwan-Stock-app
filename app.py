@@ -397,6 +397,21 @@ if not picks:
 else:
     render_stock_cards(picks, prices, show_chart)
 
+# ── 備選股 toggle ─────────────────────────────────────────────────────────────
+backups = scored[top_n:top_n + 5]
+if backups:
+    if "show_backups" not in st.session_state:
+        st.session_state.show_backups = False
+
+    label = "▲ 收起備選股" if st.session_state.show_backups else "＋ 查看備選股（第 6–10 名）"
+    if st.button(label, use_container_width=True):
+        st.session_state.show_backups = not st.session_state.show_backups
+        st.rerun()
+
+    if st.session_state.show_backups:
+        st.caption("備選股為今日評分第 6–10 名，信心指數相對較低，建議謹慎操作")
+        render_stock_cards(backups, prices, show_chart)
+
 # ── News (collapsed by default) ───────────────────────────────────────────────
 st.divider()
 with st.expander("📰 今日早盤新聞", expanded=False):
