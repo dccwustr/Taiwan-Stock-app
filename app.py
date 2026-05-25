@@ -108,35 +108,28 @@ st.markdown("""
   .h-name { font-size: 14px; color: #ccc; }
   .h-val  { font-size: 14px; font-weight: 600; }
 
-  /* Live price strip */
-  .live-strip {
-    background: #0d1117; border: 1px solid #252d45;
-    border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;
+  /* Live price inside card */
+  .live-in-card {
+    display: flex; align-items: baseline; gap: 12px;
+    flex-wrap: wrap; margin: 6px 0 10px 0;
+    padding: 10px 14px; background: #0d1117;
+    border-radius: 8px; border: 1px solid #1e2740;
   }
-  .live-row {
-    display: flex; align-items: center; gap: 14px;
-    padding: 7px 0; border-bottom: 1px solid #1a1a2e;
-    flex-wrap: wrap;
-  }
-  .live-row:last-child { border-bottom: none; }
-  .live-code  { font-size: 15px; font-weight: 700; color: #e0e0e0; min-width: 100px; }
-  .live-price { font-size: 22px; font-weight: 700; min-width: 90px; }
-  .live-chg   { font-size: 14px; font-weight: 600; min-width: 90px; }
-  .live-meta  { font-size: 12px; color: #555; flex: 1; }
+  .live-big      { font-size: 28px; font-weight: 800; }
+  .live-chg-in   { font-size: 16px; font-weight: 700; }
+  .live-vol      { font-size: 12px; color: #555; margin-left: auto; }
   .live-badge {
     font-size: 10px; font-weight: 700; padding: 2px 7px;
-    border-radius: 4px; background: #ef535033; color: #ef5350;
+    border-radius: 4px; background: #ef535022; color: #ef5350;
     animation: pulse 2s infinite;
   }
   .closed-badge {
-    font-size: 10px; font-weight: 700; padding: 2px 7px;
-    border-radius: 4px; background: #33333355; color: #666;
+    font-size: 10px; padding: 2px 7px;
+    border-radius: 4px; background: #22222255; color: #555;
   }
-  .limit-up   { background:#ef5350; color:#fff; border-radius:4px; padding:1px 6px; font-size:11px; }
-  .limit-near { background:#ff6d00; color:#fff; border-radius:4px; padding:1px 6px; font-size:11px; }
-  @keyframes pulse {
-    0%,100% { opacity:1; } 50% { opacity:0.5; }
-  }
+  .limit-up   { background:#ef5350; color:#fff; border-radius:4px; padding:2px 8px; font-size:12px; font-weight:700; }
+  .limit-near { background:#e65100; color:#fff; border-radius:4px; padding:2px 8px; font-size:12px; font-weight:700; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
   /* News */
   .news-line {
@@ -262,101 +255,36 @@ def supply_chips(supply):
 def conf_color(s):
     return "#00c853" if s >= 80 else ("#ffd54f" if s >= 60 else "#ef5350")
 
-# ── Live price strip (auto-refreshes every 30s during market hours) ──────────
+# ── Stock cards with embedded live prices (30s auto-refresh) ─────────────────
 from datetime import timezone, timedelta as _td
 
 def _is_market_open() -> bool:
     tw = datetime.now(tz=timezone(_td(hours=8)))
     return tw.weekday() < 5 and (
-        (tw.hour == 9 and tw.minute >= 0) or
-        (10 <= tw.hour <= 12) or
+        (tw.hour == 9) or (10 <= tw.hour <= 12) or
         (tw.hour == 13 and tw.minute <= 30)
     )
 
 @st.fragment(run_every="30s" if _is_market_open() else None)
-def live_price_strip(pick_tickers):
-    tickers = [p["ticker"] for p in pick_tickers]
-    live    = fetch_live_prices(tickers)
-    is_open = _is_market_open()
+def render_stock_cards(picks, prices, show_chart):
+    tickers  = [p["ticker"] for p in picks]
+    live     = fetch_live_prices(tickers)
+    is_open  = _is_market_open()
+    refresh  = "每30秒自動更新 ●" if is_open else "非交易時段"
+    st.caption(f"📡 即時股價　{refresh}　　更新：{datetime.now().strftime('%H:%M:%S')}")
 
-    rows_html = ""
-    for p in pick_tickers:
-        t   = p["ticker"]
-        d   = live.get(t)
-        name = p["name"]
-        code = t.replace(".TW", "")
-
-        if d and (d["live"] or d["price"] > 0):
-            price   = d["price"]
-            chg     = d["chg"]
-            chg_pct = d["chg_pct"]
-            lu      = d["limit_up"]
-            vol     = d["volume"]
-            upd     = d["time"] or "--:--"
-
-            up        = chg >= 0
-            p_color   = "#ef5350" if up else "#00c853"
-            arrow     = "▲" if up else "▼"
-            chg_str   = f"{arrow} {abs(chg):.1f} ({abs(chg_pct):.2f}%)"
-            vol_str   = f"{vol:,}千股" if vol else ""
-
-            is_limit  = lu > 0 and abs(price - lu) < 0.01
-            near_limit = lu > 0 and chg_pct >= 8 and not is_limit
-            limit_tag = ""
-            if is_limit:   limit_tag = '<span class="limit-up">漲停🔥</span>'
-            elif near_limit: limit_tag = '<span class="limit-near">近漲停⚡</span>'
-
-            live_ind = ('<span class="live-badge">● LIVE</span>' if is_open and d["live"]
-                        else '<span class="closed-badge">收盤</span>')
-
-            rows_html += f"""
-<div class="live-row">
-  <span class="live-code">{code} {name}</span>
-  <span class="live-price" style="color:{p_color}">{price:.2f}</span>
-  <span class="live-chg"  style="color:{p_color}">{chg_str}</span>
-  <span class="live-meta">{vol_str}　{limit_tag}　更新 {upd}</span>
-  {live_ind}
-</div>"""
-        else:
-            rows_html += f"""
-<div class="live-row">
-  <span class="live-code">{code} {name}</span>
-  <span class="live-price" style="color:#555">—</span>
-  <span class="live-chg"  style="color:#555">等待開盤</span>
-  <span class="live-meta"></span>
-  <span class="closed-badge">未開盤</span>
-</div>"""
-
-    refresh_note = "每30秒自動更新" if is_open else "非交易時段"
-    st.markdown(
-        f'<div class="live-strip">'
-        f'<div style="font-size:12px;color:#555;margin-bottom:6px">📡 即時股價　{refresh_note}</div>'
-        f'{rows_html}</div>',
-        unsafe_allow_html=True
-    )
-
-if picks:
-    live_price_strip(picks)
-
-# ── Stock cards ───────────────────────────────────────────────────────────────
-if not picks:
-    st.warning("目前無符合條件的股票，請降低評分門檻後重試。")
-else:
     for rank, p in enumerate(picks, 1):
         sc      = p["score"]
-        color   = conf_color(sc)
-        pct_up  = p["mom1d"] >= 0
+        bar_color = conf_color(sc)
         vr      = p["vol_ratio"]
         fi      = p["foreign_net"]
         cats    = p.get("catalysts") or ["技術面突破"]
         cat_str = "　".join(cats)
 
-        # Sell note simplified
         if sc >= 88:  sell = "⏰ 當日收盤前（留意漲停）"
         elif sc >= 72: sell = "⏰ 達 5–7% 即可分批出場"
         else:          sell = "⏰ T+1 早盤高點賣出"
 
-        # Foreign buying text
         if fi > 100:    fi_str = f"外資買超 {fi:.0f}千張 📥"
         elif fi < -100: fi_str = f"外資賣超 {abs(fi):.0f}千張 📤"
         else:           fi_str = ""
@@ -364,10 +292,43 @@ else:
         info_parts = [
             f'量比 <span class="info-val {"up" if vr>=1.5 else ""}">{vr:.1f}x</span>',
             f'RSI <span class="info-val">{p["rsi"]:.0f}</span>',
-            f'5日動能 <span class="info-val {"up" if p["mom5d"]>=0 else "down"}">{p["mom5d"]:+.1f}%</span>',
+            f'5日 <span class="info-val {"up" if p["mom5d"]>=0 else "down"}">{p["mom5d"]:+.1f}%</span>',
         ]
         if fi_str:
             info_parts.append(f'<span class="{"up" if fi>0 else "down"}">{fi_str}</span>')
+
+        # ── Live price block ──────────────────────────────────────────────────
+        d = live.get(p["ticker"])
+        if d and d["price"] > 0:
+            lp      = d["price"]
+            chg     = d["chg"]
+            chg_pct = d["chg_pct"]
+            lu      = d["limit_up"]
+            vol     = d["volume"]
+            upd     = d["time"] or "--:--"
+            up      = chg >= 0
+            lc      = "#ef5350" if up else "#00c853"
+            arrow   = "▲" if up else "▼"
+
+            is_limit   = lu > 0 and abs(lp - lu) < 0.02
+            near_limit = lu > 0 and chg_pct >= 8 and not is_limit
+            status_tag = ""
+            if is_limit:    status_tag = '<span class="limit-up">漲停🔥</span>'
+            elif near_limit:status_tag = '<span class="limit-near">近漲停⚡</span>'
+
+            live_badge = ('<span class="live-badge">● LIVE</span>' if is_open and d["live"]
+                         else '<span class="closed-badge">收盤價</span>')
+
+            live_block = f"""
+  <div class="live-in-card">
+    <span class="live-big" style="color:{lc}">{lp:.1f}</span>
+    <span class="live-chg-in" style="color:{lc}">{arrow} {abs(chg):.1f} ({abs(chg_pct):.2f}%)</span>
+    {status_tag}
+    {live_badge}
+    <span class="live-vol">{vol:,}千股　{upd}</span>
+  </div>"""
+        else:
+            live_block = '<div class="live-in-card"><span style="color:#555">等待開盤資料…</span></div>'
 
         bar_w = int(sc)
         st.markdown(f"""
@@ -380,9 +341,10 @@ else:
     {supply_chips(p.get('supply',[]))}
   </div>
 
+  {live_block}
+
   <div class="price-row">
-    <span class="price-now">NT${p['last_price']:.1f}</span>
-    <span class="arrow">→</span>
+    <span class="arrow">目標</span>
     <span class="price-target">NT${p['target_price']:.1f}</span>
     <span class="pct-badge">+{p['target_pct']:.0f}%</span>
   </div>
@@ -394,13 +356,12 @@ else:
   <div class="sell-note">{sell}</div>
 
   <div class="conf-wrap">
-    <div class="conf-bar" style="width:{bar_w}%;background:{color}"></div>
+    <div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div>
   </div>
   <div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>
 </div>
 """, unsafe_allow_html=True)
 
-        # Optional K-line
         if show_chart:
             df = prices.get(p["ticker"])
             if df is not None and len(df) >= 20:
@@ -411,7 +372,7 @@ else:
                                     row_heights=[0.72, 0.28], vertical_spacing=0.03)
                 fig.add_trace(go.Candlestick(
                     x=recent.index, open=recent["Open"], high=recent["High"],
-                    low=recent["Low"],  close=recent["Close"],
+                    low=recent["Low"], close=recent["Close"],
                     increasing_line_color="#ef5350", decreasing_line_color="#00c853",
                     name="K線"), row=1, col=1)
                 fig.add_trace(go.Scatter(x=recent.index, y=recent["MA5"],
@@ -432,6 +393,11 @@ else:
                     yaxis2=dict(gridcolor="#1a1a2e"),
                 )
                 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+if not picks:
+    st.warning("目前無符合條件的股票，請降低評分門檻後重試。")
+else:
+    render_stock_cards(picks, prices, show_chart)
 
 # ── News (collapsed by default) ───────────────────────────────────────────────
 st.divider()
