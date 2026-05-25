@@ -270,7 +270,7 @@ with holdings_placeholder:
 
         with st.expander(label):
             # ── Price & P&L ────────────────────────────────────────────────
-            st.metric("現價", f"NT${h['price']:.1f}", f"{chg:+.2f}%")
+            st.metric("現價", f"NT${h['price']:.1f}", f"{chg:+.2f}%", delta_color="inverse")
             st.caption(f"5日高 {h.get('wk_high',0):.1f}　／　低 {h.get('wk_low',0):.1f}")
 
             if "pnl_pct" in h:
