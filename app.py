@@ -362,6 +362,19 @@ total_val  = sum(h.get("price", 0) * h.get("shares", 0) for h in holdings_info i
 total_pnl  = total_val - total_cost if total_cost > 0 else 0
 total_pct  = (total_pnl / total_cost * 100) if total_cost > 0 else 0
 
+# ── Score stocks (needed by sidebar compact list AND picks view) ──────────────
+skip = set(MY_HOLDINGS.keys())
+scored = []
+for ticker in TECH_UNIVERSE:
+    if ticker in skip:
+        continue
+    res = score_stock(ticker, prices.get(ticker), cat_sc.get(ticker, 0), foreign.get(ticker, 0))
+    if res and res["score"] >= min_score:
+        res["catalysts"] = get_catalyst_labels(ticker, all_news)
+        scored.append(res)
+scored.sort(key=lambda x: x["score"], reverse=True)
+picks = scored[:top_n]
+
 # ── Fill sidebar content based on view mode ───────────────────────────────────
 with sidebar_content:
     # Portfolio summary (always shown at top)
@@ -421,20 +434,9 @@ if st.session_state.view_mode == "holdings":
             st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
     st.stop()
 
-# ── Score stocks (picks view only) ───────────────────────────────────────────
+# ── Picks view header ────────────────────────────────────────────────────────
 st.markdown("## 🎯 今日精選潛力股")
 st.divider()
-skip = set(MY_HOLDINGS.keys())
-scored = []
-for ticker in TECH_UNIVERSE:
-    if ticker in skip:
-        continue
-    res = score_stock(ticker, prices.get(ticker), cat_sc.get(ticker, 0), foreign.get(ticker, 0))
-    if res and res["score"] >= min_score:
-        res["catalysts"] = get_catalyst_labels(ticker, all_news)
-        scored.append(res)
-scored.sort(key=lambda x: x["score"], reverse=True)
-picks = scored[:top_n]
 
 # ── Chip helper ───────────────────────────────────────────────────────────────
 CHIP_CSS = {"NVIDIA":"nv","AMD":"amd","Apple":"apl","AI":"ai","CoWoS":"cow"}
