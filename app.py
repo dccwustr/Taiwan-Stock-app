@@ -205,7 +205,7 @@ with st.sidebar:
                 del st.session_state.custom_holdings[t]
                 st.rerun()
 
-    holdings_placeholder = st.empty()
+    holdings_placeholder = st.container()
 
     st.divider()
     st.caption("資料來源：鉅亨網・TWSE・Yahoo Finance")
