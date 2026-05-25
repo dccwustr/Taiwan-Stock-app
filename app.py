@@ -172,8 +172,39 @@ with st.sidebar:
 
     st.divider()
 
-    # Holdings — load after data
+    # ── 新增持股 ──────────────────────────────────────────────────────────────
     st.markdown("**💼 我的持股**")
+    with st.expander("＋ 新增 / 編輯持股"):
+        # Load saved holdings from session state (persists within session)
+        if "custom_holdings" not in st.session_state:
+            st.session_state.custom_holdings = {}
+
+        st.caption("輸入股票代號（如 2454）、股數、買進均價")
+        col1, col2, col3 = st.columns([2, 2, 2])
+        new_code  = col1.text_input("代號", placeholder="2454",  label_visibility="collapsed")
+        new_shares= col2.text_input("股數", placeholder="100",   label_visibility="collapsed")
+        new_cost  = col3.text_input("買進價", placeholder="850", label_visibility="collapsed")
+        if st.button("新增", use_container_width=True):
+            code = new_code.strip().upper()
+            if code:
+                ticker = code + ".TW" if not code.endswith(".TW") else code
+                try:
+                    st.session_state.custom_holdings[ticker] = {
+                        "shares": float(new_shares) if new_shares else 0,
+                        "cost":   float(new_cost)   if new_cost   else 0,
+                    }
+                    st.rerun()
+                except ValueError:
+                    st.error("請輸入有效數字")
+
+        # Show existing custom holdings with delete buttons
+        for t, v in list(st.session_state.custom_holdings.items()):
+            c1, c2 = st.columns([4, 1])
+            c1.caption(f"{t.replace('.TW','')}　{v['shares']:.0f}股　成本 {v['cost']:.1f}")
+            if c2.button("✕", key=f"del_{t}"):
+                del st.session_state.custom_holdings[t]
+                st.rerun()
+
     holdings_placeholder = st.empty()
 
     st.divider()
@@ -191,7 +222,38 @@ foreign  = data["foreign"]
 mkt      = data["market"]
 
 # ── Fill holdings in sidebar ──────────────────────────────────────────────────
-holdings_info = analyze_holdings(prices)
+custom = st.session_state.get("custom_holdings", {})
+
+# Fetch prices for any custom tickers not yet loaded
+new_tickers = [t for t in custom if t not in prices]
+if new_tickers:
+    prices.update(fetch_prices_batch(new_tickers, period="3mo"))
+
+# Build unified holdings list: fixed defaults + custom additions
+def _holding_row(ticker, name, df, cost=0, shares=0):
+    if df is None or len(df) < 2:
+        return {"ticker": ticker, "name": name, "error": True}
+    p1  = float(df["Close"].iloc[-1])
+    p0  = float(df["Close"].iloc[-2])
+    chg = (p1 / p0 - 1) * 100
+    row = {
+        "ticker": ticker, "name": name, "price": p1, "chg": chg,
+        "wk_high": float(df["Close"].tail(5).max()),
+        "wk_low":  float(df["Close"].tail(5).min()),
+        "cost": cost, "shares": shares, "error": False,
+    }
+    if cost > 0:
+        row["pnl_pct"] = (p1 - cost) / cost * 100
+        row["pnl_amt"] = (p1 - cost) * shares if shares > 0 else None
+    return row
+
+holdings_info = []
+for t, v in MY_HOLDINGS.items():
+    holdings_info.append(_holding_row(t, v["name"], prices.get(t)))
+for t, v in custom.items():
+    if t not in MY_HOLDINGS:
+        name = TECH_UNIVERSE.get(t, {}).get("name", t.replace(".TW",""))
+        holdings_info.append(_holding_row(t, name, prices.get(t), v.get("cost",0), v.get("shares",0)))
 with holdings_placeholder:
     for h in holdings_info:
         ticker = h["ticker"]
@@ -199,22 +261,35 @@ with holdings_placeholder:
 
         if h.get("error"):
             with st.expander(f"{ticker.replace('.TW','')} {name}"):
-                st.caption("資料不足")
+                st.caption("資料不足，請確認代號是否正確")
             continue
 
         chg   = h["chg"]
-        color = "#ef5350" if chg >= 0 else "#00c853"
         arrow = "▲" if chg >= 0 else "▼"
         label = f"{ticker.replace('.TW','')} {name}　{arrow}{abs(chg):.2f}%"
 
         with st.expander(label):
+            # ── Price & P&L ────────────────────────────────────────────────
             st.metric("現價", f"NT${h['price']:.1f}", f"{chg:+.2f}%")
             st.caption(f"5日高 {h.get('wk_high',0):.1f}　／　低 {h.get('wk_low',0):.1f}")
+
+            if "pnl_pct" in h:
+                pnl_color = "#ef5350" if h["pnl_pct"] >= 0 else "#00c853"
+                pnl_arrow = "▲" if h["pnl_pct"] >= 0 else "▼"
+                pnl_amt_str = f"　NT${h['pnl_amt']:+.0f}" if h.get("pnl_amt") else ""
+                st.markdown(
+                    f'<div style="color:{pnl_color};font-size:13px;margin:4px 0">'
+                    f'損益　{pnl_arrow}{abs(h["pnl_pct"]):.2f}%{pnl_amt_str}'
+                    f'　｜　成本 NT${h["cost"]:.1f}</div>',
+                    unsafe_allow_html=True
+                )
+
             st.divider()
 
+            # ── Sell analysis ──────────────────────────────────────────────
             sell = analyze_holding_sell(prices.get(ticker))
             if sell:
-                urgency_icon = {"高": "🔴", "中": "🟡", "低": "🟢"}.get(sell["urgency"], "⚪")
+                urgency_icon = {"高":"🔴","中":"🟡","低":"🟢"}.get(sell["urgency"],"⚪")
                 st.markdown(f"**{urgency_icon} {sell['action']}**")
                 st.markdown(
                     f'<div style="margin:8px 0">'
@@ -223,9 +298,8 @@ with holdings_placeholder:
                     f'</div>',
                     unsafe_allow_html=True
                 )
-                st.caption(f"RSI {sell['rsi']}　｜　MA20 {'✅' if sell['above_ma20'] else '⚠️'}　｜　MACD {'↑' if sell['macd_pos'] else '↓'}")
+                st.caption(f"RSI {sell['rsi']}　MA20 {'✅' if sell['above_ma20'] else '⚠️'}　MACD {'↑' if sell['macd_pos'] else '↓'}")
                 st.divider()
-                st.caption("分析依據：")
                 for r in sell["reasons"]:
                     st.caption(f"• {r}")
             else:
