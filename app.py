@@ -280,7 +280,7 @@ else:
     <span class="price-target">NT${p['target_price']:.1f}</span>
     <span class="pct-badge">+{p['target_pct']:.0f}%</span>
   </div>
-  <div class="stop-row">🛡 止損 NT${p['stop_loss']:.1f}　({p['stop_pct']:.1f}%)</div>
+  <div class="stop-row">💰 建議買入 NT${p['last_price']:.1f}　　🛡 止損 NT${p['stop_loss']:.1f}　({p['stop_pct']:.1f}%)</div>
 
   <div class="info-row">{'　'.join(f'<span>{x}</span>' for x in info_parts)}</div>
 
