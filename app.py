@@ -75,18 +75,18 @@ st.markdown("""
   .price-row { display: flex; gap: 16px; align-items: baseline; margin: 10px 0; flex-wrap: wrap; }
   .price-now { font-size: 20px; font-weight: 700; color: #e0e0e0; }
   .arrow { font-size: 18px; color: #555; }
-  .price-target { font-size: 20px; font-weight: 700; color: #00c853; }
+  .price-target { font-size: 20px; font-weight: 700; color: #ef5350; }
   .pct-badge {
-    background: #00c85322; color: #00c853;
+    background: #ef535022; color: #ef5350;
     border-radius: 6px; padding: 3px 10px; font-size: 14px; font-weight: 700;
   }
-  .stop-row { font-size: 13px; color: #ef5350; margin: 2px 0 6px 0; }
+  .stop-row { font-size: 13px; color: #00c853; margin: 2px 0 6px 0; }
 
   /* Info row */
   .info-row { display: flex; flex-wrap: wrap; gap: 18px; margin: 8px 0; font-size: 13px; color: #aaa; }
   .info-val { color: #e0e0e0; font-weight: 600; }
-  .up   { color: #00c853 !important; }
-  .down { color: #ef5350 !important; }
+  .up   { color: #ef5350 !important; }
+  .down { color: #00c853 !important; }
 
   /* Catalyst */
   .catalyst {
@@ -174,7 +174,7 @@ with holdings_placeholder:
             st.caption(f"{h['ticker'].replace('.TW','')} {h['name']} — 資料不足")
             continue
         chg   = h["chg"]
-        color = "#00c853" if chg >= 0 else "#ef5350"
+        color = "#ef5350" if chg >= 0 else "#00c853"
         arrow = "▲" if chg >= 0 else "▼"
         st.markdown(
             f'<div class="holding-row">'
@@ -196,7 +196,7 @@ with col_m:
         idx_chg = mkt.get("change", "—")
         chg_str  = str(idx_chg)
         is_up    = not chg_str.startswith("-")
-        mkt_col  = "#00c853" if is_up else "#ef5350"
+        mkt_col  = "#ef5350" if is_up else "#00c853"
         st.markdown(
             f'<div style="text-align:right;padding-top:8px">'
             f'<span style="color:#888;font-size:13px">加權指數　</span>'
@@ -306,13 +306,13 @@ else:
                 fig.add_trace(go.Candlestick(
                     x=recent.index, open=recent["Open"], high=recent["High"],
                     low=recent["Low"],  close=recent["Close"],
-                    increasing_line_color="#00c853", decreasing_line_color="#ef5350",
+                    increasing_line_color="#ef5350", decreasing_line_color="#00c853",
                     name="K線"), row=1, col=1)
                 fig.add_trace(go.Scatter(x=recent.index, y=recent["MA5"],
                     line=dict(color="#ffd54f", width=1.2), name="MA5"), row=1, col=1)
                 fig.add_trace(go.Scatter(x=recent.index, y=recent["MA20"],
                     line=dict(color="#4fc3f7", width=1.2), name="MA20"), row=1, col=1)
-                vol_colors = ["#00c853" if c >= o else "#ef5350"
+                vol_colors = ["#ef5350" if c >= o else "#00c853"
                               for c, o in zip(recent["Close"], recent["Open"])]
                 fig.add_trace(go.Bar(x=recent.index, y=recent["Volume"],
                     marker_color=vol_colors, opacity=0.6, name="量"), row=2, col=1)
