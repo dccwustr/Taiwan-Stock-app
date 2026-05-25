@@ -209,25 +209,21 @@ with holdings_placeholder:
         st.caption(f"NT${h['price']:.1f}　5日高 {h.get('wk_high',0):.1f} / 低 {h.get('wk_low',0):.1f}")
 
 # ── Header ────────────────────────────────────────────────────────────────────
-col_h, col_m = st.columns([3, 2])
-with col_h:
-    st.markdown("## 🎯 今日精選潛力股")
+st.markdown("## 🎯 今日精選潛力股")
+if mkt:
+    idx_val = mkt.get("index", "—")
+    idx_chg = mkt.get("change", "—")
+    is_up   = not str(idx_chg).startswith("-")
+    mkt_col = "#ef5350" if is_up else "#00c853"
+    st.markdown(
+        f'<span style="color:#888;font-size:13px">加權指數　</span>'
+        f'<span style="font-size:16px;font-weight:700;color:#f0f0f0">{idx_val}</span>'
+        f'　<span style="color:{mkt_col};font-size:14px">{idx_chg}</span>'
+        f'　<span style="color:#555;font-size:12px">｜　更新 {data["ts"]}　｜　漲停 ±10%</span>',
+        unsafe_allow_html=True
+    )
+else:
     st.caption(f"資料更新：{data['ts']}　｜　台股漲停 ±10%")
-with col_m:
-    if mkt:
-        idx_val = mkt.get("index", "—")
-        idx_chg = mkt.get("change", "—")
-        chg_str  = str(idx_chg)
-        is_up    = not chg_str.startswith("-")
-        mkt_col  = "#ef5350" if is_up else "#00c853"
-        st.markdown(
-            f'<div style="text-align:right;padding-top:8px">'
-            f'<span style="color:#888;font-size:13px">加權指數　</span>'
-            f'<span style="font-size:20px;font-weight:700;color:#f0f0f0">{idx_val}</span>'
-            f'　<span style="color:{mkt_col};font-size:15px">{idx_chg}</span>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
 
 st.divider()
 
