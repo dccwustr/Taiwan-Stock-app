@@ -72,15 +72,15 @@ st.markdown("""
   .cow { background:#0097a7; color:#fff; }
 
   /* Prices row */
-  .price-row { display: flex; gap: 24px; align-items: baseline; margin: 10px 0; }
-  .price-now { font-size: 22px; font-weight: 700; color: #e0e0e0; }
-  .arrow { font-size: 20px; color: #555; }
-  .price-target { font-size: 22px; font-weight: 700; color: #00c853; }
+  .price-row { display: flex; gap: 16px; align-items: baseline; margin: 10px 0; flex-wrap: wrap; }
+  .price-now { font-size: 20px; font-weight: 700; color: #e0e0e0; }
+  .arrow { font-size: 18px; color: #555; }
+  .price-target { font-size: 20px; font-weight: 700; color: #00c853; }
   .pct-badge {
     background: #00c85322; color: #00c853;
     border-radius: 6px; padding: 3px 10px; font-size: 14px; font-weight: 700;
   }
-  .stop { font-size: 14px; color: #ef5350; margin-left: 6px; }
+  .stop-row { font-size: 13px; color: #ef5350; margin: 2px 0 6px 0; }
 
   /* Info row */
   .info-row { display: flex; flex-wrap: wrap; gap: 18px; margin: 8px 0; font-size: 13px; color: #aaa; }
@@ -279,8 +279,8 @@ else:
     <span class="arrow">→</span>
     <span class="price-target">NT${p['target_price']:.1f}</span>
     <span class="pct-badge">+{p['target_pct']:.0f}%</span>
-    <span class="stop">止損 NT${p['stop_loss']:.1f} ({p['stop_pct']:.1f}%)</span>
   </div>
+  <div class="stop-row">🛡 止損 NT${p['stop_loss']:.1f}　({p['stop_pct']:.1f}%)</div>
 
   <div class="info-row">{'　'.join(f'<span>{x}</span>' for x in info_parts)}</div>
 
