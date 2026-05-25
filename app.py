@@ -154,6 +154,11 @@ def load_data():
                 foreign=foreign, market=market, prices=prices,
                 ts=datetime.now().strftime("%H:%M"))
 
+# ── Session state init ────────────────────────────────────────────────────────
+if "view_mode"       not in st.session_state: st.session_state.view_mode       = "picks"
+if "custom_holdings" not in st.session_state: st.session_state.custom_holdings = {}
+if "hidden_holdings" not in st.session_state: st.session_state.hidden_holdings = set()
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown(f"### 📈 台股分析")
@@ -173,14 +178,13 @@ with st.sidebar:
     st.divider()
 
     # ── 新增持股 ──────────────────────────────────────────────────────────────
-    st.markdown("**💼 我的持股**")
-    with st.expander("＋ 新增 / 編輯持股"):
-        # Load saved holdings from session state (persists within session)
-        if "custom_holdings" not in st.session_state:
-            st.session_state.custom_holdings = {}
-        if "hidden_holdings" not in st.session_state:
-            st.session_state.hidden_holdings = set()
+    # Toggle button — swaps main view
+    holding_label = "💼 我的持股  ←" if st.session_state.view_mode == "picks" else "🎯 精選潛力股  ←"
+    if st.button(holding_label, use_container_width=True):
+        st.session_state.view_mode = "holdings" if st.session_state.view_mode == "picks" else "picks"
+        st.rerun()
 
+    with st.expander("＋ 新增 / 編輯持股"):
         st.caption("輸入股票代號（如 2454）、股數、買進均價")
         col1, col2, col3 = st.columns([2, 2, 2])
         new_code  = col1.text_input("代號", placeholder="2454",  label_visibility="collapsed")
@@ -219,7 +223,7 @@ with st.sidebar:
                     st.session_state.hidden_holdings.discard(t)
                     st.rerun()
 
-    holdings_placeholder = st.container()
+    sidebar_content = st.container()
 
     st.divider()
     st.caption("資料來源：鉅亨網・TWSE・Yahoo Finance")
@@ -272,92 +276,126 @@ for t, v in custom.items():
     if t not in MY_HOLDINGS and t not in hidden:
         name = TECH_UNIVERSE.get(t, {}).get("name", t.replace(".TW",""))
         holdings_info.append(_holding_row(t, name, prices.get(t), v.get("cost",0), v.get("shares",0)))
-with holdings_placeholder:
-    for h in holdings_info:
-        ticker = h["ticker"]
-        name   = h["name"]
+# ── Holdings card renderer (used in main or sidebar) ─────────────────────────
+def render_holding_card(h, container=None):
+    ctx = container or st
+    ticker = h["ticker"]
+    name   = h["name"]
 
-        if h.get("error"):
-            with st.expander(f"{ticker.replace('.TW','')} {name}"):
-                st.caption("資料不足，請確認代號是否正確")
-                if st.button("🗑 移除", key=f"del_err_{ticker}"):
-                    st.session_state.custom_holdings.pop(ticker, None)
-                    st.session_state.hidden_holdings.add(ticker)
-                    st.rerun()
-            continue
-
-        chg   = h["chg"]
-        arrow = "▲" if chg >= 0 else "▼"
-        label = f"{ticker.replace('.TW','')} {name}　{arrow}{abs(chg):.2f}%"
-
-        with st.expander(label):
-            # ── Inline edit: hidden until toggled ─────────────────────────
-            edit_key = f"edit_open_{ticker}"
-            if edit_key not in st.session_state:
-                st.session_state[edit_key] = False
-            if st.button("✏️ 編輯持倉", key=f"editbtn_{ticker}", use_container_width=False):
-                st.session_state[edit_key] = not st.session_state[edit_key]
-                st.rerun()
-            if st.session_state[edit_key]:
-                saved = st.session_state.custom_holdings.get(ticker, {})
-                e1, e2 = st.columns(2)
-                new_shares = e1.number_input("持股數", min_value=0.0,
-                                             value=float(saved.get("shares", 0)),
-                                             step=1.0, key=f"sh_{ticker}")
-                new_cost   = e2.number_input("買進均價", min_value=0.0,
-                                             value=float(saved.get("cost", 0)),
-                                             step=0.1, key=f"co_{ticker}")
-                if st.button("💾 儲存", key=f"save_{ticker}", use_container_width=True):
-                    st.session_state.custom_holdings[ticker] = {"shares": new_shares, "cost": new_cost}
-                    st.session_state[edit_key] = False
-                    st.rerun()
-
-            st.divider()
-
-            # ── Price & P&L ────────────────────────────────────────────────
-            st.metric("現價", f"NT${h['price']:.1f}", f"{chg:+.2f}%", delta_color="inverse")
-            st.caption(f"5日高 {h.get('wk_high',0):.1f}　／　低 {h.get('wk_low',0):.1f}")
-
-            if "pnl_pct" in h:
-                pnl_color = "#ef5350" if h["pnl_pct"] >= 0 else "#00c853"
-                pnl_arrow = "▲" if h["pnl_pct"] >= 0 else "▼"
-                pnl_amt_str = f"　NT${h['pnl_amt']:+.0f}" if h.get("pnl_amt") else ""
-                st.markdown(
-                    f'<div style="color:{pnl_color};font-size:13px;margin:4px 0">'
-                    f'損益　{pnl_arrow}{abs(h["pnl_pct"]):.2f}%{pnl_amt_str}'
-                    f'　｜　成本 NT${h["cost"]:.1f}</div>',
-                    unsafe_allow_html=True
-                )
-
-            st.divider()
-
-            # ── Sell analysis ──────────────────────────────────────────────
-            sell = analyze_holding_sell(prices.get(ticker))
-            if sell:
-                urgency_icon = {"高":"🔴","中":"🟡","低":"🟢"}.get(sell["urgency"],"⚪")
-                st.markdown(f"**{urgency_icon} {sell['action']}**")
-                st.markdown(
-                    f'<div style="margin:8px 0">'
-                    f'<div style="color:#ef5350;font-size:13px">🎯 目標賣出　NT${sell["target_sell"]}　(+{sell["upside"]}%)</div>'
-                    f'<div style="color:#00c853;font-size:13px;margin-top:4px">🛡 止損參考　NT${sell["stop_loss"]}　({sell["downside"]}%)</div>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-                st.caption(f"RSI {sell['rsi']}　MA20 {'✅' if sell['above_ma20'] else '⚠️'}　MACD {'↑' if sell['macd_pos'] else '↓'}")
-                st.divider()
-                for r in sell["reasons"]:
-                    st.caption(f"• {r}")
-            else:
-                st.caption("資料不足，無法分析")
-
-            st.divider()
-            if st.button("🗑 已賣出，移除此股", key=f"del_{ticker}", use_container_width=True):
+    if h.get("error"):
+        with ctx.expander(f"{ticker.replace('.TW','')} {name}"):
+            st.caption("資料不足，請確認代號是否正確")
+            if st.button("🗑 移除", key=f"del_err_{ticker}"):
                 st.session_state.custom_holdings.pop(ticker, None)
                 st.session_state.hidden_holdings.add(ticker)
                 st.rerun()
+        return
 
-# ── Header ────────────────────────────────────────────────────────────────────
-st.markdown("## 🎯 今日精選潛力股")
+    chg   = h["chg"]
+    arrow = "▲" if chg >= 0 else "▼"
+    label = f"{ticker.replace('.TW','')} {name}　{arrow}{abs(chg):.2f}%"
+
+    with ctx.expander(label):
+        edit_key = f"edit_open_{ticker}"
+        if edit_key not in st.session_state:
+            st.session_state[edit_key] = False
+        if st.button("✏️ 編輯持倉", key=f"editbtn_{ticker}"):
+            st.session_state[edit_key] = not st.session_state[edit_key]
+            st.rerun()
+        if st.session_state[edit_key]:
+            saved = st.session_state.custom_holdings.get(ticker, {})
+            e1, e2 = st.columns(2)
+            new_shares = e1.number_input("持股數", min_value=0.0,
+                                         value=float(saved.get("shares", 0)),
+                                         step=1.0, key=f"sh_{ticker}")
+            new_cost   = e2.number_input("買進均價", min_value=0.0,
+                                         value=float(saved.get("cost", 0)),
+                                         step=0.1, key=f"co_{ticker}")
+            if st.button("💾 儲存", key=f"save_{ticker}", use_container_width=True):
+                st.session_state.custom_holdings[ticker] = {"shares": new_shares, "cost": new_cost}
+                st.session_state[edit_key] = False
+                st.rerun()
+        st.divider()
+
+        st.metric("現價", f"NT${h['price']:.1f}", f"{chg:+.2f}%", delta_color="inverse")
+        st.caption(f"5日高 {h.get('wk_high',0):.1f}　／　低 {h.get('wk_low',0):.1f}")
+
+        if "pnl_pct" in h:
+            pnl_color = "#ef5350" if h["pnl_pct"] >= 0 else "#00c853"
+            pnl_arrow = "▲" if h["pnl_pct"] >= 0 else "▼"
+            pnl_amt_str = f"　NT${h['pnl_amt']:+.0f}" if h.get("pnl_amt") else ""
+            st.markdown(
+                f'<div style="color:{pnl_color};font-size:13px;margin:4px 0">'
+                f'損益　{pnl_arrow}{abs(h["pnl_pct"]):.2f}%{pnl_amt_str}'
+                f'　｜　成本 NT${h["cost"]:.1f}</div>',
+                unsafe_allow_html=True
+            )
+        st.divider()
+
+        sell = analyze_holding_sell(prices.get(ticker))
+        if sell:
+            urgency_icon = {"高":"🔴","中":"🟡","低":"🟢"}.get(sell["urgency"],"⚪")
+            st.markdown(f"**{urgency_icon} {sell['action']}**")
+            st.markdown(
+                f'<div style="margin:8px 0">'
+                f'<div style="color:#ef5350;font-size:13px">🎯 目標賣出　NT${sell["target_sell"]}　(+{sell["upside"]}%)</div>'
+                f'<div style="color:#00c853;font-size:13px;margin-top:4px">🛡 止損參考　NT${sell["stop_loss"]}　({sell["downside"]}%)</div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+            st.caption(f"RSI {sell['rsi']}　MA20 {'✅' if sell['above_ma20'] else '⚠️'}　MACD {'↑' if sell['macd_pos'] else '↓'}")
+            st.divider()
+            for r in sell["reasons"]:
+                st.caption(f"• {r}")
+        else:
+            st.caption("資料不足，無法分析")
+
+        st.divider()
+        if st.button("🗑 已賣出，移除此股", key=f"del_{ticker}", use_container_width=True):
+            st.session_state.custom_holdings.pop(ticker, None)
+            st.session_state.hidden_holdings.add(ticker)
+            st.rerun()
+
+# ── Total portfolio summary ───────────────────────────────────────────────────
+total_cost = sum(h.get("cost", 0) * h.get("shares", 0) for h in holdings_info if h.get("cost", 0) > 0)
+total_val  = sum(h.get("price", 0) * h.get("shares", 0) for h in holdings_info if h.get("cost", 0) > 0 and not h.get("error"))
+total_pnl  = total_val - total_cost if total_cost > 0 else 0
+total_pct  = (total_pnl / total_cost * 100) if total_cost > 0 else 0
+
+# ── Fill sidebar content based on view mode ───────────────────────────────────
+with sidebar_content:
+    # Portfolio summary (always shown at top)
+    if total_cost > 0:
+        pnl_col = "#ef5350" if total_pnl >= 0 else "#00c853"
+        pnl_arrow = "▲" if total_pnl >= 0 else "▼"
+        st.markdown(
+            f'<div style="background:#0d1117;border:1px solid #252d45;border-radius:8px;padding:10px 14px;margin-bottom:8px">'
+            f'<div style="font-size:11px;color:#555;margin-bottom:4px">總成本　NT${total_cost:,.0f}</div>'
+            f'<div style="font-size:15px;font-weight:700;color:{pnl_col}">'
+            f'{pnl_arrow} {abs(total_pct):.2f}%　NT${total_pnl:+,.0f}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+    if st.session_state.view_mode == "picks":
+        # Sidebar shows holdings (compact)
+        for h in holdings_info:
+            render_holding_card(h)
+    else:
+        # Sidebar shows compact picks list
+        st.caption("今日精選（點左上按鈕返回）")
+        for i, p in enumerate(scored[:top_n] if scored else [], 1):
+            chg_col = "#ef5350" if p["mom1d"] >= 0 else "#00c853"
+            st.markdown(
+                f'<div style="padding:6px 0;border-bottom:1px solid #1a1a2e">'
+                f'<span style="color:#aaa;font-size:13px">#{i}　'
+                f'<b style="color:#e0e0e0">{p["ticker"].replace(".TW","")} {p["name"]}</b>'
+                f'　<span style="color:{chg_col}">{p["mom1d"]:+.1f}%</span>'
+                f'　<span style="color:#555;font-size:11px">信心 {p["score"]}</span></span></div>',
+                unsafe_allow_html=True
+            )
+
+# ── Market index bar (always shown) ──────────────────────────────────────────
 if mkt:
     idx_val = mkt.get("index", "—")
     idx_chg = mkt.get("change", "—")
@@ -370,12 +408,22 @@ if mkt:
         f'　<span style="color:#555;font-size:12px">｜　更新 {data["ts"]}　｜　漲停 ±10%</span>',
         unsafe_allow_html=True
     )
-else:
-    st.caption(f"資料更新：{data['ts']}　｜　台股漲停 ±10%")
-
 st.divider()
 
-# ── Score stocks ──────────────────────────────────────────────────────────────
+# ── Main view: Holdings ───────────────────────────────────────────────────────
+if st.session_state.view_mode == "holdings":
+    st.markdown("## 💼 我的持股")
+    for h in holdings_info:
+        render_holding_card(h)
+    st.divider()
+    with st.expander("📰 今日早盤新聞", expanded=False):
+        for h in data["headlines"][:8]:
+            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
+    st.stop()
+
+# ── Score stocks (picks view only) ───────────────────────────────────────────
+st.markdown("## 🎯 今日精選潛力股")
+st.divider()
 skip = set(MY_HOLDINGS.keys())
 scored = []
 for ticker in TECH_UNIVERSE:
