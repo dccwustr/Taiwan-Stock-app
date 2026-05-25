@@ -178,6 +178,8 @@ with st.sidebar:
         # Load saved holdings from session state (persists within session)
         if "custom_holdings" not in st.session_state:
             st.session_state.custom_holdings = {}
+        if "hidden_holdings" not in st.session_state:
+            st.session_state.hidden_holdings = set()
 
         st.caption("輸入股票代號（如 2454）、股數、買進均價")
         col1, col2, col3 = st.columns([2, 2, 2])
@@ -201,9 +203,21 @@ with st.sidebar:
         for t, v in list(st.session_state.custom_holdings.items()):
             c1, c2 = st.columns([4, 1])
             c1.caption(f"{t.replace('.TW','')}　{v['shares']:.0f}股　成本 {v['cost']:.1f}")
-            if c2.button("✕", key=f"del_{t}"):
+            if c2.button("✕", key=f"quickdel_{t}"):
                 del st.session_state.custom_holdings[t]
                 st.rerun()
+
+        # Restore hidden holdings
+        hidden_set = st.session_state.get("hidden_holdings", set())
+        if hidden_set:
+            st.caption("已移除的持股：")
+            for t in list(hidden_set):
+                name = MY_HOLDINGS.get(t, {}).get("name", t.replace(".TW",""))
+                c1, c2 = st.columns([4, 1])
+                c1.caption(f"{t.replace('.TW','')} {name}")
+                if c2.button("↩", key=f"restore_{t}"):
+                    st.session_state.hidden_holdings.discard(t)
+                    st.rerun()
 
     holdings_placeholder = st.container()
 
@@ -247,11 +261,13 @@ def _holding_row(ticker, name, df, cost=0, shares=0):
         row["pnl_amt"] = (p1 - cost) * shares if shares > 0 else None
     return row
 
+hidden = st.session_state.get("hidden_holdings", set())
 holdings_info = []
 for t, v in MY_HOLDINGS.items():
-    holdings_info.append(_holding_row(t, v["name"], prices.get(t)))
+    if t not in hidden:
+        holdings_info.append(_holding_row(t, v["name"], prices.get(t)))
 for t, v in custom.items():
-    if t not in MY_HOLDINGS:
+    if t not in MY_HOLDINGS and t not in hidden:
         name = TECH_UNIVERSE.get(t, {}).get("name", t.replace(".TW",""))
         holdings_info.append(_holding_row(t, name, prices.get(t), v.get("cost",0), v.get("shares",0)))
 with holdings_placeholder:
@@ -262,6 +278,10 @@ with holdings_placeholder:
         if h.get("error"):
             with st.expander(f"{ticker.replace('.TW','')} {name}"):
                 st.caption("資料不足，請確認代號是否正確")
+                if st.button("🗑 移除", key=f"del_err_{ticker}"):
+                    st.session_state.custom_holdings.pop(ticker, None)
+                    st.session_state.hidden_holdings.add(ticker)
+                    st.rerun()
             continue
 
         chg   = h["chg"]
@@ -304,6 +324,12 @@ with holdings_placeholder:
                     st.caption(f"• {r}")
             else:
                 st.caption("資料不足，無法分析")
+
+            st.divider()
+            if st.button("🗑 已賣出，移除此股", key=f"del_{ticker}", use_container_width=True):
+                st.session_state.custom_holdings.pop(ticker, None)
+                st.session_state.hidden_holdings.add(ticker)
+                st.rerun()
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## 🎯 今日精選潛力股")
