@@ -337,8 +337,6 @@ def render_stock_cards(picks, prices, show_chart):
     <div class="rank">{rank}</div>
     <span class="stock-name">{p['ticker'].replace('.TW','')} {p['name']}</span>
     <span class="stock-sub">{p['en']}</span>
-    <span class="sector-tag">{p['sector']}</span>
-    {supply_chips(p.get('supply',[]))}
   </div>
 
   {live_block}
