@@ -290,6 +290,91 @@ def fetch_live_prices(tickers: List[str]) -> Dict[str, Dict]:
 
     return result
 
+def analyze_holding_sell(df: pd.DataFrame) -> Dict:
+    """
+    分析持股最佳賣出時機。
+    回傳：action, urgency, target_sell, stop_loss, upside, downside, reasons
+    """
+    if df is None or len(df) < 22:
+        return {}
+
+    close = df["Close"]
+    high  = df["High"]
+    last  = float(close.iloc[-1])
+
+    rsi          = calc_rsi(close)
+    macd_h, macd_prev = calc_macd(close)
+    atr          = calc_atr(df)
+    ma5          = float(close.rolling(5).mean().iloc[-1])
+    ma20         = float(close.rolling(20).mean().iloc[-1])
+    ma60         = float(close.rolling(min(60, len(close))).mean().iloc[-1])
+    high_20      = float(high.tail(20).max())
+    high_60      = float(high.tail(min(60, len(high))).max())
+    high_52w     = float(high.tail(min(252, len(high))).max())
+
+    reasons  = []
+    urgency  = "低"
+    action   = "繼續持有"
+
+    # ── RSI ──────────────────────────────────────────────────────────────────
+    if rsi >= 82:
+        reasons.append(f"RSI {rsi:.0f}，嚴重超買")
+        urgency = "高"; action = "建議減倉或出場"
+    elif rsi >= 75:
+        reasons.append(f"RSI {rsi:.0f}，進入超買區間")
+        urgency = "中"; action = "可考慮部分獲利了結"
+    elif rsi >= 68:
+        reasons.append(f"RSI {rsi:.0f}，偏高，留意轉折")
+    elif rsi < 45:
+        reasons.append(f"RSI {rsi:.0f}，動能轉弱")
+        if urgency == "低": urgency = "中"
+        if action == "繼續持有": action = "留意止損"
+
+    # ── MACD ─────────────────────────────────────────────────────────────────
+    if macd_h < 0 and macd_prev >= 0:
+        reasons.append("MACD 出現死叉，動能反轉")
+        if urgency == "低": urgency = "中"
+        if action == "繼續持有": action = "留意賣出時機"
+    elif macd_h > 0 and macd_prev > 0 and macd_h < macd_prev * 0.6:
+        reasons.append("MACD 柱狀縮短，上漲動能減弱")
+
+    # ── MA position ──────────────────────────────────────────────────────────
+    if last < ma20:
+        reasons.append("跌破 MA20，短線轉弱")
+        if urgency == "低": urgency = "中"
+        if action == "繼續持有": action = "留意止損"
+    elif last > ma20 > ma60:
+        reasons.append("MA 多頭排列，趨勢健康")
+
+    # ── Resistance ───────────────────────────────────────────────────────────
+    if last >= high_52w * 0.99:
+        reasons.append(f"逼近52週高點 {high_52w:.1f}，歷史壓力區")
+        if urgency == "低": urgency = "中"
+    elif last >= high_20 * 0.985:
+        reasons.append(f"接近近20日高點 {high_20:.1f}，短期壓力")
+
+    if not reasons:
+        reasons.append("技術面穩健，暫無明顯賣出信號")
+
+    # ── Target & stop ─────────────────────────────────────────────────────────
+    target_sell = round(min(last + 2.0 * atr, high_52w * 1.02), 1)
+    stop_loss   = round(max(last - 1.5 * atr, ma20 * 0.97), 1)
+    upside      = round((target_sell - last) / last * 100, 1)
+    downside    = round((stop_loss   - last) / last * 100, 1)
+
+    return {
+        "action":      action,
+        "urgency":     urgency,
+        "target_sell": target_sell,
+        "stop_loss":   stop_loss,
+        "upside":      upside,
+        "downside":    downside,
+        "rsi":         round(rsi, 1),
+        "above_ma20":  last > ma20,
+        "macd_pos":    macd_h > 0,
+        "reasons":     reasons[:3],
+    }
+
 def fetch_twse_foreign_buying(date_str: Optional[str] = None) -> Dict[str, float]:
     """抓取外資買超資料（千張）"""
     if not date_str:

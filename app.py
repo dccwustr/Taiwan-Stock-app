@@ -19,6 +19,7 @@ from widget import (
     fetch_cnyes_news, fetch_moneydj_news, fetch_twse_foreign_buying,
     fetch_twse_market_summary, fetch_prices_batch, analyze_catalysts,
     get_catalyst_labels, score_stock, analyze_holdings, fetch_live_prices,
+    analyze_holding_sell,
 )
 
 warnings.filterwarnings("ignore")
@@ -193,20 +194,42 @@ mkt      = data["market"]
 holdings_info = analyze_holdings(prices)
 with holdings_placeholder:
     for h in holdings_info:
+        ticker = h["ticker"]
+        name   = h["name"]
+
         if h.get("error"):
-            st.caption(f"{h['ticker'].replace('.TW','')} {h['name']} — 資料不足")
+            with st.expander(f"{ticker.replace('.TW','')} {name}"):
+                st.caption("資料不足")
             continue
+
         chg   = h["chg"]
         color = "#ef5350" if chg >= 0 else "#00c853"
         arrow = "▲" if chg >= 0 else "▼"
-        st.markdown(
-            f'<div class="holding-row">'
-            f'<span class="h-name">{h["ticker"].replace(".TW","")} {h["name"]}</span>'
-            f'<span class="h-val" style="color:{color}">{arrow}{abs(chg):.2f}%</span>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-        st.caption(f"NT${h['price']:.1f}　5日高 {h.get('wk_high',0):.1f} / 低 {h.get('wk_low',0):.1f}")
+        label = f"{ticker.replace('.TW','')} {name}　{arrow}{abs(chg):.2f}%"
+
+        with st.expander(label):
+            st.metric("現價", f"NT${h['price']:.1f}", f"{chg:+.2f}%")
+            st.caption(f"5日高 {h.get('wk_high',0):.1f}　／　低 {h.get('wk_low',0):.1f}")
+            st.divider()
+
+            sell = analyze_holding_sell(prices.get(ticker))
+            if sell:
+                urgency_icon = {"高": "🔴", "中": "🟡", "低": "🟢"}.get(sell["urgency"], "⚪")
+                st.markdown(f"**{urgency_icon} {sell['action']}**")
+                st.markdown(
+                    f'<div style="margin:8px 0">'
+                    f'<div style="color:#ef5350;font-size:13px">🎯 目標賣出　NT${sell["target_sell"]}　(+{sell["upside"]}%)</div>'
+                    f'<div style="color:#00c853;font-size:13px;margin-top:4px">🛡 止損參考　NT${sell["stop_loss"]}　({sell["downside"]}%)</div>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+                st.caption(f"RSI {sell['rsi']}　｜　MA20 {'✅' if sell['above_ma20'] else '⚠️'}　｜　MACD {'↑' if sell['macd_pos'] else '↓'}")
+                st.divider()
+                st.caption("分析依據：")
+                for r in sell["reasons"]:
+                    st.caption(f"• {r}")
+            else:
+                st.caption("資料不足，無法分析")
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## 🎯 今日精選潛力股")
