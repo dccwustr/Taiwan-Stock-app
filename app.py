@@ -265,7 +265,9 @@ hidden = st.session_state.get("hidden_holdings", set())
 holdings_info = []
 for t, v in MY_HOLDINGS.items():
     if t not in hidden:
-        holdings_info.append(_holding_row(t, v["name"], prices.get(t)))
+        saved = st.session_state.get("custom_holdings", {}).get(t, {})
+        holdings_info.append(_holding_row(t, v["name"], prices.get(t),
+                                          saved.get("cost", 0), saved.get("shares", 0)))
 for t, v in custom.items():
     if t not in MY_HOLDINGS and t not in hidden:
         name = TECH_UNIVERSE.get(t, {}).get("name", t.replace(".TW",""))
@@ -289,6 +291,21 @@ with holdings_placeholder:
         label = f"{ticker.replace('.TW','')} {name}　{arrow}{abs(chg):.2f}%"
 
         with st.expander(label):
+            # ── Inline edit: shares + cost ─────────────────────────────────
+            saved = st.session_state.custom_holdings.get(ticker, {})
+            cur_shares = saved.get("shares", 0)
+            cur_cost   = saved.get("cost",   0)
+            e1, e2 = st.columns(2)
+            new_shares = e1.number_input("持股數", min_value=0.0, value=float(cur_shares),
+                                         step=1.0, key=f"sh_{ticker}", label_visibility="visible")
+            new_cost   = e2.number_input("買進均價", min_value=0.0, value=float(cur_cost),
+                                         step=0.1, key=f"co_{ticker}", label_visibility="visible")
+            if st.button("💾 儲存", key=f"save_{ticker}", use_container_width=True):
+                st.session_state.custom_holdings[ticker] = {"shares": new_shares, "cost": new_cost}
+                st.rerun()
+
+            st.divider()
+
             # ── Price & P&L ────────────────────────────────────────────────
             st.metric("現價", f"NT${h['price']:.1f}", f"{chg:+.2f}%", delta_color="inverse")
             st.caption(f"5日高 {h.get('wk_high',0):.1f}　／　低 {h.get('wk_low',0):.1f}")
