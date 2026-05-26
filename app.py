@@ -135,6 +135,17 @@ st.markdown("""
   .limit-near { background:#e65100; color:#fff; border-radius:4px; padding:2px 8px; font-size:12px; font-weight:700; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
+  /* Star overlay buttons: invisible — card's ★/☆ symbol is the only visual */
+  div[data-testid="stHorizontalBlock"]:has(.star-sentinel) button,
+  div[data-testid="stHorizontalBlock"]:has(.star-sentinel) button:hover,
+  div[data-testid="stHorizontalBlock"]:has(.star-sentinel) button:focus,
+  div[data-testid="stHorizontalBlock"]:has(.star-sentinel) button:active {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
   /* News */
   .news-line {
     padding: 5px 0 5px 10px; border-left: 2px solid #1a56db;
@@ -159,6 +170,7 @@ def load_data():
 
 # ── Session state init ────────────────────────────────────────────────────────
 if "view_mode"       not in st.session_state: st.session_state.view_mode       = "picks"
+# valid modes: "picks" | "holdings" | "watchlist"
 if "custom_holdings" not in st.session_state: st.session_state.custom_holdings = {}
 if "hidden_holdings" not in st.session_state: st.session_state.hidden_holdings = set()
 if "search_ticker"   not in st.session_state: st.session_state.search_ticker   = None
@@ -206,11 +218,17 @@ with st.sidebar:
     st.divider()
 
     # ── 新增持股 ──────────────────────────────────────────────────────────────
-    # Toggle button — swaps main view
-    holding_label = "💼 我的持股  ←" if st.session_state.view_mode == "picks" else "🎯 精選潛力股  ←"
-    if st.button(holding_label, use_container_width=True):
-        st.session_state.view_mode = "holdings" if st.session_state.view_mode == "picks" else "picks"
-        st.rerun()
+    # View toggle buttons
+    vm = st.session_state.view_mode
+    if st.button("🎯 精選潛力股" if vm != "picks" else "🎯 精選潛力股  ✓", use_container_width=True,
+                 type="primary" if vm == "picks" else "secondary"):
+        st.session_state.view_mode = "picks"; st.rerun()
+    if st.button("💼 我的持股" if vm != "holdings" else "💼 我的持股  ✓", use_container_width=True,
+                 type="primary" if vm == "holdings" else "secondary"):
+        st.session_state.view_mode = "holdings"; st.rerun()
+    if st.button("⭐ 追蹤清單" if vm != "watchlist" else "⭐ 追蹤清單  ✓", use_container_width=True,
+                 type="primary" if vm == "watchlist" else "secondary"):
+        st.session_state.view_mode = "watchlist"; st.rerun()
 
     with st.expander("＋ 新增 / 編輯持股"):
         st.caption("輸入股票代號（如 2454）、股數、買進均價")
@@ -499,6 +517,7 @@ def render_query_card(ticker, sres, live_d, key_sfx):
     # Button rendered first; card overlays it via negative margin + pointer-events:none
     _, _sc = st.columns([10, 1])
     with _sc:
+        st.markdown('<span class="star-sentinel"></span>', unsafe_allow_html=True)
         _clicked = st.button(_star, key=f"star_{key_sfx}", use_container_width=True, help="追蹤")
 
     st.markdown(
@@ -553,21 +572,29 @@ if mkt:
     )
 st.divider()
 
-# ── Search result (main screen) ───────────────────────────────────────────────
+
+# ── Main view: Watchlist ─────────────────────────────────────────────────────
+if st.session_state.view_mode == "watchlist":
+    st.markdown("## ⭐ 追蹤清單")
+    if not st.session_state.watchlist:
+        st.caption("還沒有追蹤的股票。在精選推薦或搜尋結果中點 ☆ 加入。")
+    else:
+        for _wt in st.session_state.watchlist:
+            if _wt in _watch_results:
+                render_query_card(_wt, _watch_results[_wt], _query_live.get(_wt), f"wv_{_wt}")
+    st.divider()
+    with st.expander("📰 今日早盤新聞", expanded=False):
+        for h in data["headlines"][:8]:
+            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
+    st.stop()
+
+# ── Search result (inline, only in picks view) ───────────────────────────────
 if _sticker and _sres:
     st.markdown("## 🔍 搜尋結果")
     render_query_card(_sticker, _sres, _query_live.get(_sticker), "search")
     st.divider()
 elif _sticker and not _sres:
     st.warning("找不到資料，請確認代號是否正確（格式：2330）")
-    st.divider()
-
-# ── Watchlist (main screen) ───────────────────────────────────────────────────
-_watch_show = [t for t in st.session_state.watchlist if t != _sticker and t in _watch_results]
-if _watch_show:
-    st.markdown("## ⭐ 追蹤清單")
-    for _wt in _watch_show:
-        render_query_card(_wt, _watch_results[_wt], _query_live.get(_wt), f"w_{_wt}")
     st.divider()
 
 # ── Main view: Holdings ───────────────────────────────────────────────────────
@@ -677,6 +704,7 @@ def render_stock_cards(picks, prices, show_chart):
         # Button rendered first; card overlays it via negative margin + pointer-events:none
         _, _sc = st.columns([10, 1])
         with _sc:
+            st.markdown('<span class="star-sentinel"></span>', unsafe_allow_html=True)
             _star_clicked = st.button(_star, key=f"star_pick_{p['ticker']}", use_container_width=True, help="追蹤")
 
         st.markdown(
