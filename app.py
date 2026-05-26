@@ -11,6 +11,19 @@ from typing import Dict, List
 _TW = timezone(timedelta(hours=8))
 def _now_tw(): return datetime.now(tz=_TW)
 
+def _trading_epoch() -> str:
+    """Returns the trading-date string this session belongs to.
+    Changes at 08:00 TWN each weekday — Streamlit uses this as a cache key,
+    so load_data() re-runs exactly once per trading morning on first visit.
+    Before 08:00 TWN, or on weekends, rolls back to the last valid trading day.
+    """
+    tw = _now_tw()
+    if tw.hour < 8:
+        tw -= timedelta(days=1)
+    while tw.weekday() >= 5:   # Sat=5, Sun=6
+        tw -= timedelta(days=1)
+    return tw.strftime("%Y-%m-%d")
+
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
@@ -190,10 +203,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Data loading ──────────────────────────────────────────────────────────────
-@st.cache_data(ttl=1800, show_spinner=False)
-def load_data():
+@st.cache_data(ttl=28800, show_spinner=False)   # 8-hour TTL; epoch param busts cache each trading morning
+def load_data(epoch: str):                       # epoch = "YYYY-MM-DD", changes at 08:00 TWN each weekday
     tickers  = list(TECH_UNIVERSE.keys())
-    news     = fetch_cnyes_news(60) + fetch_moneydj_news()
+    news     = fetch_cnyes_news(100) + fetch_moneydj_news()   # 100 items per category, 24h window
     cat_sc, headlines = analyze_catalysts(news)
     foreign  = fetch_twse_foreign_buying()
     market   = fetch_twse_market_summary()
@@ -322,8 +335,9 @@ if st.session_state.get("_close_sidebar"):
 """, height=0)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
+_epoch = _trading_epoch()
 with st.spinner("載入中…"):
-    data = load_data()
+    data = load_data(_epoch)
 
 prices   = data["prices"]
 all_news = data["news"]
@@ -634,7 +648,7 @@ with _mi_col:
             f'<span style="color:#888;font-size:13px">加權指數　</span>'
             f'<span style="font-size:16px;font-weight:700;color:#f0f0f0">{idx_val}</span>'
             f'　<span style="color:{mkt_col};font-size:14px">{idx_chg}</span>'
-            f'　<span style="color:#555;font-size:12px">｜　更新 {data["ts"]}　｜　漲停 ±10%</span>',
+            f'　<span style="color:#555;font-size:12px">｜　盤前資料 {_epoch}　載入 {data["ts"]}　｜　漲停 ±10%</span>',
             unsafe_allow_html=True
         )
 with _ref_col:

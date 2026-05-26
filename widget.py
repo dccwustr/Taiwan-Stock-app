@@ -197,7 +197,7 @@ def fetch_cnyes_news(limit: int = 60) -> List[Dict]:
             for item in items:
                 pub_ts = item.get("publishAt", 0)
                 pub_dt = datetime.fromtimestamp(pub_ts)
-                if datetime.now() - pub_dt > timedelta(hours=18):
+                if datetime.now() - pub_dt > timedelta(hours=24):
                     continue
                 news.append({
                     "title":   item.get("title", ""),
