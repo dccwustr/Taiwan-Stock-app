@@ -5,8 +5,11 @@
 """
 
 import sys, os, json, warnings
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List
+
+_TW = timezone(timedelta(hours=8))
+def _now_tw(): return datetime.now(tz=_TW)
 
 import streamlit as st
 import pandas as pd
@@ -150,8 +153,7 @@ def load_data():
     foreign  = fetch_twse_foreign_buying()
     market   = fetch_twse_market_summary()
     prices   = fetch_prices_batch(tickers, period="3mo")
-    from datetime import timezone, timedelta as _td
-    ts = datetime.now(tz=timezone(_td(hours=8))).strftime("%H:%M")
+    ts = _now_tw().strftime("%H:%M")
     return dict(news=news, headlines=headlines, catalyst=cat_sc,
                 foreign=foreign, market=market, prices=prices, ts=ts)
 
@@ -451,13 +453,6 @@ def conf_color(s):
     return "#00c853" if s >= 80 else ("#ffd54f" if s >= 60 else "#ef5350")
 
 # ── Stock cards with embedded live prices (30s auto-refresh) ─────────────────
-from datetime import timezone, timedelta as _td
-
-_TW = timezone(_td(hours=8))
-
-def _now_tw():
-    return datetime.now(tz=_TW)
-
 def _is_market_open() -> bool:
     tw = _now_tw()
     return tw.weekday() < 5 and (
