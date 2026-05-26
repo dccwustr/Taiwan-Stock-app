@@ -202,6 +202,15 @@ with st.sidebar:
             st.session_state.recent_searches = ([ticker] + rs)[:10]
             st.session_state.view_mode = "search"
 
+    _vm_search_active = st.session_state.view_mode == "search"
+    if st.button("🔍 搜尋記錄  ✓" if _vm_search_active else "🔍 搜尋記錄",
+                 use_container_width=True,
+                 type="primary" if _vm_search_active else "secondary",
+                 key="nav_search_inline"):
+        st.session_state.view_mode = "search"; st.rerun()
+
+    st.divider()
+
     # ── 新增持股 ──────────────────────────────────────────────────────────────
     # View toggle buttons
     vm = st.session_state.view_mode
@@ -209,7 +218,6 @@ with st.sidebar:
         ("picks",    "🎯 精選潛力股"),
         ("holdings", "💼 我的持股"),
         ("watchlist","⭐ 追蹤清單"),
-        ("search",   "🔍 搜尋記錄"),
     ]
     for _vkey, _vlabel in _views:
         _active = vm == _vkey
