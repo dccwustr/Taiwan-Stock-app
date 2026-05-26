@@ -642,7 +642,6 @@ with _ref_col:
     if st.button("↻", key="top_refresh", help="重新整理", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
-st.divider()
 
 
 # ── Main view: Search history ────────────────────────────────────────────────
@@ -732,7 +731,6 @@ if st.session_state.view_mode == "holdings":
 
 # ── Picks view header ────────────────────────────────────────────────────────
 st.markdown("## 🎯 今日精選潛力股　<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>零股小資模式</span>", unsafe_allow_html=True)
-st.divider()
 
 # ── Chip helper ───────────────────────────────────────────────────────────────
 CHIP_CSS = {"NVIDIA":"nv","AMD":"amd","Apple":"apl","AI":"ai","CoWoS":"cow"}
