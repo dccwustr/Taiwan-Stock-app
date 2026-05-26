@@ -161,6 +161,7 @@ def load_data():
 if "view_mode"       not in st.session_state: st.session_state.view_mode       = "picks"
 if "custom_holdings" not in st.session_state: st.session_state.custom_holdings = {}
 if "hidden_holdings" not in st.session_state: st.session_state.hidden_holdings = set()
+if "search_ticker"   not in st.session_state: st.session_state.search_ticker   = None
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -171,7 +172,21 @@ with st.sidebar:
         st.cache_data.clear()
         st.rerun()
 
+    # ── 即時查詢 ──────────────────────────────────────────────────────────────
     st.divider()
+    st.markdown("**🔍 查詢個股**")
+    qc1, qc2 = st.columns([3, 1])
+    query_input = qc1.text_input("q", placeholder="輸入代號，如 2454",
+                                  label_visibility="collapsed", key="query_input")
+    if qc2.button("查", use_container_width=True):
+        raw = query_input.strip().upper()
+        if raw:
+            st.session_state.search_ticker = raw + ".TW" if not raw.endswith(".TW") else raw
+    if st.session_state.search_ticker and st.button("✕ 清除查詢", use_container_width=True):
+        st.session_state.search_ticker = None
+        st.rerun()
+
+    search_result_box = st.container()
 
     # Settings
     top_n     = st.slider("推薦數量", 3, 8, 5)
@@ -241,6 +256,53 @@ all_news = data["news"]
 cat_sc   = data["catalyst"]
 foreign  = data["foreign"]
 mkt      = data["market"]
+
+# ── Search result ─────────────────────────────────────────────────────────────
+_sticker = st.session_state.get("search_ticker")
+if _sticker:
+    if _sticker not in prices:
+        _extra = fetch_prices_batch([_sticker], period="3mo")
+        if _extra:
+            prices.update(_extra)
+    _sdf  = prices.get(_sticker)
+    _sres = score_stock(_sticker, _sdf, cat_sc.get(_sticker, 0), foreign.get(_sticker, 0))
+    _slive = fetch_live_prices([_sticker])
+    _sd   = _slive.get(_sticker)
+
+    with search_result_box:
+        if _sres:
+            _sname = TECH_UNIVERSE.get(_sticker, {}).get("name", _sticker.replace(".TW",""))
+            _sen   = TECH_UNIVERSE.get(_sticker, {}).get("en", "")
+            st.markdown(f"**{_sticker.replace('.TW','')} {_sname}** {_sen}")
+
+            if _sd and _sd["price"] > 0:
+                _up  = _sd["chg"] >= 0
+                _lc  = "#ef5350" if _up else "#00c853"
+                _arr = "▲" if _up else "▼"
+                st.markdown(
+                    f'<span style="font-size:22px;font-weight:800;color:{_lc}">NT${_sd["price"]:.1f}</span>'
+                    f'<span style="font-size:14px;color:{_lc}"> {_arr}{abs(_sd["chg_pct"]):.2f}%</span>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.caption(f"最近收盤 NT${_sres['last_price']:.1f}")
+
+            _sc = _sres["score"]
+            if _sc >= 60:
+                st.success(f"✅ 建議買入　信心 {_sc}/100")
+            elif _sc >= 45:
+                st.warning(f"🟡 條件不足，觀望　信心 {_sc}/100")
+            else:
+                st.error(f"❌ 不建議買進　信心 {_sc}/100")
+
+            st.caption(f"🎯 目標 NT${_sres['target_price']:.1f}（+{_sres['target_pct']:.0f}%）")
+            st.caption(f"🛡 止損 NT${_sres['stop_loss']:.1f}（{_sres['stop_pct']:.1f}%）")
+            st.caption(f"RSI {_sres['rsi']:.0f}　量比 {_sres['vol_ratio']:.1f}x　5日 {_sres['mom5d']:+.1f}%")
+            _scats = get_catalyst_labels(_sticker, all_news)
+            if _scats:
+                st.caption("📌 " + "　".join(_scats[:2]))
+        else:
+            st.warning("找不到資料，請確認代號是否正確（格式：2330）")
 
 # ── Fill holdings in sidebar ──────────────────────────────────────────────────
 custom = st.session_state.get("custom_holdings", {})
