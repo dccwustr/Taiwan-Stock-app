@@ -516,46 +516,41 @@ def render_stock_cards(picks, prices, show_chart):
             live_badge = ('<span class="live-badge">● LIVE</span>' if is_open and d["live"]
                          else '<span class="closed-badge">收盤價</span>')
 
-            live_block = f"""
-  <div class="live-in-card">
-    <span class="live-big" style="color:{lc}">{lp:.1f}</span>
-    <span class="live-chg-in" style="color:{lc}">{arrow} {abs(chg):.1f} ({abs(chg_pct):.2f}%)</span>
-    {status_tag}
-    {live_badge}
-    <span class="live-vol">{vol:,}千股　{upd}</span>
-  </div>"""
+            live_block = (
+                f'<div class="live-in-card">'
+                f'<span class="live-big" style="color:{lc}">{lp:.1f}</span>'
+                f'<span class="live-chg-in" style="color:{lc}">{arrow} {abs(chg):.1f} ({abs(chg_pct):.2f}%)</span>'
+                f'{status_tag}{live_badge}'
+                f'<span class="live-vol">{vol:,}千股　{upd}</span>'
+                f'</div>'
+            )
         else:
             live_block = '<div class="live-in-card"><span style="color:#555">等待開盤資料…</span></div>'
 
         bar_w = int(sc)
-        st.markdown(f"""
-<div class="card">
-  <div class="card-top">
-    <div class="rank">{rank}</div>
-    <span class="stock-name">{p['ticker'].replace('.TW','')} {p['name']}</span>
-    <span class="stock-sub">{p['en']}</span>
-  </div>
-
-  {live_block}
-
-  <div class="price-row">
-    <span class="arrow">目標</span>
-    <span class="price-target">NT${p['target_price']:.1f}</span>
-    <span class="pct-badge">+{p['target_pct']:.0f}%</span>
-  </div>
-  <div class="stop-row">💰 建議買入 NT${p['last_price']:.1f}　　🛡 止損 NT${p['stop_loss']:.1f}　({p['stop_pct']:.1f}%)</div>
-
-  <div class="info-row">{'　'.join(f'<span>{x}</span>' for x in info_parts)}</div>
-
-  <div class="catalyst">📌 {cat_str}</div>
-  <div class="sell-note">{sell}</div>
-
-  <div class="conf-wrap">
-    <div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div>
-  </div>
-  <div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>
-</div>
-""", unsafe_allow_html=True)
+        info_html = '　'.join(f'<span>{x}</span>' for x in info_parts)
+        st.markdown(
+            f'<div class="card">'
+            f'<div class="card-top">'
+            f'<div class="rank">{rank}</div>'
+            f'<span class="stock-name">{p["ticker"].replace(".TW","")} {p["name"]}</span>'
+            f'<span class="stock-sub">{p["en"]}</span>'
+            f'</div>'
+            f'{live_block}'
+            f'<div class="price-row">'
+            f'<span class="arrow">目標</span>'
+            f'<span class="price-target">NT${p["target_price"]:.1f}</span>'
+            f'<span class="pct-badge">+{p["target_pct"]:.0f}%</span>'
+            f'</div>'
+            f'<div class="stop-row">💰 建議買入 NT${p["last_price"]:.1f}　　🛡 止損 NT${p["stop_loss"]:.1f}　({p["stop_pct"]:.1f}%)</div>'
+            f'<div class="info-row">{info_html}</div>'
+            f'<div class="catalyst">📌 {cat_str}</div>'
+            f'<div class="sell-note">{sell}</div>'
+            f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
+            f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
 
         if show_chart:
             df = prices.get(p["ticker"])
