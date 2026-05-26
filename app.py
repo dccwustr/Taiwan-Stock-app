@@ -12,6 +12,7 @@ _TW = timezone(timedelta(hours=8))
 def _now_tw(): return datetime.now(tz=_TW)
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -291,6 +292,41 @@ with st.sidebar:
     st.divider()
     st.caption("資料來源：鉅亨網・TWSE・Yahoo Finance")
     st.caption("⚠ 非投資建議，僅供參考")
+
+# ── Auto-close sidebar on mobile after button click ───────────────────────────
+components.html("""
+<script>
+(function() {
+  var doc;
+  try { doc = window.parent.document; } catch(e) { return; }
+
+  function closeSidebar() {
+    var btn =
+      doc.querySelector('[data-testid="stSidebarCollapseButton"] button') ||
+      doc.querySelector('button[data-testid="baseButton-headerNoPadding"]');
+    if (btn) { btn.click(); return; }
+    doc.body.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true, cancelable:true}));
+  }
+
+  function attach() {
+    var sidebar = doc.querySelector('section[data-testid="stSidebar"]');
+    if (!sidebar) return;
+    sidebar.querySelectorAll('button').forEach(function(b) {
+      if (b._sc) return;
+      b._sc = true;
+      b.addEventListener('click', function() {
+        if (this.hasAttribute('aria-expanded')) return; // leave expanders alone
+        setTimeout(closeSidebar, 250);
+      });
+    });
+  }
+
+  setTimeout(attach, 600);
+  new MutationObserver(function() { setTimeout(attach, 100); })
+    .observe(doc.body, {childList:true, subtree:true});
+})();
+</script>
+""", height=0)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 with st.spinner("載入中…"):
