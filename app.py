@@ -202,13 +202,6 @@ with st.sidebar:
             st.session_state.recent_searches = ([ticker] + rs)[:10]
             st.session_state.view_mode = "search"
 
-    # Settings
-    top_n     = st.slider("推薦數量", 3, 8, 5)
-    min_score = st.slider("最低評分門檻", 30, 75, 40)
-    show_chart = st.checkbox("顯示K線圖", value=False)
-
-    st.divider()
-
     # ── 新增持股 ──────────────────────────────────────────────────────────────
     # View toggle buttons
     vm = st.session_state.view_mode
@@ -266,6 +259,11 @@ with st.sidebar:
 
     sidebar_content = st.container()
 
+    st.divider()
+    st.divider()
+    top_n     = st.slider("推薦數量", 3, 8, 5)
+    min_score = st.slider("最低評分門檻", 30, 75, 40)
+    show_chart = st.checkbox("顯示K線圖", value=False)
     st.divider()
     st.caption("資料來源：鉅亨網・TWSE・Yahoo Finance")
     st.caption("⚠ 非投資建議，僅供參考")
