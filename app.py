@@ -165,6 +165,21 @@ st.markdown("""
     outline: none !important;
   }
 
+  /* Minimalist top refresh button */
+  div[data-testid="stHorizontalBlock"]:has(.refresh-sentinel) button {
+    background: transparent !important;
+    border: 1px solid #2a2a2a !important;
+    color: #555 !important;
+    font-size: 1rem !important;
+    padding: 0.1rem 0.3rem !important;
+    min-height: 1.8rem !important;
+    box-shadow: none !important;
+  }
+  div[data-testid="stHorizontalBlock"]:has(.refresh-sentinel) button:hover {
+    color: #bbb !important;
+    border-color: #555 !important;
+  }
+
   /* News */
   .news-line {
     padding: 5px 0 5px 10px; border-left: 2px solid #1a56db;
@@ -199,17 +214,8 @@ if "_close_sidebar"   not in st.session_state: st.session_state._close_sidebar  
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    # Compact header: title/date left, refresh right
-    _hc1, _hc2 = st.columns([3, 1])
-    with _hc1:
-        st.markdown("#### 📈 台股分析")
-        st.caption(_now_tw().strftime('%Y-%m-%d  %H:%M'))
-    with _hc2:
-        st.markdown("<div style='margin-top:16px'></div>", unsafe_allow_html=True)
-        if st.button("🔄", use_container_width=True, help="重新整理"):
-            st.cache_data.clear()
-            st.session_state._close_sidebar = True
-            st.rerun()
+    st.markdown("#### 📈 台股分析")
+    st.caption(_now_tw().strftime('%Y-%m-%d  %H:%M'))
 
     st.divider()
 
@@ -616,19 +622,26 @@ def render_query_card(ticker, sres, live_d, key_sfx):
                 st.session_state.watchlist.append(ticker)
         st.rerun()
 
-# ── Market index bar (always shown) ──────────────────────────────────────────
-if mkt:
-    idx_val = mkt.get("index", "—")
-    idx_chg = mkt.get("change", "—")
-    is_up   = not str(idx_chg).startswith("-")
-    mkt_col = "#ef5350" if is_up else "#00c853"
-    st.markdown(
-        f'<span style="color:#888;font-size:13px">加權指數　</span>'
-        f'<span style="font-size:16px;font-weight:700;color:#f0f0f0">{idx_val}</span>'
-        f'　<span style="color:{mkt_col};font-size:14px">{idx_chg}</span>'
-        f'　<span style="color:#555;font-size:12px">｜　更新 {data["ts"]}　｜　漲停 ±10%</span>',
-        unsafe_allow_html=True
-    )
+# ── Market index bar + minimalist refresh ────────────────────────────────────
+_mi_col, _ref_col = st.columns([11, 1])
+with _mi_col:
+    if mkt:
+        idx_val = mkt.get("index", "—")
+        idx_chg = mkt.get("change", "—")
+        is_up   = not str(idx_chg).startswith("-")
+        mkt_col = "#ef5350" if is_up else "#00c853"
+        st.markdown(
+            f'<span style="color:#888;font-size:13px">加權指數　</span>'
+            f'<span style="font-size:16px;font-weight:700;color:#f0f0f0">{idx_val}</span>'
+            f'　<span style="color:{mkt_col};font-size:14px">{idx_chg}</span>'
+            f'　<span style="color:#555;font-size:12px">｜　更新 {data["ts"]}　｜　漲停 ±10%</span>',
+            unsafe_allow_html=True
+        )
+with _ref_col:
+    st.markdown('<span class="refresh-sentinel"></span>', unsafe_allow_html=True)
+    if st.button("↻", key="top_refresh", help="重新整理", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
 st.divider()
 
 

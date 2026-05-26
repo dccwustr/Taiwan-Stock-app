@@ -263,7 +263,7 @@ def fetch_live_prices(tickers: List[str]) -> Dict[str, Dict]:
         raw = yf.download(
             tickers=" ".join(tickers),
             period="2d",
-            interval="2m",
+            interval="1m",
             progress=False,
             auto_adjust=True,
         )
