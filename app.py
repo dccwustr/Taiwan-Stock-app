@@ -178,7 +178,7 @@ with st.sidebar:
     qc1, qc2 = st.columns([3, 1])
     query_input = qc1.text_input("q", placeholder="輸入代號，如 2454",
                                   label_visibility="collapsed", key="query_input")
-    if qc2.button("查", use_container_width=True):
+    if qc2.button("Go", use_container_width=True):
         raw = query_input.strip().upper()
         if raw:
             st.session_state.search_ticker = raw + ".TW" if not raw.endswith(".TW") else raw
