@@ -12,7 +12,6 @@ _TW = timezone(timedelta(hours=8))
 def _now_tw(): return datetime.now(tz=_TW)
 
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -300,44 +299,32 @@ with st.sidebar:
     st.caption("資料來源：鉅亨網・TWSE・Yahoo Finance")
     st.caption("⚠ 非投資建議，僅供參考")
 
-# ── Auto-close sidebar on mobile (fires AFTER rerun completes) ────────────────
+# ── Auto-close sidebar on mobile (fires in main document, no iframe needed) ───
 if st.session_state.get("_close_sidebar"):
     st.session_state._close_sidebar = False
-    components.html("""
-<script>
-(function() {
-  function tryClose() {
-    var d;
-    try { d = window.parent.document; } catch(e) { return; }
-    // Try every known selector across Streamlit versions
-    var candidates = [
-      d.querySelector('[data-testid="stSidebarCollapseButton"] button'),
-      d.querySelector('[data-testid="stSidebarHeader"] button'),
-      d.querySelector('section[data-testid="stSidebar"] header button'),
-      d.querySelector('section[data-testid="stSidebar"] > div > div > button'),
-      d.querySelector('button[aria-label="Close sidebar"]'),
-      d.querySelector('button[aria-label="Collapse sidebar"]'),
-    ];
-    for (var i = 0; i < candidates.length; i++) {
-      if (candidates[i]) { candidates[i].click(); return true; }
+    # img onerror runs directly in the page document — no cross-origin issue.
+    # Strategy: find the first button in the sidebar that is NOT inside the
+    # user-content area (i.e. the sidebar's own collapse/header button).
+    st.markdown("""
+<img src="x" onerror="(function(){
+  function close(){
+    var d=document;
+    var sidebar=d.querySelector('section[data-testid=stSidebar]');
+    var uc=d.querySelector('[data-testid=stSidebarUserContent]');
+    if(sidebar&&uc){
+      var btns=sidebar.querySelectorAll('button');
+      for(var i=0;i<btns.length;i++){
+        if(!uc.contains(btns[i])){btns[i].click();return;}
+      }
     }
-    // Last resort: click main content area (closes mobile overlay)
-    var main = d.querySelector('[data-testid="stMain"]')
-             || d.querySelector('.main')
-             || d.querySelector('[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"])');
-    if (main) {
-      main.dispatchEvent(new MouseEvent('mousedown', {bubbles:true, clientX:200, clientY:200}));
-      return true;
-    }
-    return false;
+    var b=d.querySelector('[data-testid=stSidebarCollapseButton] button')
+        ||d.querySelector('[data-testid=stSidebarCollapseButton]')
+        ||d.querySelector('[data-testid=stSidebarHeader] button');
+    if(b){b.click();}
   }
-  // Retry a few times to handle varying Streamlit render timing
-  tryClose();
-  setTimeout(tryClose, 150);
-  setTimeout(tryClose, 400);
-})();
-</script>
-""", height=1)
+  close();setTimeout(close,200);setTimeout(close,500);
+})()" style="display:none">
+""", unsafe_allow_html=True)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 with st.spinner("載入中…"):
