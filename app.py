@@ -251,45 +251,6 @@ with st.sidebar:
             st.session_state._close_sidebar = True
             st.rerun()
 
-    with st.expander("＋ 新增 / 編輯持股"):
-        st.caption("輸入股票代號（如 2454）、股數、買進均價")
-        col1, col2, col3 = st.columns([2, 2, 2])
-        new_code  = col1.text_input("代號", placeholder="2454",  label_visibility="collapsed")
-        new_shares= col2.text_input("股數", placeholder="100",   label_visibility="collapsed")
-        new_cost  = col3.text_input("買進價", placeholder="850", label_visibility="collapsed")
-        if st.button("新增", use_container_width=True):
-            code = new_code.strip().upper()
-            if code:
-                ticker = code + ".TW" if not code.endswith(".TW") else code
-                try:
-                    st.session_state.custom_holdings[ticker] = {
-                        "shares": float(new_shares) if new_shares else 0,
-                        "cost":   float(new_cost)   if new_cost   else 0,
-                    }
-                    st.rerun()
-                except ValueError:
-                    st.error("請輸入有效數字")
-
-        # Show existing custom holdings with delete buttons
-        for t, v in list(st.session_state.custom_holdings.items()):
-            c1, c2 = st.columns([4, 1])
-            c1.caption(f"{t.replace('.TW','')}　{v['shares']:.0f}股　成本 {v['cost']:.1f}")
-            if c2.button("✕", key=f"quickdel_{t}"):
-                del st.session_state.custom_holdings[t]
-                st.rerun()
-
-        # Restore hidden holdings
-        hidden_set = st.session_state.get("hidden_holdings", set())
-        if hidden_set:
-            st.caption("已移除的持股：")
-            for t in list(hidden_set):
-                name = MY_HOLDINGS.get(t, {}).get("name", t.replace(".TW",""))
-                c1, c2 = st.columns([4, 1])
-                c1.caption(f"{t.replace('.TW','')} {name}")
-                if c2.button("↩", key=f"restore_{t}"):
-                    st.session_state.hidden_holdings.discard(t)
-                    st.rerun()
-
     sidebar_content = st.container()
 
     st.divider()
