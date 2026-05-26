@@ -464,6 +464,9 @@ with sidebar_content:
             )
 
 # ── Query card renderer (search result + watchlist) ──────────────────────────
+def conf_color(s):
+    return "#00c853" if s >= 80 else ("#ffd54f" if s >= 60 else "#ef5350")
+
 def render_query_card(ticker, sres, live_d, key_sfx):
     sc        = sres["score"]
     bar_color = conf_color(sc)
@@ -586,9 +589,6 @@ def supply_chips(supply):
         f'<span class="chip {CHIP_CSS[s]}">{s}</span>'
         for s in supply if s in CHIP_CSS
     )
-
-def conf_color(s):
-    return "#00c853" if s >= 80 else ("#ffd54f" if s >= 60 else "#ef5350")
 
 # ── Stock cards with embedded live prices (30s auto-refresh) ─────────────────
 def _is_market_open() -> bool:
