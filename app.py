@@ -12,6 +12,7 @@ _TW = timezone(timedelta(hours=8))
 def _now_tw(): return datetime.now(tz=_TW)
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -299,32 +300,59 @@ with st.sidebar:
     st.caption("資料來源：鉅亨網・TWSE・Yahoo Finance")
     st.caption("⚠ 非投資建議，僅供參考")
 
-# ── Auto-close sidebar on mobile (fires in main document, no iframe needed) ───
+# ── Auto-close sidebar on mobile ──────────────────────────────────────────────
 if st.session_state.get("_close_sidebar"):
     st.session_state._close_sidebar = False
-    # img onerror runs directly in the page document — no cross-origin issue.
-    # Strategy: find the first button in the sidebar that is NOT inside the
-    # user-content area (i.e. the sidebar's own collapse/header button).
-    st.markdown("""
-<img src="x" onerror="(function(){
-  function close(){
-    var d=document;
-    var sidebar=d.querySelector('section[data-testid=stSidebar]');
-    var uc=d.querySelector('[data-testid=stSidebarUserContent]');
-    if(sidebar&&uc){
-      var btns=sidebar.querySelectorAll('button');
+    # components.v1.html iframe uses srcdoc with allow-same-origin, so
+    # window.parent.document is accessible — no CSP restriction.
+    components.html("""
+<script>
+(function(){
+  var d = window.parent.document;
+
+  function isSidebarOpen(){
+    var sb = d.querySelector('section[data-testid="stSidebar"]');
+    if(!sb) return false;
+    return sb.getBoundingClientRect().width > 50;
+  }
+
+  function tryClose(){
+    if(!isSidebarOpen()) return;
+    // 1. Mobile backdrop overlay
+    var backdrop = d.querySelector('[data-testid="stSidebarBackdrop"]');
+    if(backdrop){ backdrop.click(); return; }
+    // 2. Any button in sidebar NOT inside user content area
+    var sb = d.querySelector('section[data-testid="stSidebar"]');
+    var uc = d.querySelector('[data-testid="stSidebarUserContent"]');
+    if(sb && uc){
+      var btns = sb.querySelectorAll('button');
       for(var i=0;i<btns.length;i++){
-        if(!uc.contains(btns[i])){btns[i].click();return;}
+        if(!uc.contains(btns[i])){ btns[i].click(); return; }
       }
     }
-    var b=d.querySelector('[data-testid=stSidebarCollapseButton] button')
-        ||d.querySelector('[data-testid=stSidebarCollapseButton]')
-        ||d.querySelector('[data-testid=stSidebarHeader] button');
-    if(b){b.click();}
+    // 3. Named collapse selectors
+    var sels = [
+      '[data-testid="stSidebarCollapseButton"] button',
+      '[data-testid="stSidebarCollapseButton"]',
+      '[data-testid="stSidebarHeader"] button',
+      'button[aria-label="Close sidebar"]'
+    ];
+    for(var j=0;j<sels.length;j++){
+      var b = d.querySelector(sels[j]);
+      if(b){ b.click(); return; }
+    }
+    // 4. Last resort: mousedown on main content
+    var main = d.querySelector('[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"])');
+    if(main){ main.dispatchEvent(new MouseEvent('mousedown',{bubbles:true})); }
   }
-  close();setTimeout(close,200);setTimeout(close,500);
-})()" style="display:none">
-""", unsafe_allow_html=True)
+
+  tryClose();
+  setTimeout(tryClose, 300);
+  setTimeout(tryClose, 700);
+  setTimeout(tryClose, 1500);
+})();
+</script>
+""", height=0)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 with st.spinner("載入中…"):
@@ -675,6 +703,44 @@ if st.session_state.view_mode == "watchlist":
 # ── Main view: Holdings ───────────────────────────────────────────────────────
 if st.session_state.view_mode == "holdings":
     st.markdown("## 💼 我的持股")
+
+    with st.expander("＋ 新增 / 編輯持股", expanded=False):
+        st.caption("輸入股票代號（如 2454）、股數、買進均價")
+        _hc1, _hc2, _hc3 = st.columns([2, 2, 2])
+        _h_code   = _hc1.text_input("代號",   placeholder="2454",  label_visibility="collapsed", key="hp_code")
+        _h_shares = _hc2.text_input("股數",   placeholder="100",   label_visibility="collapsed", key="hp_shares")
+        _h_cost   = _hc3.text_input("買進價", placeholder="850",   label_visibility="collapsed", key="hp_cost")
+        if st.button("新增", use_container_width=True, key="hp_add"):
+            _code = _h_code.strip().upper()
+            if _code:
+                _hticker = _code + ".TW" if not _code.endswith(".TW") else _code
+                try:
+                    st.session_state.custom_holdings[_hticker] = {
+                        "shares": float(_h_shares) if _h_shares else 0,
+                        "cost":   float(_h_cost)   if _h_cost   else 0,
+                    }
+                    st.rerun()
+                except ValueError:
+                    st.error("請輸入有效數字")
+
+        for _ht, _hv in list(st.session_state.custom_holdings.items()):
+            _hd1, _hd2 = st.columns([4, 1])
+            _hd1.caption(f"{_ht.replace('.TW','')}　{_hv['shares']:.0f}股　成本 {_hv['cost']:.1f}")
+            if _hd2.button("✕", key=f"hp_del_{_ht}"):
+                del st.session_state.custom_holdings[_ht]
+                st.rerun()
+
+        _h_hidden = st.session_state.get("hidden_holdings", set())
+        if _h_hidden:
+            st.caption("已移除的持股：")
+            for _ht in list(_h_hidden):
+                _hname = MY_HOLDINGS.get(_ht, {}).get("name", _ht.replace(".TW",""))
+                _hr1, _hr2 = st.columns([4, 1])
+                _hr1.caption(f"{_ht.replace('.TW','')} {_hname}")
+                if _hr2.button("↩", key=f"hp_restore_{_ht}"):
+                    st.session_state.hidden_holdings.discard(_ht)
+                    st.rerun()
+
     for h in holdings_info:
         render_holding_card(h)
     st.divider()
