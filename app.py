@@ -162,6 +162,7 @@ if "view_mode"       not in st.session_state: st.session_state.view_mode       =
 if "custom_holdings" not in st.session_state: st.session_state.custom_holdings = {}
 if "hidden_holdings" not in st.session_state: st.session_state.hidden_holdings = set()
 if "search_ticker"   not in st.session_state: st.session_state.search_ticker   = None
+if "watchlist"       not in st.session_state: st.session_state.watchlist       = []
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -186,7 +187,16 @@ with st.sidebar:
         st.session_state.search_ticker = None
         st.rerun()
 
-    search_result_box = st.container()
+    # Compact watchlist in sidebar
+    if st.session_state.watchlist:
+        st.caption("⭐ 追蹤中")
+        for _wt in list(st.session_state.watchlist):
+            _wn = TECH_UNIVERSE.get(_wt, {}).get("name", _wt.replace(".TW",""))
+            _wc1, _wc2 = st.columns([4, 1])
+            _wc1.caption(f"{_wt.replace('.TW','')} {_wn}")
+            if _wc2.button("✕", key=f"rmwatch_side_{_wt}"):
+                st.session_state.watchlist.remove(_wt)
+                st.rerun()
 
     # Settings
     top_n     = st.slider("推薦數量", 3, 8, 5)
@@ -257,52 +267,32 @@ cat_sc   = data["catalyst"]
 foreign  = data["foreign"]
 mkt      = data["market"]
 
-# ── Search result ─────────────────────────────────────────────────────────────
+# ── Prepare search + watchlist data ──────────────────────────────────────────
 _sticker = st.session_state.get("search_ticker")
+
+# Pre-fetch price data for search ticker and any watchlist tickers not yet loaded
+_need = [t for t in ([_sticker] if _sticker else []) + st.session_state.watchlist if t and t not in prices]
+if _need:
+    prices.update(fetch_prices_batch(_need, period="3mo"))
+
+# Score search ticker
+_sres = None
 if _sticker:
-    if _sticker not in prices:
-        _extra = fetch_prices_batch([_sticker], period="3mo")
-        if _extra:
-            prices.update(_extra)
-    _sdf  = prices.get(_sticker)
-    _sres = score_stock(_sticker, _sdf, cat_sc.get(_sticker, 0), foreign.get(_sticker, 0))
-    _slive = fetch_live_prices([_sticker])
-    _sd   = _slive.get(_sticker)
+    _sres = score_stock(_sticker, prices.get(_sticker), cat_sc.get(_sticker, 0), foreign.get(_sticker, 0))
+    if _sres:
+        _sres["catalysts"] = get_catalyst_labels(_sticker, all_news)
 
-    with search_result_box:
-        if _sres:
-            _sname = TECH_UNIVERSE.get(_sticker, {}).get("name", _sticker.replace(".TW",""))
-            _sen   = TECH_UNIVERSE.get(_sticker, {}).get("en", "")
-            st.markdown(f"**{_sticker.replace('.TW','')} {_sname}** {_sen}")
+# Score watchlist tickers
+_watch_results = {}
+for _wt in st.session_state.watchlist:
+    _wr = score_stock(_wt, prices.get(_wt), cat_sc.get(_wt, 0), foreign.get(_wt, 0))
+    if _wr:
+        _wr["catalysts"] = get_catalyst_labels(_wt, all_news)
+        _watch_results[_wt] = _wr
 
-            if _sd and _sd["price"] > 0:
-                _up  = _sd["chg"] >= 0
-                _lc  = "#ef5350" if _up else "#00c853"
-                _arr = "▲" if _up else "▼"
-                st.markdown(
-                    f'<span style="font-size:22px;font-weight:800;color:{_lc}">NT${_sd["price"]:.1f}</span>'
-                    f'<span style="font-size:14px;color:{_lc}"> {_arr}{abs(_sd["chg_pct"]):.2f}%</span>',
-                    unsafe_allow_html=True
-                )
-            else:
-                st.caption(f"最近收盤 NT${_sres['last_price']:.1f}")
-
-            _sc = _sres["score"]
-            if _sc >= 60:
-                st.success(f"✅ 建議買入　信心 {_sc}/100")
-            elif _sc >= 45:
-                st.warning(f"🟡 條件不足，觀望　信心 {_sc}/100")
-            else:
-                st.error(f"❌ 不建議買進　信心 {_sc}/100")
-
-            st.caption(f"🎯 目標 NT${_sres['target_price']:.1f}（+{_sres['target_pct']:.0f}%）")
-            st.caption(f"🛡 止損 NT${_sres['stop_loss']:.1f}（{_sres['stop_pct']:.1f}%）")
-            st.caption(f"RSI {_sres['rsi']:.0f}　量比 {_sres['vol_ratio']:.1f}x　5日 {_sres['mom5d']:+.1f}%")
-            _scats = get_catalyst_labels(_sticker, all_news)
-            if _scats:
-                st.caption("📌 " + "　".join(_scats[:2]))
-        else:
-            st.warning("找不到資料，請確認代號是否正確（格式：2330）")
+# Batch live prices for search + watchlist in one call
+_live_tickers = [t for t in ([_sticker] if _sticker and _sres else []) + st.session_state.watchlist if t]
+_query_live = fetch_live_prices(_live_tickers) if _live_tickers else {}
 
 # ── Fill holdings in sidebar ──────────────────────────────────────────────────
 custom = st.session_state.get("custom_holdings", {})
@@ -473,6 +463,75 @@ with sidebar_content:
                 unsafe_allow_html=True
             )
 
+# ── Query card renderer (search result + watchlist) ──────────────────────────
+def render_query_card(ticker, sres, live_d, key_sfx):
+    sc        = sres["score"]
+    bar_color = conf_color(sc)
+    mom_cls   = "up" if sres["mom5d"] >= 0 else "down"
+    cats      = sres.get("catalysts") or ["技術面分析"]
+    cat_str   = "　".join(cats[:2])
+
+    if sc >= 60:   verdict, vcolor = "✅ 建議買入",       "#ef5350"
+    elif sc >= 45: verdict, vcolor = "🟡 條件不足，觀望",  "#ffd54f"
+    else:          verdict, vcolor = "❌ 不建議買進",      "#00c853"
+
+    if live_d and live_d["price"] > 0:
+        lp, chg, chg_pct = live_d["price"], live_d["chg"], live_d["chg_pct"]
+        lc  = "#ef5350" if chg >= 0 else "#00c853"
+        arr = "▲" if chg >= 0 else "▼"
+        live_html = (
+            f'<div class="live-in-card">'
+            f'<span class="live-big" style="color:{lc}">{lp:.1f}</span>'
+            f'<span class="live-chg-in" style="color:{lc}">{arr} {abs(chg):.1f} ({abs(chg_pct):.2f}%)</span>'
+            f'<span class="closed-badge">{live_d["time"]}</span>'
+            f'</div>'
+        )
+    else:
+        live_html = f'<div class="live-in-card"><span style="color:#555">收盤 NT${sres["last_price"]:.1f}</span></div>'
+
+    st.markdown(
+        f'<div class="card">'
+        f'<div class="card-top">'
+        f'<span class="stock-name">{ticker.replace(".TW","")} {sres["name"]}</span>'
+        f'<span class="stock-sub">{sres["en"]}</span>'
+        f'<span style="font-size:13px;color:{vcolor};font-weight:700;margin-left:auto">{verdict}</span>'
+        f'</div>'
+        f'{live_html}'
+        f'<div class="price-row">'
+        f'<span class="arrow">目標</span>'
+        f'<span class="price-target">NT${sres["target_price"]:.1f}</span>'
+        f'<span class="pct-badge">+{sres["target_pct"]:.0f}%</span>'
+        f'</div>'
+        f'<div class="stop-row">🛡 止損 NT${sres["stop_loss"]:.1f}　({sres["stop_pct"]:.1f}%)</div>'
+        f'<div class="info-row">'
+        f'<span>RSI <span class="info-val">{sres["rsi"]:.0f}</span></span>'
+        f'<span>量比 <span class="info-val">{sres["vol_ratio"]:.1f}x</span></span>'
+        f'<span>5日 <span class="info-val {mom_cls}">{sres["mom5d"]:+.1f}%</span></span>'
+        f'</div>'
+        f'<div class="catalyst">📌 {cat_str}</div>'
+        f'<div class="conf-wrap"><div class="conf-bar" style="width:{int(sc)}%;background:{bar_color}"></div></div>'
+        f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+    # Star / unstar button
+    in_watch = ticker in st.session_state.watchlist
+    c1, c2 = st.columns([1, 1])
+    if c1.button("★ 追蹤中" if in_watch else "☆ 加入追蹤", key=f"star_{key_sfx}", use_container_width=True):
+        if in_watch:
+            st.session_state.watchlist.remove(ticker)
+        else:
+            if ticker not in st.session_state.watchlist:
+                st.session_state.watchlist.append(ticker)
+        st.rerun()
+    if c2.button("✕ 清除", key=f"clr_{key_sfx}", use_container_width=True):
+        if ticker == st.session_state.get("search_ticker"):
+            st.session_state.search_ticker = None
+        else:
+            st.session_state.watchlist.remove(ticker)
+        st.rerun()
+
 # ── Market index bar (always shown) ──────────────────────────────────────────
 if mkt:
     idx_val = mkt.get("index", "—")
@@ -487,6 +546,23 @@ if mkt:
         unsafe_allow_html=True
     )
 st.divider()
+
+# ── Search result (main screen) ───────────────────────────────────────────────
+if _sticker and _sres:
+    st.markdown("## 🔍 搜尋結果")
+    render_query_card(_sticker, _sres, _query_live.get(_sticker), "search")
+    st.divider()
+elif _sticker and not _sres:
+    st.warning("找不到資料，請確認代號是否正確（格式：2330）")
+    st.divider()
+
+# ── Watchlist (main screen) ───────────────────────────────────────────────────
+_watch_show = [t for t in st.session_state.watchlist if t != _sticker and t in _watch_results]
+if _watch_show:
+    st.markdown("## ⭐ 追蹤清單")
+    for _wt in _watch_show:
+        render_query_card(_wt, _watch_results[_wt], _query_live.get(_wt), f"w_{_wt}")
+    st.divider()
 
 # ── Main view: Holdings ───────────────────────────────────────────────────────
 if st.session_state.view_mode == "holdings":
