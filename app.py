@@ -722,6 +722,20 @@ def render_stock_cards(picks, prices, show_chart):
                 )
                 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
+        # ── Star button ───────────────────────────────────────────────────────
+        _in_w = p["ticker"] in st.session_state.watchlist
+        if st.button(
+            "★ 追蹤中" if _in_w else "☆ 加入追蹤",
+            key=f"star_pick_{p['ticker']}",
+            use_container_width=True,
+        ):
+            if _in_w:
+                st.session_state.watchlist.remove(p["ticker"])
+            else:
+                if p["ticker"] not in st.session_state.watchlist:
+                    st.session_state.watchlist.append(p["ticker"])
+            st.rerun()
+
 if not picks:
     st.warning("目前無符合條件的股票，請降低評分門檻後重試。")
 else:
