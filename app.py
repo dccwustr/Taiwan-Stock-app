@@ -494,45 +494,49 @@ def render_query_card(ticker, sres, live_d, key_sfx):
 
     in_watch = ticker in st.session_state.watchlist
     _star = "★" if in_watch else "☆"
-    _scol = "#ffd54f" if in_watch else "#444"
+    _scol = "#ffd54f" if in_watch else "#888"
 
-    card_col, star_col = st.columns([10, 1])
-    with card_col:
-        st.markdown(
-            f'<div class="card">'
-            f'<div class="card-top">'
-            f'<span class="stock-name">{ticker.replace(".TW","")} {sres["name"]}</span>'
-            f'<span class="stock-sub">{sres["en"]}</span>'
-            f'<span style="font-size:13px;color:{vcolor};font-weight:700;margin-left:auto">{verdict}</span>'
-            f'<span style="font-size:20px;color:{_scol};line-height:1;margin-left:10px">{_star}</span>'
-            f'</div>'
-            f'{live_html}'
-            f'<div class="price-row">'
-            f'<span class="arrow">目標</span>'
-            f'<span class="price-target">NT${sres["target_price"]:.1f}</span>'
-            f'<span class="pct-badge">+{sres["target_pct"]:.0f}%</span>'
-            f'</div>'
-            f'<div class="stop-row">🛡 止損 NT${sres["stop_loss"]:.1f}　({sres["stop_pct"]:.1f}%)</div>'
-            f'<div class="info-row">'
-            f'<span>RSI <span class="info-val">{sres["rsi"]:.0f}</span></span>'
-            f'<span>量比 <span class="info-val">{sres["vol_ratio"]:.1f}x</span></span>'
-            f'<span>5日 <span class="info-val {mom_cls}">{sres["mom5d"]:+.1f}%</span></span>'
-            f'</div>'
-            f'<div class="catalyst">📌 {cat_str}</div>'
-            f'<div class="conf-wrap"><div class="conf-bar" style="width:{int(sc)}%;background:{bar_color}"></div></div>'
-            f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    with star_col:
-        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-        if st.button(_star, key=f"star_{key_sfx}", use_container_width=True, help="追蹤"):
-            if in_watch:
-                st.session_state.watchlist.remove(ticker)
-            else:
-                if ticker not in st.session_state.watchlist:
-                    st.session_state.watchlist.append(ticker)
-            st.rerun()
+    # Button rendered first; card overlays it via negative margin + pointer-events:none
+    _, _sc = st.columns([10, 1])
+    with _sc:
+        _clicked = st.button(_star, key=f"star_{key_sfx}", use_container_width=True, help="追蹤")
+
+    st.markdown(
+        f'<div style="margin-top:-3rem;pointer-events:none">'
+        f'<div class="card">'
+        f'<div class="card-top">'
+        f'<span class="stock-name">{ticker.replace(".TW","")} {sres["name"]}</span>'
+        f'<span class="stock-sub">{sres["en"]}</span>'
+        f'<span style="font-size:13px;color:{vcolor};font-weight:700;margin-left:auto">{verdict}</span>'
+        f'<span style="font-size:20px;color:{_scol};line-height:1;margin-left:10px">{_star}</span>'
+        f'</div>'
+        f'{live_html}'
+        f'<div class="price-row">'
+        f'<span class="arrow">目標</span>'
+        f'<span class="price-target">NT${sres["target_price"]:.1f}</span>'
+        f'<span class="pct-badge">+{sres["target_pct"]:.0f}%</span>'
+        f'</div>'
+        f'<div class="stop-row">🛡 止損 NT${sres["stop_loss"]:.1f}　({sres["stop_pct"]:.1f}%)</div>'
+        f'<div class="info-row">'
+        f'<span>RSI <span class="info-val">{sres["rsi"]:.0f}</span></span>'
+        f'<span>量比 <span class="info-val">{sres["vol_ratio"]:.1f}x</span></span>'
+        f'<span>5日 <span class="info-val {mom_cls}">{sres["mom5d"]:+.1f}%</span></span>'
+        f'</div>'
+        f'<div class="catalyst">📌 {cat_str}</div>'
+        f'<div class="conf-wrap"><div class="conf-bar" style="width:{int(sc)}%;background:{bar_color}"></div></div>'
+        f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+    if _clicked:
+        if in_watch:
+            st.session_state.watchlist.remove(ticker)
+        else:
+            if ticker not in st.session_state.watchlist:
+                st.session_state.watchlist.append(ticker)
+        st.rerun()
 
 # ── Market index bar (always shown) ──────────────────────────────────────────
 if mkt:
@@ -668,75 +672,78 @@ def render_stock_cards(picks, prices, show_chart):
         info_html = '　'.join(f'<span>{x}</span>' for x in info_parts)
         _in_w  = p["ticker"] in st.session_state.watchlist
         _star  = "★" if _in_w else "☆"
-        _scol  = "#ffd54f" if _in_w else "#444"
+        _scol  = "#ffd54f" if _in_w else "#888"
 
-        card_col, star_col = st.columns([10, 1])
-        with card_col:
-            st.markdown(
-                f'<div class="card">'
-                f'<div class="card-top">'
-                f'<div class="rank">{rank}</div>'
-                f'<span class="stock-name">{p["ticker"].replace(".TW","")} {p["name"]}</span>'
-                f'<span class="stock-sub">{p["en"]}</span>'
-                f'<span style="margin-left:auto;font-size:20px;color:{_scol};line-height:1">{_star}</span>'
-                f'</div>'
-                f'{live_block}'
-                f'<div class="price-row">'
-                f'<span class="arrow">目標</span>'
-                f'<span class="price-target">NT${p["target_price"]:.1f}</span>'
-                f'<span class="pct-badge">+{p["target_pct"]:.0f}%</span>'
-                f'</div>'
-                f'<div class="stop-row">💰 建議買入 NT${p["last_price"]:.1f}　　🛡 止損 NT${p["stop_loss"]:.1f}　({p["stop_pct"]:.1f}%)</div>'
-                f'<div class="info-row">{info_html}</div>'
-                f'<div class="catalyst">📌 {cat_str}</div>'
-                f'<div class="sell-note">{sell}</div>'
-                f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
-                f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
+        # Button rendered first; card overlays it via negative margin + pointer-events:none
+        _, _sc = st.columns([10, 1])
+        with _sc:
+            _star_clicked = st.button(_star, key=f"star_pick_{p['ticker']}", use_container_width=True, help="追蹤")
 
-            if show_chart:
-                df = prices.get(p["ticker"])
-                if df is not None and len(df) >= 20:
-                    recent = df.tail(60).copy()
-                    recent["MA5"]  = recent["Close"].rolling(5).mean()
-                    recent["MA20"] = recent["Close"].rolling(20).mean()
-                    fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
-                                        row_heights=[0.72, 0.28], vertical_spacing=0.03)
-                    fig.add_trace(go.Candlestick(
-                        x=recent.index, open=recent["Open"], high=recent["High"],
-                        low=recent["Low"], close=recent["Close"],
-                        increasing_line_color="#ef5350", decreasing_line_color="#00c853",
-                        name="K線"), row=1, col=1)
-                    fig.add_trace(go.Scatter(x=recent.index, y=recent["MA5"],
-                        line=dict(color="#ffd54f", width=1.2), name="MA5"), row=1, col=1)
-                    fig.add_trace(go.Scatter(x=recent.index, y=recent["MA20"],
-                        line=dict(color="#4fc3f7", width=1.2), name="MA20"), row=1, col=1)
-                    vol_colors = ["#ef5350" if c >= o else "#00c853"
-                                  for c, o in zip(recent["Close"], recent["Open"])]
-                    fig.add_trace(go.Bar(x=recent.index, y=recent["Volume"],
-                        marker_color=vol_colors, opacity=0.6, name="量"), row=2, col=1)
-                    fig.update_layout(
-                        height=280, margin=dict(l=0, r=0, t=0, b=0),
-                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#0e1117",
-                        xaxis_rangeslider_visible=False, showlegend=False,
-                        font=dict(color="#666", size=11),
-                        xaxis2=dict(gridcolor="#1a1a2e"),
-                        yaxis=dict(gridcolor="#1a1a2e"),
-                        yaxis2=dict(gridcolor="#1a1a2e"),
-                    )
-                    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        st.markdown(
+            f'<div style="margin-top:-3rem;pointer-events:none">'
+            f'<div class="card">'
+            f'<div class="card-top">'
+            f'<div class="rank">{rank}</div>'
+            f'<span class="stock-name">{p["ticker"].replace(".TW","")} {p["name"]}</span>'
+            f'<span class="stock-sub">{p["en"]}</span>'
+            f'<span style="margin-left:auto;font-size:20px;color:{_scol};line-height:1">{_star}</span>'
+            f'</div>'
+            f'{live_block}'
+            f'<div class="price-row">'
+            f'<span class="arrow">目標</span>'
+            f'<span class="price-target">NT${p["target_price"]:.1f}</span>'
+            f'<span class="pct-badge">+{p["target_pct"]:.0f}%</span>'
+            f'</div>'
+            f'<div class="stop-row">💰 建議買入 NT${p["last_price"]:.1f}　　🛡 止損 NT${p["stop_loss"]:.1f}　({p["stop_pct"]:.1f}%)</div>'
+            f'<div class="info-row">{info_html}</div>'
+            f'<div class="catalyst">📌 {cat_str}</div>'
+            f'<div class="sell-note">{sell}</div>'
+            f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
+            f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
 
-        with star_col:
-            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-            if st.button(_star, key=f"star_pick_{p['ticker']}", use_container_width=True, help="追蹤"):
-                if _in_w:
-                    st.session_state.watchlist.remove(p["ticker"])
-                else:
-                    if p["ticker"] not in st.session_state.watchlist:
-                        st.session_state.watchlist.append(p["ticker"])
-                st.rerun()
+        if show_chart:
+            df = prices.get(p["ticker"])
+            if df is not None and len(df) >= 20:
+                recent = df.tail(60).copy()
+                recent["MA5"]  = recent["Close"].rolling(5).mean()
+                recent["MA20"] = recent["Close"].rolling(20).mean()
+                fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
+                                    row_heights=[0.72, 0.28], vertical_spacing=0.03)
+                fig.add_trace(go.Candlestick(
+                    x=recent.index, open=recent["Open"], high=recent["High"],
+                    low=recent["Low"], close=recent["Close"],
+                    increasing_line_color="#ef5350", decreasing_line_color="#00c853",
+                    name="K線"), row=1, col=1)
+                fig.add_trace(go.Scatter(x=recent.index, y=recent["MA5"],
+                    line=dict(color="#ffd54f", width=1.2), name="MA5"), row=1, col=1)
+                fig.add_trace(go.Scatter(x=recent.index, y=recent["MA20"],
+                    line=dict(color="#4fc3f7", width=1.2), name="MA20"), row=1, col=1)
+                vol_colors = ["#ef5350" if c >= o else "#00c853"
+                              for c, o in zip(recent["Close"], recent["Open"])]
+                fig.add_trace(go.Bar(x=recent.index, y=recent["Volume"],
+                    marker_color=vol_colors, opacity=0.6, name="量"), row=2, col=1)
+                fig.update_layout(
+                    height=280, margin=dict(l=0, r=0, t=0, b=0),
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#0e1117",
+                    xaxis_rangeslider_visible=False, showlegend=False,
+                    font=dict(color="#666", size=11),
+                    xaxis2=dict(gridcolor="#1a1a2e"),
+                    yaxis=dict(gridcolor="#1a1a2e"),
+                    yaxis2=dict(gridcolor="#1a1a2e"),
+                )
+                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+        if _star_clicked:
+            if _in_w:
+                st.session_state.watchlist.remove(p["ticker"])
+            else:
+                if p["ticker"] not in st.session_state.watchlist:
+                    st.session_state.watchlist.append(p["ticker"])
+            st.rerun()
 
 if not picks:
     st.warning("目前無符合條件的股票，請降低評分門檻後重試。")
