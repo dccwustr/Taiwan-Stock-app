@@ -209,8 +209,6 @@ with st.sidebar:
                  key="nav_search_inline"):
         st.session_state.view_mode = "search"; st.rerun()
 
-    st.divider()
-
     # ── 新增持股 ──────────────────────────────────────────────────────────────
     # View toggle buttons
     vm = st.session_state.view_mode
