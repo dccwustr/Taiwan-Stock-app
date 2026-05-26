@@ -179,25 +179,28 @@ if "recent_searches"  not in st.session_state: st.session_state.recent_searches 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown(f"### 📈 台股分析")
-    st.caption(f"{_now_tw().strftime('%Y-%m-%d  %H:%M')}")
+    # Compact header: title/date left, refresh right
+    _hc1, _hc2 = st.columns([3, 1])
+    with _hc1:
+        st.markdown("#### 📈 台股分析")
+        st.caption(_now_tw().strftime('%Y-%m-%d  %H:%M'))
+    with _hc2:
+        st.markdown("<div style='margin-top:16px'></div>", unsafe_allow_html=True)
+        if st.button("🔄", use_container_width=True, help="重新整理"):
+            st.cache_data.clear()
+            st.rerun()
 
-    if st.button("🔄 重新整理", use_container_width=True, type="primary"):
-        st.cache_data.clear()
-        st.rerun()
-
-    # ── 即時查詢 ──────────────────────────────────────────────────────────────
     st.divider()
-    st.markdown("**🔍 查詢個股**")
+
+    # Search input + Go
     qc1, qc2 = st.columns([3, 1])
-    query_input = qc1.text_input("q", placeholder="輸入代號，如 2454",
+    query_input = qc1.text_input("q", placeholder="查詢代號，如 2454",
                                   label_visibility="collapsed", key="query_input")
     if qc2.button("Go", use_container_width=True):
         raw = query_input.strip().upper()
         if raw:
             ticker = raw + ".TW" if not raw.endswith(".TW") else raw
             st.session_state.search_ticker = ticker
-            # Prepend to recent searches, deduplicate, cap at 10
             rs = [t for t in st.session_state.recent_searches if t != ticker]
             st.session_state.recent_searches = ([ticker] + rs)[:10]
             st.session_state.view_mode = "search"
@@ -209,20 +212,18 @@ with st.sidebar:
                  key="nav_search_inline"):
         st.session_state.view_mode = "search"; st.rerun()
 
-    # ── 新增持股 ──────────────────────────────────────────────────────────────
-    # View toggle buttons
+    st.divider()
+
+    # Nav: 3 buttons in one row
     vm = st.session_state.view_mode
-    _views = [
-        ("picks",    "🎯 精選潛力股"),
-        ("holdings", "💼 我的持股"),
-        ("watchlist","⭐ 追蹤清單"),
-    ]
-    for _vkey, _vlabel in _views:
-        _active = vm == _vkey
-        _suffix = "  ✓" if _active else ""
-        if st.button(f"{_vlabel}{_suffix}", use_container_width=True,
-                     type="primary" if _active else "secondary", key=f"nav_{_vkey}"):
-            st.session_state.view_mode = _vkey; st.rerun()
+    _nc1, _nc2, _nc3 = st.columns(3)
+    for _col, (_vk, _vl) in zip([_nc1, _nc2, _nc3], [
+        ("picks", "🎯 精選"), ("holdings", "💼 持股"), ("watchlist", "⭐ 追蹤"),
+    ]):
+        _active = vm == _vk
+        if _col.button(_vl + (" ✓" if _active else ""), key=f"nav_{_vk}",
+                       type="primary" if _active else "secondary", use_container_width=True):
+            st.session_state.view_mode = _vk; st.rerun()
 
     with st.expander("＋ 新增 / 編輯持股"):
         st.caption("輸入股票代號（如 2454）、股數、買進均價")
