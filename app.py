@@ -492,48 +492,47 @@ def render_query_card(ticker, sres, live_d, key_sfx):
     else:
         live_html = f'<div class="live-in-card"><span style="color:#555">收盤 NT${sres["last_price"]:.1f}</span></div>'
 
-    st.markdown(
-        f'<div class="card">'
-        f'<div class="card-top">'
-        f'<span class="stock-name">{ticker.replace(".TW","")} {sres["name"]}</span>'
-        f'<span class="stock-sub">{sres["en"]}</span>'
-        f'<span style="font-size:13px;color:{vcolor};font-weight:700;margin-left:auto">{verdict}</span>'
-        f'</div>'
-        f'{live_html}'
-        f'<div class="price-row">'
-        f'<span class="arrow">目標</span>'
-        f'<span class="price-target">NT${sres["target_price"]:.1f}</span>'
-        f'<span class="pct-badge">+{sres["target_pct"]:.0f}%</span>'
-        f'</div>'
-        f'<div class="stop-row">🛡 止損 NT${sres["stop_loss"]:.1f}　({sres["stop_pct"]:.1f}%)</div>'
-        f'<div class="info-row">'
-        f'<span>RSI <span class="info-val">{sres["rsi"]:.0f}</span></span>'
-        f'<span>量比 <span class="info-val">{sres["vol_ratio"]:.1f}x</span></span>'
-        f'<span>5日 <span class="info-val {mom_cls}">{sres["mom5d"]:+.1f}%</span></span>'
-        f'</div>'
-        f'<div class="catalyst">📌 {cat_str}</div>'
-        f'<div class="conf-wrap"><div class="conf-bar" style="width:{int(sc)}%;background:{bar_color}"></div></div>'
-        f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
-
-    # Star / unstar button
     in_watch = ticker in st.session_state.watchlist
-    c1, c2 = st.columns([1, 1])
-    if c1.button("★ 追蹤中" if in_watch else "☆ 加入追蹤", key=f"star_{key_sfx}", use_container_width=True):
-        if in_watch:
-            st.session_state.watchlist.remove(ticker)
-        else:
-            if ticker not in st.session_state.watchlist:
-                st.session_state.watchlist.append(ticker)
-        st.rerun()
-    if c2.button("✕ 清除", key=f"clr_{key_sfx}", use_container_width=True):
-        if ticker == st.session_state.get("search_ticker"):
-            st.session_state.search_ticker = None
-        else:
-            st.session_state.watchlist.remove(ticker)
-        st.rerun()
+    _star = "★" if in_watch else "☆"
+    _scol = "#ffd54f" if in_watch else "#444"
+
+    card_col, star_col = st.columns([10, 1])
+    with card_col:
+        st.markdown(
+            f'<div class="card">'
+            f'<div class="card-top">'
+            f'<span class="stock-name">{ticker.replace(".TW","")} {sres["name"]}</span>'
+            f'<span class="stock-sub">{sres["en"]}</span>'
+            f'<span style="font-size:13px;color:{vcolor};font-weight:700;margin-left:auto">{verdict}</span>'
+            f'<span style="font-size:20px;color:{_scol};line-height:1;margin-left:10px">{_star}</span>'
+            f'</div>'
+            f'{live_html}'
+            f'<div class="price-row">'
+            f'<span class="arrow">目標</span>'
+            f'<span class="price-target">NT${sres["target_price"]:.1f}</span>'
+            f'<span class="pct-badge">+{sres["target_pct"]:.0f}%</span>'
+            f'</div>'
+            f'<div class="stop-row">🛡 止損 NT${sres["stop_loss"]:.1f}　({sres["stop_pct"]:.1f}%)</div>'
+            f'<div class="info-row">'
+            f'<span>RSI <span class="info-val">{sres["rsi"]:.0f}</span></span>'
+            f'<span>量比 <span class="info-val">{sres["vol_ratio"]:.1f}x</span></span>'
+            f'<span>5日 <span class="info-val {mom_cls}">{sres["mom5d"]:+.1f}%</span></span>'
+            f'</div>'
+            f'<div class="catalyst">📌 {cat_str}</div>'
+            f'<div class="conf-wrap"><div class="conf-bar" style="width:{int(sc)}%;background:{bar_color}"></div></div>'
+            f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+    with star_col:
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+        if st.button(_star, key=f"star_{key_sfx}", use_container_width=True, help="追蹤"):
+            if in_watch:
+                st.session_state.watchlist.remove(ticker)
+            else:
+                if ticker not in st.session_state.watchlist:
+                    st.session_state.watchlist.append(ticker)
+            st.rerun()
 
 # ── Market index bar (always shown) ──────────────────────────────────────────
 if mkt:
