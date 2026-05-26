@@ -343,47 +343,47 @@ def analyze_holding_sell(df: pd.DataFrame) -> Dict:
 
     reasons  = []
     urgency  = "低"
-    action   = "繼續持有"
+    action   = "目前可以繼續持有"
 
     # ── RSI ──────────────────────────────────────────────────────────────────
     if rsi >= 82:
-        reasons.append(f"RSI {rsi:.0f}，嚴重超買")
-        urgency = "高"; action = "建議減倉或出場"
+        reasons.append(f"漲太多了（RSI {rsi:.0f}），很多人開始獲利了結")
+        urgency = "高"; action = "建議賣掉或減少持股"
     elif rsi >= 75:
-        reasons.append(f"RSI {rsi:.0f}，進入超買區間")
-        urgency = "中"; action = "可考慮部分獲利了結"
+        reasons.append(f"漲勢偏強（RSI {rsi:.0f}），可以考慮先賣一部分")
+        urgency = "中"; action = "可以先賣一半獲利"
     elif rsi >= 68:
-        reasons.append(f"RSI {rsi:.0f}，偏高，留意轉折")
+        reasons.append(f"漲幅不小（RSI {rsi:.0f}），留意有沒有反轉跡象")
     elif rsi < 45:
-        reasons.append(f"RSI {rsi:.0f}，動能轉弱")
+        reasons.append(f"漲勢在減弱（RSI {rsi:.0f}），小心繼續跌")
         if urgency == "低": urgency = "中"
-        if action == "繼續持有": action = "留意止損"
+        if action == "目前可以繼續持有": action = "注意停損點，別讓虧損擴大"
 
     # ── MACD ─────────────────────────────────────────────────────────────────
     if macd_h < 0 and macd_prev >= 0:
-        reasons.append("MACD 出現死叉，動能反轉")
+        reasons.append("動能轉向向下，短線可能開始走弱")
         if urgency == "低": urgency = "中"
-        if action == "繼續持有": action = "留意賣出時機"
+        if action == "目前可以繼續持有": action = "考慮找高點賣出"
     elif macd_h > 0 and macd_prev > 0 and macd_h < macd_prev * 0.6:
-        reasons.append("MACD 柱狀縮短，上漲動能減弱")
+        reasons.append("上漲力道在縮減，後續漲幅可能有限")
 
     # ── MA position ──────────────────────────────────────────────────────────
     if last < ma20:
-        reasons.append("跌破 MA20，短線轉弱")
+        reasons.append("股價跌破20日均線，短線轉弱")
         if urgency == "低": urgency = "中"
-        if action == "繼續持有": action = "留意止損"
+        if action == "目前可以繼續持有": action = "注意停損點，別讓虧損擴大"
     elif last > ma20 > ma60:
-        reasons.append("MA 多頭排列，趨勢健康")
+        reasons.append("均線向上排列，趨勢健康，可以繼續持有")
 
     # ── Resistance ───────────────────────────────────────────────────────────
     if last >= high_52w * 0.99:
-        reasons.append(f"逼近52週高點 {high_52w:.1f}，歷史壓力區")
+        reasons.append(f"快到一年最高點 {high_52w:.1f} 了，這附近通常會有賣壓")
         if urgency == "低": urgency = "中"
     elif last >= high_20 * 0.985:
-        reasons.append(f"接近近20日高點 {high_20:.1f}，短期壓力")
+        reasons.append(f"接近近20天高點 {high_20:.1f}，短期可能遇到阻力")
 
     if not reasons:
-        reasons.append("技術面穩健，暫無明顯賣出信號")
+        reasons.append("目前沒有明顯賣出訊號，可以繼續觀察")
 
     # ── Target & stop ─────────────────────────────────────────────────────────
     target_sell = round(min(last + 2.0 * atr, high_52w * 1.02), 1)

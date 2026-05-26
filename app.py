@@ -478,9 +478,9 @@ def render_stock_cards(picks, prices, show_chart):
         cats    = p.get("catalysts") or ["技術面突破"]
         cat_str = "　".join(cats)
 
-        if sc >= 88:  sell = "⏰ 當日收盤前（留意漲停）"
-        elif sc >= 72: sell = "⏰ 達 5–7% 即可分批出場"
-        else:          sell = "⏰ T+1 早盤高點賣出"
+        if sc >= 88:  sell = "⏰ 今天收盤前賣，有機會漲停"
+        elif sc >= 72: sell = "⏰ 漲 5–7% 就賣，不要貪"
+        else:          sell = "⏰ 明天早上9–10點趁高點賣掉"
 
         if fi > 100:    fi_str = f"外資買超 {fi:.0f}千張 📥"
         elif fi < -100: fi_str = f"外資賣超 {abs(fi):.0f}千張 📤"
