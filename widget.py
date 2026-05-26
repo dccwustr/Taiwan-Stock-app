@@ -565,12 +565,13 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     else:
         sell_note = "T+1 早盤高點賣出"
 
+    _tinfo = TECH_UNIVERSE.get(ticker, {})
     return {
         "ticker":      ticker,
-        "name":        TECH_UNIVERSE[ticker]["name"],
-        "en":          TECH_UNIVERSE[ticker]["en"],
-        "sector":      TECH_UNIVERSE[ticker]["sector"],
-        "supply":      TECH_UNIVERSE[ticker]["supply"],
+        "name":        _tinfo.get("name", ticker.replace(".TW", "")),
+        "en":          _tinfo.get("en", ""),
+        "sector":      _tinfo.get("sector", ""),
+        "supply":      _tinfo.get("supply", []),
         "score":       total,
         "vol_score":   vol_score,
         "mom_score":   mom_score,
