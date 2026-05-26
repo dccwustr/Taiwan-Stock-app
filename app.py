@@ -150,9 +150,10 @@ def load_data():
     foreign  = fetch_twse_foreign_buying()
     market   = fetch_twse_market_summary()
     prices   = fetch_prices_batch(tickers, period="3mo")
+    from datetime import timezone, timedelta as _td
+    ts = datetime.now(tz=timezone(_td(hours=8))).strftime("%H:%M")
     return dict(news=news, headlines=headlines, catalyst=cat_sc,
-                foreign=foreign, market=market, prices=prices,
-                ts=datetime.now().strftime("%H:%M"))
+                foreign=foreign, market=market, prices=prices, ts=ts)
 
 # ── Session state init ────────────────────────────────────────────────────────
 if "view_mode"       not in st.session_state: st.session_state.view_mode       = "picks"
@@ -162,7 +163,7 @@ if "hidden_holdings" not in st.session_state: st.session_state.hidden_holdings =
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown(f"### 📈 台股分析")
-    st.caption(f"{datetime.now().strftime('%Y-%m-%d  %H:%M')}")
+    st.caption(f"{_now_tw().strftime('%Y-%m-%d  %H:%M')}")
 
     if st.button("🔄 重新整理", use_container_width=True, type="primary"):
         st.cache_data.clear()
@@ -452,20 +453,27 @@ def conf_color(s):
 # ── Stock cards with embedded live prices (30s auto-refresh) ─────────────────
 from datetime import timezone, timedelta as _td
 
+_TW = timezone(_td(hours=8))
+
+def _now_tw():
+    return datetime.now(tz=_TW)
+
 def _is_market_open() -> bool:
-    tw = datetime.now(tz=timezone(_td(hours=8)))
+    tw = _now_tw()
     return tw.weekday() < 5 and (
         (tw.hour == 9) or (10 <= tw.hour <= 12) or
         (tw.hour == 13 and tw.minute <= 30)
     )
 
-@st.fragment(run_every="30s" if _is_market_open() else None)
+# Always run every 30s — decorator is evaluated once at import so the
+# conditional would be frozen to whatever time the server started.
+@st.fragment(run_every="30s")
 def render_stock_cards(picks, prices, show_chart):
     tickers  = [p["ticker"] for p in picks]
     live     = fetch_live_prices(tickers)
     is_open  = _is_market_open()
     refresh  = "每30秒自動更新 ●" if is_open else "非交易時段"
-    st.caption(f"📡 即時股價　{refresh}　　更新：{datetime.now().strftime('%H:%M:%S')}")
+    st.caption(f"📡 即時股價　{refresh}　　更新：{_now_tw().strftime('%H:%M:%S')}")
 
     for rank, p in enumerate(picks, 1):
         sc      = p["score"]

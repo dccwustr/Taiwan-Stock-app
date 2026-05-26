@@ -374,7 +374,8 @@ def analyze_holding_sell(df: pd.DataFrame) -> Dict:
 def fetch_twse_foreign_buying(date_str: Optional[str] = None) -> Dict[str, float]:
     """抓取外資買超資料（千張）"""
     if not date_str:
-        date_str = datetime.now().strftime("%Y%m%d")
+        from datetime import timezone, timedelta
+        date_str = datetime.now(tz=timezone(timedelta(hours=8))).strftime("%Y%m%d")
     url = f"https://www.twse.com.tw/rwd/zh/fund/TWT53U?response=json&date={date_str}"
     result = {}
     try:
