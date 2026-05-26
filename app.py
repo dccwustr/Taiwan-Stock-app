@@ -195,6 +195,7 @@ if "hidden_holdings"  not in st.session_state: st.session_state.hidden_holdings 
 if "search_ticker"    not in st.session_state: st.session_state.search_ticker    = None
 if "watchlist"        not in st.session_state: st.session_state.watchlist        = []
 if "recent_searches"  not in st.session_state: st.session_state.recent_searches  = []
+if "_close_sidebar"   not in st.session_state: st.session_state._close_sidebar   = False
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -207,6 +208,7 @@ with st.sidebar:
         st.markdown("<div style='margin-top:16px'></div>", unsafe_allow_html=True)
         if st.button("🔄", use_container_width=True, help="重新整理"):
             st.cache_data.clear()
+            st.session_state._close_sidebar = True
             st.rerun()
 
     st.divider()
@@ -223,13 +225,16 @@ with st.sidebar:
             rs = [t for t in st.session_state.recent_searches if t != ticker]
             st.session_state.recent_searches = ([ticker] + rs)[:10]
             st.session_state.view_mode = "search"
+            st.session_state._close_sidebar = True
 
     _vm_search_active = st.session_state.view_mode == "search"
     if st.button("🔍 搜尋記錄  ✓" if _vm_search_active else "🔍 搜尋記錄",
                  use_container_width=True,
                  type="primary" if _vm_search_active else "secondary",
                  key="nav_search_inline"):
-        st.session_state.view_mode = "search"; st.rerun()
+        st.session_state.view_mode = "search"
+        st.session_state._close_sidebar = True
+        st.rerun()
 
     st.divider()
 
@@ -242,7 +247,9 @@ with st.sidebar:
         _active = vm == _vk
         if _col.button(_vl + (" ✓" if _active else ""), key=f"nav_{_vk}",
                        type="primary" if _active else "secondary", use_container_width=True):
-            st.session_state.view_mode = _vk; st.rerun()
+            st.session_state.view_mode = _vk
+            st.session_state._close_sidebar = True
+            st.rerun()
 
     with st.expander("＋ 新增 / 編輯持股"):
         st.caption("輸入股票代號（如 2454）、股數、買進均價")
@@ -293,40 +300,44 @@ with st.sidebar:
     st.caption("資料來源：鉅亨網・TWSE・Yahoo Finance")
     st.caption("⚠ 非投資建議，僅供參考")
 
-# ── Auto-close sidebar on mobile after button click ───────────────────────────
-components.html("""
+# ── Auto-close sidebar on mobile (fires AFTER rerun completes) ────────────────
+if st.session_state.get("_close_sidebar"):
+    st.session_state._close_sidebar = False
+    components.html("""
 <script>
 (function() {
-  var doc;
-  try { doc = window.parent.document; } catch(e) { return; }
-
-  function closeSidebar() {
-    var btn =
-      doc.querySelector('[data-testid="stSidebarCollapseButton"] button') ||
-      doc.querySelector('button[data-testid="baseButton-headerNoPadding"]');
-    if (btn) { btn.click(); return; }
-    doc.body.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true, cancelable:true}));
+  function tryClose() {
+    var d;
+    try { d = window.parent.document; } catch(e) { return; }
+    // Try every known selector across Streamlit versions
+    var candidates = [
+      d.querySelector('[data-testid="stSidebarCollapseButton"] button'),
+      d.querySelector('[data-testid="stSidebarHeader"] button'),
+      d.querySelector('section[data-testid="stSidebar"] header button'),
+      d.querySelector('section[data-testid="stSidebar"] > div > div > button'),
+      d.querySelector('button[aria-label="Close sidebar"]'),
+      d.querySelector('button[aria-label="Collapse sidebar"]'),
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      if (candidates[i]) { candidates[i].click(); return true; }
+    }
+    // Last resort: click main content area (closes mobile overlay)
+    var main = d.querySelector('[data-testid="stMain"]')
+             || d.querySelector('.main')
+             || d.querySelector('[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"])');
+    if (main) {
+      main.dispatchEvent(new MouseEvent('mousedown', {bubbles:true, clientX:200, clientY:200}));
+      return true;
+    }
+    return false;
   }
-
-  function attach() {
-    var sidebar = doc.querySelector('section[data-testid="stSidebar"]');
-    if (!sidebar) return;
-    sidebar.querySelectorAll('button').forEach(function(b) {
-      if (b._sc) return;
-      b._sc = true;
-      b.addEventListener('click', function() {
-        if (this.hasAttribute('aria-expanded')) return; // leave expanders alone
-        setTimeout(closeSidebar, 250);
-      });
-    });
-  }
-
-  setTimeout(attach, 600);
-  new MutationObserver(function() { setTimeout(attach, 100); })
-    .observe(doc.body, {childList:true, subtree:true});
+  // Retry a few times to handle varying Streamlit render timing
+  tryClose();
+  setTimeout(tryClose, 150);
+  setTimeout(tryClose, 400);
 })();
 </script>
-""", height=0)
+""", height=1)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 with st.spinner("載入中…"):
