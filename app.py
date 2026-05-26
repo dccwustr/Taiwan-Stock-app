@@ -460,14 +460,14 @@ def _is_market_open() -> bool:
         (tw.hour == 13 and tw.minute <= 30)
     )
 
-# Always run every 30s — decorator is evaluated once at import so the
+# Always run every 10s — decorator is evaluated once at import so the
 # conditional would be frozen to whatever time the server started.
-@st.fragment(run_every="30s")
+@st.fragment(run_every="10s")
 def render_stock_cards(picks, prices, show_chart):
     tickers  = [p["ticker"] for p in picks]
     live     = fetch_live_prices(tickers)
     is_open  = _is_market_open()
-    refresh  = "每30秒自動更新 ●" if is_open else "非交易時段"
+    refresh  = "每10秒更新 ●" if is_open else "非交易時段"
     st.caption(f"📡 即時股價　{refresh}　　更新：{_now_tw().strftime('%H:%M:%S')}")
 
     for rank, p in enumerate(picks, 1):

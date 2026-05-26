@@ -225,65 +225,79 @@ def fetch_moneydj_news() -> List[Dict]:
     return news
 
 # Exchange mapping: stocks on OTC (櫃買) vs TSE (上市)
-_OTC_STOCKS = {"3529.TW","6415.TW","8299.TW","2401.TW","6770.TW","3406.TW"}
+def _tw_limit_up(prev: float) -> float:
+    """Taiwan ±10% limit, rounded to correct tick size."""
+    price = prev * 1.10
+    if price < 10:     tick = 0.01
+    elif price < 50:   tick = 0.05
+    elif price < 100:  tick = 0.10
+    elif price < 500:  tick = 0.50
+    elif price < 1000: tick = 1.00
+    else:              tick = 5.00
+    return round(price / tick) * tick
+
+def _fetch_one_yf(ticker: str) -> tuple:
+    """Fetch latest price for a single ticker via yfinance (works from any server IP)."""
+    try:
+        import yfinance as yf
+        df = yf.Ticker(ticker).history(period="2d", interval="2m")
+        if df is None or df.empty:
+            return ticker, None
+
+        last_price = float(df["Close"].iloc[-1])
+        last_ts    = df.index[-1]
+
+        # Previous trading day's last close for change calculation
+        if hasattr(last_ts, "date"):
+            today_d   = last_ts.date()
+            prev_bars = df[[x.date() < today_d for x in df.index]]
+            prev_close = float(prev_bars["Close"].iloc[-1]) if not prev_bars.empty else last_price
+        else:
+            prev_close = last_price
+
+        chg     = last_price - prev_close
+        chg_pct = (chg / prev_close * 100) if prev_close > 0 else 0
+        vol_sum = int(df["Volume"].iloc[-30:].sum() / 1000)
+
+        # Timestamp → Taipei time
+        try:
+            from datetime import timezone as _tz, timedelta as _td
+            if getattr(last_ts, "tzinfo", None):
+                tw = last_ts.astimezone(_tz(_td(hours=8)))
+            else:
+                tw = pd.Timestamp(last_ts).tz_localize("UTC").tz_convert("Asia/Taipei")
+            time_str = tw.strftime("%H:%M")
+        except Exception:
+            time_str = "--:--"
+
+        return ticker, {
+            "price":      last_price,
+            "prev":       prev_close,
+            "chg":        chg,
+            "chg_pct":    chg_pct,
+            "volume":     vol_sum,
+            "limit_up":   _tw_limit_up(prev_close),
+            "limit_down": round(prev_close * 0.90, 0),
+            "time":       time_str,
+            "live":       True,
+        }
+    except Exception:
+        return ticker, None
 
 def fetch_live_prices(tickers: List[str]) -> Dict[str, Dict]:
     """
-    Real-time prices via TWSE MIS API.
-    Returns price, change, change_pct, volume, limit_up, limit_down, last_time.
-    Falls back to yfinance previous close when market is closed or data unavailable.
+    Real-time-ish prices via yfinance (2-min bars, ~15 min Yahoo delay).
+    Replaced TWSE MIS API which is geo-blocked on Streamlit Cloud (AWS US).
+    Fetches all tickers in parallel via ThreadPoolExecutor.
     """
+    from concurrent.futures import ThreadPoolExecutor
     result: Dict[str, Dict] = {}
-
-    # Build exchange-aware query string
-    tse_codes = [t.replace(".TW","") for t in tickers if t not in _OTC_STOCKS and not t.endswith(".TWO")]
-    otc_codes = [t.replace(".TW","") for t in tickers if t in _OTC_STOCKS]
-
-    def _parse_response(data: dict, exchange: str):
-        for item in data.get("msgArray", []):
-            code   = item.get("c", "")
-            ticker = code + ".TW"
-            if ticker not in tickers:
-                continue
-            z = item.get("z", "-")   # current deal price
-            y = item.get("y", "0")   # yesterday close
-            u = item.get("u", "-")   # limit up (漲停)
-            w = item.get("w", "-")   # limit down (跌停)
-            v = item.get("v", "0")   # volume (千股)
-            t = item.get("t", "")    # time
-            try:
-                prev   = float(y) if y and y != "-" else 0
-                curr   = float(z) if z and z != "-" else prev
-                chg    = curr - prev
-                chg_pct = (chg / prev * 100) if prev > 0 else 0
-                vol_k  = int(float(v)) if v and v != "-" else 0
-                result[ticker] = {
-                    "price":     curr,
-                    "prev":      prev,
-                    "chg":       chg,
-                    "chg_pct":   chg_pct,
-                    "volume":    vol_k,
-                    "limit_up":  float(u) if u and u != "-" else 0,
-                    "limit_down":float(w) if w and w != "-" else 0,
-                    "time":      t,
-                    "live":      z != "-",
-                }
-            except (ValueError, ZeroDivisionError):
-                pass
-
-    headers = {**HEADERS, "Referer": "https://mis.twse.com.tw/"}
-
-    for codes, prefix in [(tse_codes, "tse"), (otc_codes, "otc")]:
-        if not codes:
-            continue
-        ex_ch = "|".join(f"{prefix}_{c}.tw" for c in codes)
-        url   = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={ex_ch}&json=1&delay=0"
-        try:
-            r = requests.get(url, headers=headers, timeout=6)
-            _parse_response(r.json(), prefix)
-        except Exception:
-            pass
-
+    if not tickers:
+        return result
+    with ThreadPoolExecutor(max_workers=min(len(tickers), 6)) as ex:
+        for ticker, data in ex.map(_fetch_one_yf, tickers):
+            if data:
+                result[ticker] = data
     return result
 
 def analyze_holding_sell(df: pd.DataFrame) -> Dict:
