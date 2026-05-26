@@ -494,9 +494,16 @@ for ticker in TECH_UNIVERSE:
     if ticker in skip:
         continue
     res = score_stock(ticker, prices.get(ticker), cat_sc.get(ticker, 0), foreign.get(ticker, 0))
-    if res and res["score"] >= min_score:
-        res["catalysts"] = get_catalyst_labels(ticker, all_news)
-        scored.append(res)
+    if res:
+        # 零股小資調整：RSI過熱難買到低點；高價股零股難累積
+        _adj = 0
+        if res.get("rsi", 50) > 75: _adj -= 10  # overbought = bad accumulation entry
+        if res.get("rsi", 50) < 40: _adj +=  5  # oversold = good accumulation entry
+        if res.get("last_price", 0) > 500: _adj -= 8  # expensive per share
+        res["score"] = max(0, min(100, res["score"] + _adj))
+        if res["score"] >= min_score:
+            res["catalysts"] = get_catalyst_labels(ticker, all_news)
+            scored.append(res)
 scored.sort(key=lambda x: x["score"], reverse=True)
 picks = scored[:top_n]
 
@@ -711,7 +718,7 @@ if st.session_state.view_mode == "holdings":
     st.stop()
 
 # ── Picks view header ────────────────────────────────────────────────────────
-st.markdown("## 🎯 今日精選潛力股")
+st.markdown("## 🎯 今日精選潛力股　<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>零股小資模式</span>", unsafe_allow_html=True)
 st.divider()
 
 # ── Chip helper ───────────────────────────────────────────────────────────────
@@ -738,7 +745,7 @@ def render_stock_cards(picks, prices, show_chart):
     live     = fetch_live_prices(tickers)
     is_open  = _is_market_open()
     refresh  = "每10秒更新 ●" if is_open else "非交易時段"
-    st.caption(f"📡 即時股價　{refresh}　　更新：{_now_tw().strftime('%H:%M:%S')}")
+    st.caption(f"📡 即時股價　{refresh}　　更新：{_now_tw().strftime('%H:%M:%S')}　｜　零股盤中 09:00–13:30 ／ 盤後 14:00–14:30")
 
     for rank, p in enumerate(picks, 1):
         sc      = p["score"]
@@ -748,9 +755,9 @@ def render_stock_cards(picks, prices, show_chart):
         cats    = p.get("catalysts") or ["技術面突破"]
         cat_str = "　".join(cats)
 
-        if sc >= 88:  sell = "⏰ 今天收盤前賣，有機會漲停"
-        elif sc >= 72: sell = "⏰ 漲 5–7% 就賣，不要貪"
-        else:          sell = "⏰ 明天早上9–10點趁高點賣掉"
+        if sc >= 88:  acq = "📈 強勢股，可逢低分批零股累積"
+        elif sc >= 72: acq = "💡 趨勢向上，適合定期定額布局"
+        else:          acq = "⏳ 等 RSI 回落至 50 以下再考慮進場"
 
         if fi > 100:    fi_str = f"外資買超 {fi:.0f}千張 📥"
         elif fi < -100: fi_str = f"外資賣超 {abs(fi):.0f}千張 📤"
@@ -797,6 +804,9 @@ def render_stock_cards(picks, prices, show_chart):
         else:
             live_block = '<div class="live-in-card"><span style="color:#555">等待開盤資料…</span></div>'
 
+        ref_price  = (d["price"] if d and d["price"] > 0 else p["last_price"])
+        shares_10k = int(10000 / ref_price) if ref_price > 0 else 0
+
         bar_w  = int(sc)
         info_html = '　'.join(f'<span>{x}</span>' for x in info_parts)
         _in_w  = p["ticker"] in st.session_state.watchlist
@@ -824,10 +834,11 @@ def render_stock_cards(picks, prices, show_chart):
             f'<span class="price-target">NT${p["target_price"]:.1f}</span>'
             f'<span class="pct-badge">+{p["target_pct"]:.0f}%</span>'
             f'</div>'
-            f'<div class="stop-row">💰 建議買入 NT${p["last_price"]:.1f}　　🛡 止損 NT${p["stop_loss"]:.1f}　({p["stop_pct"]:.1f}%)</div>'
+            f'<div class="stop-row">💰 參考買點 NT${p["last_price"]:.1f}　　🛡 止損 NT${p["stop_loss"]:.1f}　({p["stop_pct"]:.1f}%)</div>'
+            f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
             f'<div class="info-row">{info_html}</div>'
             f'<div class="catalyst">📌 {cat_str}</div>'
-            f'<div class="sell-note">{sell}</div>'
+            f'<div class="sell-note">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
             f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
             f'</div>'
