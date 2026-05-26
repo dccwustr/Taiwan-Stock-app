@@ -236,68 +236,87 @@ def _tw_limit_up(prev: float) -> float:
     else:              tick = 5.00
     return round(price / tick) * tick
 
-def _fetch_one_yf(ticker: str) -> tuple:
-    """Fetch latest price for a single ticker via yfinance (works from any server IP)."""
+def _parse_ts(ts) -> str:
+    """Convert a pandas Timestamp to Taipei HH:MM string."""
     try:
-        import yfinance as yf
-        df = yf.Ticker(ticker).history(period="2d", interval="2m")
-        if df is None or df.empty:
-            return ticker, None
-
-        last_price = float(df["Close"].iloc[-1])
-        last_ts    = df.index[-1]
-
-        # Previous trading day's last close for change calculation
-        if hasattr(last_ts, "date"):
-            today_d   = last_ts.date()
-            prev_bars = df[[x.date() < today_d for x in df.index]]
-            prev_close = float(prev_bars["Close"].iloc[-1]) if not prev_bars.empty else last_price
+        from datetime import timezone as _tz, timedelta as _td
+        if getattr(ts, "tzinfo", None):
+            tw = ts.astimezone(_tz(_td(hours=8)))
         else:
-            prev_close = last_price
-
-        chg     = last_price - prev_close
-        chg_pct = (chg / prev_close * 100) if prev_close > 0 else 0
-        vol_sum = int(df["Volume"].iloc[-30:].sum() / 1000)
-
-        # Timestamp → Taipei time
-        try:
-            from datetime import timezone as _tz, timedelta as _td
-            if getattr(last_ts, "tzinfo", None):
-                tw = last_ts.astimezone(_tz(_td(hours=8)))
-            else:
-                tw = pd.Timestamp(last_ts).tz_localize("UTC").tz_convert("Asia/Taipei")
-            time_str = tw.strftime("%H:%M")
-        except Exception:
-            time_str = "--:--"
-
-        return ticker, {
-            "price":      last_price,
-            "prev":       prev_close,
-            "chg":        chg,
-            "chg_pct":    chg_pct,
-            "volume":     vol_sum,
-            "limit_up":   _tw_limit_up(prev_close),
-            "limit_down": round(prev_close * 0.90, 0),
-            "time":       time_str,
-            "live":       True,
-        }
+            tw = pd.Timestamp(ts).tz_localize("UTC").tz_convert("Asia/Taipei")
+        return tw.strftime("%H:%M")
     except Exception:
-        return ticker, None
+        return "--:--"
 
 def fetch_live_prices(tickers: List[str]) -> Dict[str, Dict]:
     """
-    Real-time-ish prices via yfinance (2-min bars, ~15 min Yahoo delay).
-    Replaced TWSE MIS API which is geo-blocked on Streamlit Cloud (AWS US).
-    Fetches all tickers in parallel via ThreadPoolExecutor.
+    Real-time-ish prices via yfinance batch download (single HTTP request).
+    Uses yf.download() so all tickers are fetched in one call — avoids
+    Yahoo Finance rate-limiting that hits per-ticker parallel requests.
     """
-    from concurrent.futures import ThreadPoolExecutor
+    import yfinance as yf
     result: Dict[str, Dict] = {}
     if not tickers:
         return result
-    with ThreadPoolExecutor(max_workers=min(len(tickers), 6)) as ex:
-        for ticker, data in ex.map(_fetch_one_yf, tickers):
-            if data:
-                result[ticker] = data
+
+    try:
+        raw = yf.download(
+            tickers=" ".join(tickers),
+            period="2d",
+            interval="2m",
+            progress=False,
+            auto_adjust=True,
+        )
+    except Exception:
+        return result
+
+    if raw is None or raw.empty:
+        return result
+
+    is_multi = isinstance(raw.columns, pd.MultiIndex)
+
+    for t in tickers:
+        try:
+            if is_multi:
+                close_s = raw["Close"][t].dropna()
+                vol_s   = raw["Volume"][t].dropna()
+            else:
+                # yf.download with a single ticker returns flat columns
+                close_s = raw["Close"].dropna()
+                vol_s   = raw["Volume"].dropna()
+
+            if close_s.empty:
+                continue
+
+            last_price = float(close_s.iloc[-1])
+            last_ts    = close_s.index[-1]
+
+            # Previous trading day's last close
+            if hasattr(last_ts, "date"):
+                today_d    = last_ts.date()
+                prev_bars  = close_s[[x.date() < today_d for x in close_s.index]]
+                prev_close = float(prev_bars.iloc[-1]) if not prev_bars.empty else last_price
+            else:
+                prev_close = last_price
+
+            chg     = last_price - prev_close
+            chg_pct = (chg / prev_close * 100) if prev_close > 0 else 0
+            vol_sum = int(vol_s.iloc[-30:].sum() / 1000) if not vol_s.empty else 0
+
+            result[t] = {
+                "price":      last_price,
+                "prev":       prev_close,
+                "chg":        chg,
+                "chg_pct":    chg_pct,
+                "volume":     vol_sum,
+                "limit_up":   _tw_limit_up(prev_close),
+                "limit_down": round(prev_close * 0.90, 0),
+                "time":       _parse_ts(last_ts),
+                "live":       True,
+            }
+        except Exception:
+            pass
+
     return result
 
 def analyze_holding_sell(df: pd.DataFrame) -> Dict:
