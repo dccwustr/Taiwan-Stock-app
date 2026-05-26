@@ -135,6 +135,24 @@ st.markdown("""
   .limit-near { background:#e65100; color:#fff; border-radius:4px; padding:2px 8px; font-size:12px; font-weight:700; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
+  /* ── Compact sidebar ──────────────────────────────────────────────────────── */
+  section[data-testid="stSidebar"] > div:first-child { padding-top: 0.5rem !important; }
+  section[data-testid="stSidebar"] button {
+    padding-top: 0.2rem !important; padding-bottom: 0.2rem !important;
+    min-height: 1.6rem !important; font-size: 0.78rem !important; line-height: 1.2 !important;
+  }
+  section[data-testid="stSidebar"] .stElementContainer,
+  section[data-testid="stSidebar"] [class*="element-container"] {
+    margin-bottom: 0.15rem !important; margin-top: 0 !important;
+  }
+  section[data-testid="stSidebar"] hr { margin-top: 0.35rem !important; margin-bottom: 0.35rem !important; }
+  section[data-testid="stSidebar"] [data-testid="stSlider"] { padding-top: 0.1rem !important; padding-bottom: 0.1rem !important; }
+  section[data-testid="stSidebar"] label { font-size: 0.78rem !important; }
+  section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p,
+  section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { font-size: 0.75rem !important; margin-bottom: 0 !important; }
+  section[data-testid="stSidebar"] h4 { font-size: 1rem !important; margin-bottom: 0 !important; }
+  section[data-testid="stSidebar"] input { padding: 0.2rem 0.4rem !important; font-size: 0.78rem !important; }
+
   /* Star overlay buttons: invisible — card's ★/☆ symbol is the only visual */
   div[data-testid="stHorizontalBlock"]:has(.star-sentinel) button,
   div[data-testid="stHorizontalBlock"]:has(.star-sentinel) button:hover,
