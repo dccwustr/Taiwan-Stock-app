@@ -169,12 +169,13 @@ def load_data():
                 foreign=foreign, market=market, prices=prices, ts=ts)
 
 # ── Session state init ────────────────────────────────────────────────────────
-if "view_mode"       not in st.session_state: st.session_state.view_mode       = "picks"
-# valid modes: "picks" | "holdings" | "watchlist"
-if "custom_holdings" not in st.session_state: st.session_state.custom_holdings = {}
-if "hidden_holdings" not in st.session_state: st.session_state.hidden_holdings = set()
-if "search_ticker"   not in st.session_state: st.session_state.search_ticker   = None
-if "watchlist"       not in st.session_state: st.session_state.watchlist       = []
+if "view_mode"        not in st.session_state: st.session_state.view_mode        = "picks"
+# valid modes: "picks" | "holdings" | "watchlist" | "search"
+if "custom_holdings"  not in st.session_state: st.session_state.custom_holdings  = {}
+if "hidden_holdings"  not in st.session_state: st.session_state.hidden_holdings  = set()
+if "search_ticker"    not in st.session_state: st.session_state.search_ticker    = None
+if "watchlist"        not in st.session_state: st.session_state.watchlist        = []
+if "recent_searches"  not in st.session_state: st.session_state.recent_searches  = []
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -194,21 +195,12 @@ with st.sidebar:
     if qc2.button("Go", use_container_width=True):
         raw = query_input.strip().upper()
         if raw:
-            st.session_state.search_ticker = raw + ".TW" if not raw.endswith(".TW") else raw
-    if st.session_state.search_ticker and st.button("✕ 清除查詢", use_container_width=True):
-        st.session_state.search_ticker = None
-        st.rerun()
-
-    # Compact watchlist in sidebar
-    if st.session_state.watchlist:
-        st.caption("⭐ 追蹤中")
-        for _wt in list(st.session_state.watchlist):
-            _wn = TECH_UNIVERSE.get(_wt, {}).get("name", _wt.replace(".TW",""))
-            _wc1, _wc2 = st.columns([4, 1])
-            _wc1.caption(f"{_wt.replace('.TW','')} {_wn}")
-            if _wc2.button("✕", key=f"rmwatch_side_{_wt}"):
-                st.session_state.watchlist.remove(_wt)
-                st.rerun()
+            ticker = raw + ".TW" if not raw.endswith(".TW") else raw
+            st.session_state.search_ticker = ticker
+            # Prepend to recent searches, deduplicate, cap at 10
+            rs = [t for t in st.session_state.recent_searches if t != ticker]
+            st.session_state.recent_searches = ([ticker] + rs)[:10]
+            st.session_state.view_mode = "search"
 
     # Settings
     top_n     = st.slider("推薦數量", 3, 8, 5)
@@ -220,15 +212,18 @@ with st.sidebar:
     # ── 新增持股 ──────────────────────────────────────────────────────────────
     # View toggle buttons
     vm = st.session_state.view_mode
-    if st.button("🎯 精選潛力股" if vm != "picks" else "🎯 精選潛力股  ✓", use_container_width=True,
-                 type="primary" if vm == "picks" else "secondary"):
-        st.session_state.view_mode = "picks"; st.rerun()
-    if st.button("💼 我的持股" if vm != "holdings" else "💼 我的持股  ✓", use_container_width=True,
-                 type="primary" if vm == "holdings" else "secondary"):
-        st.session_state.view_mode = "holdings"; st.rerun()
-    if st.button("⭐ 追蹤清單" if vm != "watchlist" else "⭐ 追蹤清單  ✓", use_container_width=True,
-                 type="primary" if vm == "watchlist" else "secondary"):
-        st.session_state.view_mode = "watchlist"; st.rerun()
+    _views = [
+        ("picks",    "🎯 精選潛力股"),
+        ("holdings", "💼 我的持股"),
+        ("watchlist","⭐ 追蹤清單"),
+        ("search",   "🔍 搜尋記錄"),
+    ]
+    for _vkey, _vlabel in _views:
+        _active = vm == _vkey
+        _suffix = "  ✓" if _active else ""
+        if st.button(f"{_vlabel}{_suffix}", use_container_width=True,
+                     type="primary" if _active else "secondary", key=f"nav_{_vkey}"):
+            st.session_state.view_mode = _vkey; st.rerun()
 
     with st.expander("＋ 新增 / 編輯持股"):
         st.caption("輸入股票代號（如 2454）、股數、買進均價")
@@ -285,11 +280,15 @@ cat_sc   = data["catalyst"]
 foreign  = data["foreign"]
 mkt      = data["market"]
 
-# ── Prepare search + watchlist data ──────────────────────────────────────────
-_sticker = st.session_state.get("search_ticker")
+# ── Prepare search + watchlist + recent-search data ──────────────────────────
+_sticker       = st.session_state.get("search_ticker")
+_recent        = st.session_state.recent_searches        # list[ticker], max 10
+_all_extra     = list(dict.fromkeys(                     # deduplicated, order preserved
+    ([_sticker] if _sticker else []) + _recent + st.session_state.watchlist
+))
 
-# Pre-fetch price data for search ticker and any watchlist tickers not yet loaded
-_need = [t for t in ([_sticker] if _sticker else []) + st.session_state.watchlist if t and t not in prices]
+# Pre-fetch prices for anything not already loaded
+_need = [t for t in _all_extra if t and t not in prices]
 if _need:
     prices.update(fetch_prices_batch(_need, period="3mo"))
 
@@ -308,8 +307,16 @@ for _wt in st.session_state.watchlist:
         _wr["catalysts"] = get_catalyst_labels(_wt, all_news)
         _watch_results[_wt] = _wr
 
-# Batch live prices for search + watchlist in one call
-_live_tickers = [t for t in ([_sticker] if _sticker and _sres else []) + st.session_state.watchlist if t]
+# Score recent search tickers
+_recent_results = {}
+for _rt in _recent:
+    _rr = score_stock(_rt, prices.get(_rt), cat_sc.get(_rt, 0), foreign.get(_rt, 0))
+    if _rr:
+        _rr["catalysts"] = get_catalyst_labels(_rt, all_news)
+        _recent_results[_rt] = _rr
+
+# Batch live prices for all extra tickers in one call
+_live_tickers = [t for t in _all_extra if t]
 _query_live = fetch_live_prices(_live_tickers) if _live_tickers else {}
 
 # ── Fill holdings in sidebar ──────────────────────────────────────────────────
@@ -573,6 +580,27 @@ if mkt:
 st.divider()
 
 
+# ── Main view: Search history ────────────────────────────────────────────────
+if st.session_state.view_mode == "search":
+    st.markdown("## 🔍 搜尋記錄")
+    if not _recent:
+        st.caption("還沒有搜尋記錄。在左側輸入股票代號查詢。")
+    else:
+        for _rt in _recent:
+            if _rt in _recent_results:
+                render_query_card(_rt, _recent_results[_rt], _query_live.get(_rt), f"r_{_rt}")
+            else:
+                st.warning(f"{_rt.replace('.TW','')} — 找不到資料")
+    if _recent and st.button("🗑 清除搜尋記錄", use_container_width=True):
+        st.session_state.recent_searches = []
+        st.session_state.search_ticker   = None
+        st.rerun()
+    st.divider()
+    with st.expander("📰 今日早盤新聞", expanded=False):
+        for h in data["headlines"][:8]:
+            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
+    st.stop()
+
 # ── Main view: Watchlist ─────────────────────────────────────────────────────
 if st.session_state.view_mode == "watchlist":
     st.markdown("## ⭐ 追蹤清單")
@@ -587,15 +615,6 @@ if st.session_state.view_mode == "watchlist":
         for h in data["headlines"][:8]:
             st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
     st.stop()
-
-# ── Search result (inline, only in picks view) ───────────────────────────────
-if _sticker and _sres:
-    st.markdown("## 🔍 搜尋結果")
-    render_query_card(_sticker, _sres, _query_live.get(_sticker), "search")
-    st.divider()
-elif _sticker and not _sres:
-    st.warning("找不到資料，請確認代號是否正確（格式：2330）")
-    st.divider()
 
 # ── Main view: Holdings ───────────────────────────────────────────────────────
 if st.session_state.view_mode == "holdings":
