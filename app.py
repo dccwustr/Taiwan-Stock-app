@@ -266,7 +266,6 @@ with st.sidebar:
     sidebar_content = st.container()
 
     st.divider()
-    st.divider()
     top_n     = st.slider("推薦數量", 3, 8, 5)
     min_score = st.slider("最低評分門檻", 30, 75, 40)
     show_chart = st.checkbox("顯示K線圖", value=False)
