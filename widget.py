@@ -913,10 +913,183 @@ def get_beginner_advice(df: pd.DataFrame, live_price: float) -> Dict:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  美股隔夜 & 國際財經
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def fetch_us_overnight() -> Dict:
+    """
+    抓取美股隔夜收盤：S&P500、那斯達克、費城半導體（SOX）、VIX、
+    TSMC ADR、NVDA、美元/台幣。
+    計算對台股的綜合影響分數 macro_score（-15 ~ +15）。
+    費半是台灣半導體股最關鍵的領先指標。
+    """
+    empty = {
+        "sp500":   {"pct": 0.0, "val": 0.0},
+        "nasdaq":  {"pct": 0.0, "val": 0.0},
+        "sox":     {"pct": 0.0, "val": 0.0},
+        "vix":     {"pct": 0.0, "val": 0.0},
+        "usd_twd": {"pct": 0.0, "val": 0.0},
+        "tsm_adr": {"pct": 0.0, "val": 0.0},
+        "nvda":    {"pct": 0.0, "val": 0.0},
+        "sentiment":   "neutral",
+        "macro_score": 0,
+        "summary":     "",
+    }
+    if not HAS_YF:
+        return empty
+
+    try:
+        syms = ["^GSPC", "^IXIC", "^SOX", "^VIX", "USDTWD=X", "TSM", "NVDA"]
+        raw = yf.download(syms, period="5d", progress=False,
+                          auto_adjust=True, threads=True)
+        if raw is None or raw.empty:
+            return empty
+
+        def _pct_val(sym: str):
+            try:
+                s = raw["Close"][sym].dropna() if isinstance(raw.columns, pd.MultiIndex) \
+                    else raw["Close"].dropna()
+                if len(s) >= 2:
+                    return round((s.iloc[-1] / s.iloc[-2] - 1) * 100, 2), round(float(s.iloc[-1]), 2)
+            except Exception:
+                pass
+            return 0.0, 0.0
+
+        sp_pct,  sp_val  = _pct_val("^GSPC")
+        nq_pct,  nq_val  = _pct_val("^IXIC")
+        sox_pct, sox_val = _pct_val("^SOX")
+        vix_pct, vix_val = _pct_val("^VIX")
+        usd_pct, usd_val = _pct_val("USDTWD=X")
+        tsm_pct, tsm_val = _pct_val("TSM")
+        nvd_pct, nvd_val = _pct_val("NVDA")
+
+        # ── 綜合評分（加權，費半最重要）────────────────────────────────────────
+        macro = (
+            sox_pct * 2.0    # 費半：直接反映半導體出口景氣，與台股相關係數 >0.8
+          + nq_pct  * 1.0    # 那指：科技股整體氣氛
+          + sp_pct  * 0.5    # 標普：市場廣度
+          + nvd_pct * 0.5    # 輝達：AI板塊溫度計
+          + tsm_pct * 0.5    # 台積電ADR：外資對台股科技的直接看法
+        )
+        # VIX 恐慌指數懲罰
+        if   vix_val > 35: macro -= 12
+        elif vix_val > 30: macro -= 8
+        elif vix_val > 25: macro -= 4
+        elif vix_val > 20: macro -= 1
+        # 美元強勢微幅加分（台灣出口股受惠）
+        if   usd_pct >  0.5: macro += 1
+        elif usd_pct < -0.5: macro -= 1
+
+        macro = max(-15.0, min(15.0, round(macro, 1)))
+
+        sent = "bullish" if macro >= 6 else ("bearish" if macro <= -6 else "neutral")
+
+        # 摘要文字
+        movers = []
+        if abs(sox_pct) >= 0.8:  movers.append(f"費半 {sox_pct:+.1f}%")
+        if abs(nq_pct)  >= 0.8:  movers.append(f"那指 {nq_pct:+.1f}%")
+        if abs(nvd_pct) >= 1.5:  movers.append(f"NVDA {nvd_pct:+.1f}%")
+        if abs(tsm_pct) >= 1.0:  movers.append(f"TSM ADR {tsm_pct:+.1f}%")
+        if vix_val > 25:         movers.append(f"VIX {vix_val:.0f} ⚠️")
+        summary = "　".join(movers) if movers else "美股小幅波動，影響有限"
+
+        return {
+            "sp500":   {"pct": sp_pct,  "val": sp_val},
+            "nasdaq":  {"pct": nq_pct,  "val": nq_val},
+            "sox":     {"pct": sox_pct, "val": sox_val},
+            "vix":     {"pct": vix_pct, "val": vix_val},
+            "usd_twd": {"pct": usd_pct, "val": usd_val},
+            "tsm_adr": {"pct": tsm_pct, "val": tsm_val},
+            "nvda":    {"pct": nvd_pct, "val": nvd_val},
+            "sentiment":   sent,
+            "macro_score": macro,
+            "summary":     summary,
+        }
+    except Exception:
+        return empty
+
+
+def us_macro_stock_bonus(ticker: str, us_data: Dict) -> int:
+    """
+    根據美股隔夜表現，計算個股的盤前加/減分（-10 ~ +10）。
+    半導體/IC設計股與費半相關最高；金融/航運相關最低。
+    """
+    if not us_data:
+        return 0
+    macro  = float(us_data.get("macro_score", 0))
+    sox    = float(us_data.get("sox",  {}).get("pct", 0))
+    nvda   = float(us_data.get("nvda", {}).get("pct", 0))
+    vix    = float(us_data.get("vix",  {}).get("val", 0))
+    if macro == 0 and vix == 0:
+        return 0
+
+    info   = TECH_UNIVERSE.get(ticker, {})
+    sector = info.get("sector", "")
+    supply = info.get("supply", [])
+
+    # Tier 1: directly in SOX basket — 半導體、記憶體、IC設計
+    T1 = {"記憶體", "晶片", "IC設計", "網路/通訊IC"}
+    # Tier 2: downstream supply chain
+    T2 = {"PCB/被動元件", "封裝測試", "設備材料"}
+    # Tier 3: low correlation
+    T3 = {"金融", "航運", "生技", "消費"}
+
+    if sector in T1 or any(s in supply for s in ("NVIDIA", "AMD", "Apple", "CoWoS")):
+        base = sox * 1.5 + nvda * 0.5
+    elif sector in T2:
+        base = sox * 0.8 + macro * 0.2
+    elif sector in T3:
+        base = macro * 0.15
+    else:
+        base = macro * 0.5   # general tech
+
+    # Extreme VIX overrides sector: if panic, cap at -3 or lower
+    if   vix > 35: base = min(base, -8)
+    elif vix > 30: base = min(base, -3)
+    elif vix > 25: base = min(base,  0)
+
+    return max(-10, min(10, round(base)))
+
+
+def fetch_global_news() -> List[str]:
+    """
+    抓取國際財經新聞（yfinance Ticker.news），
+    過濾出台灣科技相關主題（半導體、AI、供應鏈、關稅、Fed…）。
+    """
+    if not HAS_YF:
+        return []
+    KW = ["semiconductor", "chip", "TSMC", "NVIDIA", "AI", "Taiwan",
+          "memory", "HBM", "packaging", "tariff", "Fed", "Apple",
+          "supply chain", "Micron", "ASML", "foundry", "wafer"]
+    seen: set = set()
+    headlines: List[str] = []
+    for sym in ["TSM", "NVDA", "MU", "AVGO", "^SOX"]:
+        try:
+            items = yf.Ticker(sym).news or []
+            for item in items[:5]:
+                content = item.get("content", {})
+                title = (content.get("title", "") if isinstance(content, dict)
+                         else item.get("title", ""))
+                if not title or title in seen:
+                    continue
+                if any(k.lower() in title.lower() for k in KW):
+                    seen.add(title)
+                    headlines.append(title)
+                if len(headlines) >= 8:
+                    break
+        except Exception:
+            pass
+        if len(headlines) >= 8:
+            break
+    return headlines
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  股票篩選引擎
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net: float) -> Dict:
+def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net: float,
+                macro_bonus: int = 0) -> Dict:
     """
     綜合評分 0-100：
       量能 30 + 動能 25 + 技術 25 + 催化劑 20（+外資調整）
@@ -952,11 +1125,11 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     elif macd_hist > 0:   tech += 5
     tech += mas * 2   # max 6
 
-    # 4. 催化劑 (0-30) + 外資調整
-    # 上限從20提高到30，讓直接被點名的個股能獲得更高加分
-    cat_score = min(30, catalyst_bonus)
-    fi_bonus  = min(5, int(foreign_net / 500)) if foreign_net > 0 else max(-5, int(foreign_net / 500))
-    total = min(100, vol_score + mom_score + tech + cat_score + fi_bonus)
+    # 4. 催化劑 (0-30) + 外資調整 + 美股盤前影響
+    cat_score  = min(30, catalyst_bonus)
+    fi_bonus   = min(5, int(foreign_net / 500)) if foreign_net > 0 else max(-5, int(foreign_net / 500))
+    macro_adj  = max(-10, min(10, int(macro_bonus)))   # clamped just in case
+    total = min(100, max(0, vol_score + mom_score + tech + cat_score + fi_bonus + macro_adj))
 
     last_price = float(close.iloc[-1])
     atr        = calc_atr(df)
@@ -983,6 +1156,7 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
         "mom_score":   mom_score,
         "tech_score":  tech,
         "cat_score":   cat_score,
+        "macro_bonus": macro_adj,
         "vol_ratio":   round(vr, 2),
         "rsi":         round(rsi, 1),
         "mom1d":       round(mom1d, 2),

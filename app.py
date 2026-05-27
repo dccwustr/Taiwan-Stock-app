@@ -38,6 +38,7 @@ from widget import (
     get_catalyst_labels, score_stock, analyze_holdings, fetch_live_prices,
     analyze_holding_sell, get_beginner_advice,
     calc_rsi, calc_live_rsi, _TW_STOCK_NAMES,
+    fetch_us_overnight, us_macro_stock_bonus, fetch_global_news,
 )
 
 warnings.filterwarnings("ignore")
@@ -251,9 +252,12 @@ def load_data(epoch: str):                       # epoch = "YYYY-MM-DD", changes
     foreign  = fetch_twse_foreign_buying()
     market   = fetch_twse_market_summary()
     prices   = fetch_prices_batch(tickers, period="3mo")
+    us_data  = fetch_us_overnight()              # US overnight macro (SOX, Nasdaq, VIX…)
+    g_news   = fetch_global_news()               # international headlines filtered for TW tech
     ts = _now_tw().strftime("%H:%M")
     return dict(news=news, headlines=headlines, catalyst=cat_sc,
-                foreign=foreign, market=market, prices=prices, ts=ts)
+                foreign=foreign, market=market, prices=prices,
+                us_data=us_data, global_news=g_news, ts=ts)
 
 # ── Session state init ────────────────────────────────────────────────────────
 if "view_mode"        not in st.session_state: st.session_state.view_mode        = "picks"
@@ -383,11 +387,13 @@ _epoch = _trading_epoch()
 with st.spinner("載入中…"):
     data = load_data(_epoch)
 
-prices   = data["prices"]
-all_news = data["news"]
-cat_sc   = data["catalyst"]
-foreign  = data["foreign"]
-mkt      = data["market"]
+prices      = data["prices"]
+all_news    = data["news"]
+cat_sc      = data["catalyst"]
+foreign     = data["foreign"]
+mkt         = data["market"]
+us_data     = data.get("us_data", {})
+global_news = data.get("global_news", [])
 
 # ── Prepare search + watchlist + recent-search data ──────────────────────────
 _sticker       = st.session_state.get("search_ticker")
@@ -410,14 +416,16 @@ _query_live = fetch_live_prices(_live_tickers) if _live_tickers else {}
 # Score search ticker
 _sres = None
 if _sticker:
-    _sres = score_stock(_sticker, prices.get(_sticker), cat_sc.get(_sticker, 0), foreign.get(_sticker, 0))
+    _sres = score_stock(_sticker, prices.get(_sticker), cat_sc.get(_sticker, 0), foreign.get(_sticker, 0),
+                        us_macro_stock_bonus(_sticker, us_data))
     if _sres:
         _sres["catalysts"] = get_catalyst_labels(_sticker, all_news)
 
 # Score watchlist tickers
 _watch_results = {}
 for _wt in st.session_state.watchlist:
-    _wr = score_stock(_wt, prices.get(_wt), cat_sc.get(_wt, 0), foreign.get(_wt, 0))
+    _wr = score_stock(_wt, prices.get(_wt), cat_sc.get(_wt, 0), foreign.get(_wt, 0),
+                      us_macro_stock_bonus(_wt, us_data))
     if _wr:
         _wr["catalysts"] = get_catalyst_labels(_wt, all_news)
         _watch_results[_wt] = _wr
@@ -425,7 +433,8 @@ for _wt in st.session_state.watchlist:
 # Score recent search tickers
 _recent_results = {}
 for _rt in _recent:
-    _rr = score_stock(_rt, prices.get(_rt), cat_sc.get(_rt, 0), foreign.get(_rt, 0))
+    _rr = score_stock(_rt, prices.get(_rt), cat_sc.get(_rt, 0), foreign.get(_rt, 0),
+                      us_macro_stock_bonus(_rt, us_data))
     if _rr:
         _rr["catalysts"] = get_catalyst_labels(_rt, all_news)
         _recent_results[_rt] = _rr
@@ -559,7 +568,8 @@ scored = []
 for ticker in TECH_UNIVERSE:
     if ticker in skip:
         continue
-    res = score_stock(ticker, prices.get(ticker), cat_sc.get(ticker, 0), foreign.get(ticker, 0))
+    res = score_stock(ticker, prices.get(ticker), cat_sc.get(ticker, 0), foreign.get(ticker, 0),
+                      us_macro_stock_bonus(ticker, us_data))
     if res:
         # 零股小資調整：RSI過熱難買到低點；高價股零股難累積
         _adj = 0
@@ -1166,6 +1176,79 @@ if st.session_state.view_mode == "monitor":
         for h in data["headlines"][:8]:
             st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
     st.stop()
+
+# ── US Overnight Macro Panel ────────────────────────────────────────────────
+def _c(pct):
+    """Taiwan convention: UP = red, DOWN = green."""
+    return "#ef5350" if pct >= 0 else "#00c853"
+def _a(pct):
+    return "▲" if pct >= 0 else "▼"
+
+if us_data and (us_data.get("macro_score", 0) != 0 or us_data.get("sox", {}).get("val", 0) > 0):
+    _ms   = us_data.get("macro_score", 0)
+    _sent = us_data.get("sentiment", "neutral")
+    _sent_html = (
+        '<span style="color:#ef5350;font-weight:700">🟢 偏多</span>' if _sent == "bullish" else
+        '<span style="color:#00c853;font-weight:700">🔴 偏空</span>' if _sent == "bearish" else
+        '<span style="color:#ffd54f;font-weight:700">🟡 中性</span>'
+    )
+    _sox   = us_data["sox"];   _nq = us_data["nasdaq"]; _sp = us_data["sp500"]
+    _nvda  = us_data["nvda"];  _tsm = us_data["tsm_adr"]; _vix = us_data["vix"]
+    _usd   = us_data["usd_twd"]
+    _ms_col = "#ef5350" if _ms >= 3 else ("#00c853" if _ms <= -3 else "#ffd54f")
+
+    st.markdown(
+        f'<div style="background:#0a1628;border:1px solid #1e3a5c;border-radius:10px;'
+        f'padding:14px 18px;margin-bottom:12px">'
+        # Title row
+        f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+        f'<span style="font-size:14px;font-weight:700;color:#7eb3ff">🌍 美股隔夜概況</span>'
+        f'<span style="font-size:11px;color:#555">（{_epoch}）</span>'
+        f'<span style="margin-left:auto;font-size:12px">{_sent_html}　'
+        f'<span style="color:{_ms_col};font-weight:700">台股影響 {_ms:+.0f}</span></span>'
+        f'</div>'
+        # Indices row
+        f'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px">'
+        f'<div style="text-align:center">'
+        f'<div style="font-size:10px;color:#555">費半 SOX</div>'
+        f'<div style="font-size:16px;font-weight:700;color:{_c(_sox["pct"])}">'
+        f'{_a(_sox["pct"])}{abs(_sox["pct"]):.1f}%</div>'
+        f'<div style="font-size:10px;color:#444">{_sox["val"]:.0f}</div></div>'
+
+        f'<div style="text-align:center">'
+        f'<div style="font-size:10px;color:#555">那斯達克</div>'
+        f'<div style="font-size:16px;font-weight:700;color:{_c(_nq["pct"])}">'
+        f'{_a(_nq["pct"])}{abs(_nq["pct"]):.1f}%</div>'
+        f'<div style="font-size:10px;color:#444">{_nq["val"]:.0f}</div></div>'
+
+        f'<div style="text-align:center">'
+        f'<div style="font-size:10px;color:#555">標普500</div>'
+        f'<div style="font-size:16px;font-weight:700;color:{_c(_sp["pct"])}">'
+        f'{_a(_sp["pct"])}{abs(_sp["pct"]):.1f}%</div>'
+        f'<div style="font-size:10px;color:#444">{_sp["val"]:.0f}</div></div>'
+
+        f'<div style="text-align:center">'
+        f'<div style="font-size:10px;color:#555">VIX 恐慌</div>'
+        f'<div style="font-size:16px;font-weight:700;color:{"#ef5350" if _vix["val"] > 25 else "#00c853" if _vix["val"] < 15 else "#ffd54f"}">'
+        f'{_vix["val"]:.1f}</div>'
+        f'<div style="font-size:10px;color:#444">{"偏高⚠️" if _vix["val"] > 25 else "正常"}</div></div>'
+        f'</div>'
+        # ADR + USD row
+        f'<div style="display:flex;gap:16px;font-size:12px;color:#888;border-top:1px solid #1a1a2e;padding-top:8px">'
+        f'<span>台積電ADR <b style="color:{_c(_tsm["pct"])}">{_a(_tsm["pct"])}{abs(_tsm["pct"]):.1f}%</b></span>'
+        f'<span>NVDA <b style="color:{_c(_nvda["pct"])}">{_a(_nvda["pct"])}{abs(_nvda["pct"]):.1f}%</b></span>'
+        f'<span>美元/台幣 <b style="color:#e0e0e0">{_usd["val"]:.2f}</b>'
+        f' <span style="color:{_c(_usd["pct"])};font-size:10px">{_a(_usd["pct"])}{abs(_usd["pct"]):.2f}%</span></span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+    # Global news headlines
+    if global_news:
+        with st.expander(f"🌐 國際財經新聞 ({len(global_news)}則)", expanded=False):
+            for _gh in global_news:
+                st.markdown(f'<div class="news-line">🌐 {_gh}</div>', unsafe_allow_html=True)
 
 # ── Picks view header ────────────────────────────────────────────────────────
 st.markdown("## 🎯 今日精選潛力股　<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>全產業・零股小資</span>", unsafe_allow_html=True)
