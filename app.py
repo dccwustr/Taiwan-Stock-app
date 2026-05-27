@@ -246,14 +246,19 @@ st.markdown("""
 # ── Data loading ──────────────────────────────────────────────────────────────
 @st.cache_data(ttl=28800, show_spinner=False)   # 8-hour TTL; epoch param busts cache each trading morning
 def load_data(epoch: str):                       # epoch = "YYYY-MM-DD", changes at 08:00 TWN each weekday
+    import io, contextlib
     tickers  = list(TECH_UNIVERSE.keys())
-    news     = fetch_cnyes_news(100) + fetch_moneydj_news()   # 100 items per category, 24h window
+    # Suppress yfinance stdout/stderr chatter inside the cached function
+    # (yfinance prints "N Failed downloads:" etc. which can confuse some Streamlit Cloud versions)
+    _buf = io.StringIO()
+    with contextlib.redirect_stdout(_buf), contextlib.redirect_stderr(_buf):
+        prices   = fetch_prices_batch(tickers, period="3mo")
+        us_data  = fetch_us_overnight()
+        g_news   = fetch_global_news()
+    news     = fetch_cnyes_news(100) + fetch_moneydj_news()
     cat_sc, headlines = analyze_catalysts(news)
     foreign  = fetch_twse_foreign_buying()
     market   = fetch_twse_market_summary()
-    prices   = fetch_prices_batch(tickers, period="3mo")
-    us_data  = fetch_us_overnight()              # US overnight macro (SOX, Nasdaq, VIX…)
-    g_news   = fetch_global_news()               # international headlines filtered for TW tech
     ts = _now_tw().strftime("%H:%M")
     return dict(news=news, headlines=headlines, catalyst=cat_sc,
                 foreign=foreign, market=market, prices=prices,
@@ -395,13 +400,24 @@ if st.session_state.get("_close_sidebar"):
 # ── Load data ─────────────────────────────────────────────────────────────────
 _epoch = _trading_epoch()
 with st.spinner("載入中…"):
-    data = load_data(_epoch)
+    try:
+        data = load_data(_epoch)
+    except Exception as _load_err:
+        # If cache fails (rare Streamlit Cloud serialization issue), clear and retry once
+        st.cache_data.clear()
+        try:
+            data = load_data(_epoch)
+        except Exception:
+            data = dict(news=[], headlines=[], catalyst={},
+                        foreign={}, market={}, prices={},
+                        us_data={}, global_news=[], ts="--:--")
+            st.warning(f"資料載入失敗，請重新整理頁面。（{type(_load_err).__name__}）")
 
-prices      = data["prices"]
-all_news    = data["news"]
-cat_sc      = data["catalyst"]
-foreign     = data["foreign"]
-mkt         = data["market"]
+prices      = data.get("prices", {})
+all_news    = data.get("news", [])
+cat_sc      = data.get("catalyst", {})
+foreign     = data.get("foreign", {})
+mkt         = data.get("market", {})
 us_data     = data.get("us_data", {})
 global_news = data.get("global_news", [])
 
