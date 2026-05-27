@@ -52,3 +52,17 @@ if [ "$FINAL" = "200" ]; then
 else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚠️  App 無回應 (HTTP $FINAL)，請手動檢查" >> "$LOG"
 fi
+
+# ── 5. 推送今日時間戳到 GitHub → 觸發 Streamlit Cloud 重新部署 ─────────────────
+# 原理：Streamlit Cloud 偵測到 GitHub 有新 commit 就自動重新部署，
+#       重新部署會清除 in-memory cache，讓手機端也能拿到今日新資料。
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] 推送 GitHub 觸發雲端刷新..." >> "$LOG"
+cd "$APP_DIR"
+echo "refreshed: $(date '+%Y-%m-%d %H:%M CST')" > data/last_refreshed.txt
+git add data/last_refreshed.txt >> "$LOG" 2>&1
+git commit -m "chore: daily refresh $(date '+%Y-%m-%d')" >> "$LOG" 2>&1
+if git push origin main >> "$LOG" 2>&1; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ GitHub 推送成功，Streamlit Cloud 即將重新部署 🚀" >> "$LOG"
+else
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚠️  GitHub 推送失敗，請檢查網路或 token" >> "$LOG"
+fi
