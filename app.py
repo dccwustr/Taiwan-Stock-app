@@ -917,7 +917,7 @@ def render_stock_cards(picks, prices, show_chart):
             _rsi_pct  = min(100, max(0, _adv["rsi"]))
             _rsi_col  = _adv["rsi_col"]
             _stop_pct = _adv["stop_pct"]
-            with st.expander("💡 新手操作建議（點擊展開）", expanded=False):
+            with st.expander(f"💡 {p['ticker'].replace('.TW','')} 新手建議（點擊展開）", expanded=False):
                 st.markdown(
                     f'<div class="advice-box">'
                     f'<div class="advice-title">💡 新手操作建議（即時更新）</div>'
