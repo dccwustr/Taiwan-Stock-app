@@ -365,17 +365,117 @@ def _parse_ts(ts) -> str:
     except Exception:
         return "--:--"
 
-def fetch_live_prices(tickers: List[str]) -> Dict[str, Dict]:
+# 模組層級 TWSE session（初始化一次，保留 cookie）
+_twse_session: Optional[requests.Session] = None
+
+def _get_twse_session() -> requests.Session:
+    global _twse_session
+    if _twse_session is None:
+        _twse_session = requests.Session()
+        _twse_session.headers.update({
+            **HEADERS,
+            "Referer": "https://mis.twse.com.tw/stock/index.jsp",
+        })
+        try:
+            _twse_session.get("https://mis.twse.com.tw/stock/index.jsp", timeout=5)
+        except Exception:
+            pass
+    return _twse_session
+
+
+def _fetch_live_twse(tickers: List[str]) -> Dict[str, Dict]:
     """
-    Real-time-ish prices via yfinance batch download (single HTTP request).
-    Uses yf.download() so all tickers are fetched in one call — avoids
-    Yahoo Finance rate-limiting that hits per-ticker parallel requests.
+    即時股價 — TWSE MIS API（台灣交易所官方資料）
+    優先用 z（成交價），z=- 時改用買賣掛單中間價（bid/ask midpoint），
+    確保盤中每幾秒都有更新，遠比 yfinance 1分K即時。
     """
-    import yfinance as yf
     result: Dict[str, Dict] = {}
     if not tickers:
         return result
 
+    session = _get_twse_session()
+    codes   = [t.replace(".TW", "").replace(".TWO", "").lower() for t in tickers]
+    # 同時送出 tse_ 和 otc_ 前綴，API 自動忽略無效的那個
+    ex_ch   = "|".join(f"tse_{c}.tw|otc_{c}.tw" for c in codes)
+    url     = (f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
+               f"?ex_ch={ex_ch}&json=1&delay=0")
+    try:
+        r = session.get(url, timeout=5)
+        r.raise_for_status()
+        for item in r.json().get("msgArray", []):
+            code   = item.get("c", "")
+            ticker = code + ".TW"
+            if not code or ticker not in tickers:
+                continue
+
+            y_str = item.get("y", "")
+            prev  = float(y_str) if y_str and y_str not in ("-", "0", "") else 0
+            if prev == 0:
+                continue
+
+            # ── 1. 成交價 z（有撮合就用） ─────────────────────────────────────
+            price = None
+            z = item.get("z", "-")
+            if z and z not in ("-", "0", ""):
+                price = float(z)
+
+            # ── 2. z=- 時改用買賣掛單中間價（bid/ask midpoint）──────────────
+            if price is None:
+                a_str = item.get("a", "")   # 賣：2315_2320_...
+                b_str = item.get("b", "")   # 買：2310_2305_...
+                try:
+                    best_ask = float(a_str.split("_")[0]) if a_str else None
+                    best_bid = float(b_str.split("_")[0]) if b_str else None
+                    if best_ask and best_bid:
+                        price = (best_ask + best_bid) / 2
+                    elif best_bid:
+                        price = best_bid
+                    elif best_ask:
+                        price = best_ask
+                except (ValueError, IndexError):
+                    pass
+
+            # ── 3. 再退：今日最高 / 開盤 ─────────────────────────────────────
+            if price is None:
+                for fld in ("h", "o"):
+                    val = item.get(fld, "-")
+                    if val and val not in ("-", "0", ""):
+                        price = float(val)
+                        break
+
+            if price is None:
+                continue
+
+            chg      = price - prev
+            chg_pct  = (chg / prev * 100) if prev > 0 else 0
+            vol_raw  = item.get("v", "0").replace(",", "")
+            volume   = int(float(vol_raw)) // 1000 if vol_raw and vol_raw not in ("-", "") else 0
+            u_str    = item.get("u", "-")
+            limit_up = float(u_str) if u_str and u_str not in ("-", "0", "") else _tw_limit_up(prev)
+            t_str    = item.get("t", "") or item.get("%", "--:--")
+
+            result[ticker] = {
+                "price":      round(price, 2),
+                "prev":       prev,
+                "chg":        round(chg, 2),
+                "chg_pct":    round(chg_pct, 2),
+                "volume":     volume,
+                "limit_up":   limit_up,
+                "limit_down": round(prev * 0.90, 0),
+                "time":       t_str[:5] if len(t_str) >= 5 else t_str,
+                "live":       True,
+            }
+    except Exception:
+        pass
+    return result
+
+
+def _fetch_live_yf(tickers: List[str]) -> Dict[str, Dict]:
+    """yfinance fallback（非交易時段 / TWSE API 未覆蓋時使用）"""
+    import yfinance as yf
+    result: Dict[str, Dict] = {}
+    if not tickers:
+        return result
     try:
         raw = yf.download(
             tickers=" ".join(tickers),
@@ -386,39 +486,34 @@ def fetch_live_prices(tickers: List[str]) -> Dict[str, Dict]:
         )
     except Exception:
         return result
-
     if raw is None or raw.empty:
         return result
-
     is_multi = isinstance(raw.columns, pd.MultiIndex)
-
     for t in tickers:
         try:
-            if is_multi:
-                close_s = raw["Close"][t].dropna()
-                vol_s   = raw["Volume"][t].dropna()
-            else:
-                # yf.download with a single ticker returns flat columns
-                close_s = raw["Close"].dropna()
-                vol_s   = raw["Volume"].dropna()
-
+            close_s = raw["Close"][t].dropna() if is_multi else raw["Close"].dropna()
+            vol_s   = raw["Volume"][t].dropna() if is_multi else raw["Volume"].dropna()
             if close_s.empty:
                 continue
-
             last_price = float(close_s.iloc[-1])
             last_ts    = close_s.index[-1]
-
-            # Previous trading day's last close
             if hasattr(last_ts, "date"):
                 today_d    = last_ts.date()
                 prev_bars  = close_s[[x.date() < today_d for x in close_s.index]]
                 prev_close = float(prev_bars.iloc[-1]) if not prev_bars.empty else last_price
             else:
                 prev_close = last_price
-
             chg     = last_price - prev_close
             chg_pct = (chg / prev_close * 100) if prev_close > 0 else 0
             vol_sum = int(vol_s.iloc[-30:].sum() / 1000) if not vol_s.empty else 0
+            # 若最後一根 K 是今天的，就算「盤中延遲」也算 live
+            from datetime import timezone as _tz, timedelta as _td
+            _tw_now = datetime.now(_tz(_td(hours=8))).date()
+            try:
+                _bar_date = last_ts.astimezone(_tz(_td(hours=8))).date()
+            except Exception:
+                _bar_date = None
+            is_today = (_bar_date == _tw_now) if _bar_date else False
 
             result[t] = {
                 "price":      last_price,
@@ -429,11 +524,25 @@ def fetch_live_prices(tickers: List[str]) -> Dict[str, Dict]:
                 "limit_up":   _tw_limit_up(prev_close),
                 "limit_down": round(prev_close * 0.90, 0),
                 "time":       _parse_ts(last_ts),
-                "live":       True,
+                "live":       is_today,
             }
         except Exception:
             pass
+    return result
 
+
+def fetch_live_prices(tickers: List[str]) -> Dict[str, Dict]:
+    """
+    即時股價主入口：
+      1. 優先用 TWSE MIS API（官方即時，盤中幾秒更新）
+      2. 沒拿到的 ticker 改用 yfinance 1分K補齊（非盤中時段）
+    """
+    if not tickers:
+        return {}
+    result  = _fetch_live_twse(tickers)
+    missing = [t for t in tickers if t not in result]
+    if missing:
+        result.update(_fetch_live_yf(missing))
     return result
 
 def analyze_holding_sell(df: pd.DataFrame) -> Dict:
