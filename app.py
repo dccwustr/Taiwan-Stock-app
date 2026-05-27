@@ -36,7 +36,7 @@ from widget import (
     fetch_cnyes_news, fetch_moneydj_news, fetch_twse_foreign_buying,
     fetch_twse_market_summary, fetch_prices_batch, analyze_catalysts,
     get_catalyst_labels, score_stock, analyze_holdings, fetch_live_prices,
-    analyze_holding_sell,
+    analyze_holding_sell, get_beginner_advice,
 )
 
 warnings.filterwarnings("ignore")
@@ -191,6 +191,45 @@ st.markdown("""
   div[data-testid="stHorizontalBlock"]:has(.refresh-sentinel) button:hover {
     color: #bbb !important;
     border-color: #555 !important;
+  }
+
+  /* Beginner advice panel */
+  .advice-box {
+    background: #0a1628;
+    border: 1px solid #1e3a5c;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 10px 0 4px 0;
+  }
+  .advice-title {
+    font-size: 13px; font-weight: 700; color: #7eb3ff;
+    letter-spacing: 0.5px; margin-bottom: 10px;
+  }
+  .advice-row {
+    display: flex; align-items: flex-start; gap: 8px;
+    margin-bottom: 8px; font-size: 13px;
+  }
+  .advice-label {
+    color: #666; white-space: nowrap; min-width: 56px;
+  }
+  .advice-val { color: #e0e0e0; font-weight: 600; }
+  .advice-note { color: #aaa; font-size: 12px; margin-top: 2px; }
+  .rsi-big {
+    font-size: 22px; font-weight: 800; line-height: 1;
+  }
+  .rsi-bar-wrap {
+    background: #1a1a2e; border-radius: 4px; height: 8px;
+    width: 100%; margin: 6px 0 2px;
+    position: relative;
+  }
+  .rsi-bar-fill { border-radius: 4px; height: 8px; }
+  .rsi-zones {
+    display: flex; justify-content: space-between;
+    font-size: 10px; color: #444; margin-top: 2px;
+  }
+  .entry-signal {
+    font-size: 13px; font-weight: 700; padding: 6px 10px;
+    border-radius: 8px; margin-top: 6px; text-align: center;
   }
 
   /* News */
@@ -870,6 +909,68 @@ def render_stock_cards(picks, prices, show_chart):
             f'</div>',
             unsafe_allow_html=True
         )
+
+        # ── 新手操作建議（即時更新，每10秒隨股價重算）────────────────────────
+        _ref = d["price"] if d and d["price"] > 0 else p["last_price"]
+        _adv = get_beginner_advice(prices.get(p["ticker"]), _ref)
+        if _adv:
+            _rsi_pct  = min(100, max(0, _adv["rsi"]))
+            _rsi_col  = _adv["rsi_col"]
+            _stop_pct = _adv["stop_pct"]
+            st.markdown(
+                f'<div class="advice-box">'
+                f'<div class="advice-title">💡 新手操作建議（即時更新）</div>'
+
+                # RSI 即時
+                f'<div class="advice-row">'
+                f'  <span class="advice-label">📊 RSI</span>'
+                f'  <div style="flex:1">'
+                f'    <span class="rsi-big" style="color:{_rsi_col}">{_adv["rsi"]}</span>'
+                f'    <span style="font-size:13px;color:{_rsi_col};margin-left:8px;font-weight:700">{_adv["rsi_signal"]}</span>'
+                f'    <div class="rsi-bar-wrap">'
+                f'      <div class="rsi-bar-fill" style="width:{_rsi_pct}%;background:linear-gradient(90deg,#00c853 30%,#ffd54f 60%,#ef5350 85%)"></div>'
+                f'    </div>'
+                f'    <div class="rsi-zones"><span>0</span><span>30 超賣</span><span>50</span><span>70 超買</span><span>100</span></div>'
+                f'    <div class="advice-note" style="color:{_rsi_col};margin-top:5px">{_adv["rsi_action"]}</div>'
+                f'  </div>'
+                f'</div>'
+
+                # 趨勢
+                f'<div class="advice-row" style="margin-top:10px">'
+                f'  <span class="advice-label">📈 趨勢</span>'
+                f'  <span style="color:{_adv["trend_col"]};font-weight:700">'
+                f'    {_adv["trend_icon"]} {_adv["trend"]}'
+                f'  </span>'
+                f'</div>'
+
+                # 建議買點
+                f'<div class="advice-row">'
+                f'  <span class="advice-label">🎯 買點</span>'
+                f'  <div>'
+                f'    <span class="advice-val">NT${_adv["buy_low"]} ~ {_adv["buy_high"]}</span>'
+                f'    <div class="advice-note">{_adv["buy_note"]}</div>'
+                f'  </div>'
+                f'</div>'
+
+                # 止損 & 目標
+                f'<div class="advice-row">'
+                f'  <span class="advice-label">🛡 止損</span>'
+                f'  <span class="advice-val" style="color:#00c853">NT${_adv["stop_loss"]}'
+                f'  <span style="font-size:12px;color:#666"> ({_stop_pct}%)</span></span>'
+                f'</div>'
+                f'<div class="advice-row">'
+                f'  <span class="advice-label">🏆 目標</span>'
+                f'  <span class="advice-val" style="color:#ef5350">NT${_adv["target"]}'
+                f'  <span style="font-size:12px;color:#666"> (+{_adv["target_pct"]}%)</span></span>'
+                f'</div>'
+
+                # MA參考
+                f'<div style="font-size:11px;color:#444;margin-top:6px">'
+                f'  均線參考：MA5 {_adv["ma5"]}　MA20 {_adv["ma20"]}'
+                f'</div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
 
         if show_chart:
             df = prices.get(p["ticker"])

@@ -770,6 +770,134 @@ def get_catalyst_labels(ticker: str, news_list: List[Dict]) -> List[str]:
     return list(dict.fromkeys(labels))[:3]
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  新手即時操作建議
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def calc_live_rsi(df: pd.DataFrame, live_price: float, period: int = 14) -> float:
+    """
+    即時 RSI：把當前成交價接在歷史日K後面重算。
+    讓 RSI 在盤中隨股價變動，新手可看到 RSI 何時進入可買區。
+    """
+    if df is None or len(df) < period + 2:
+        return calc_rsi(df["Close"]) if df is not None and len(df) > period else 50.0
+    close = df["Close"].copy()
+    # 用 live_price 取代（或附加）最後一根，模擬當前收盤
+    close = pd.concat([close, pd.Series([live_price], index=[close.index[-1] + pd.Timedelta(days=1)])])
+    return calc_rsi(close, period)
+
+
+def get_beginner_advice(df: pd.DataFrame, live_price: float) -> Dict:
+    """
+    為新手產生清楚的操作建議，包含：
+      - 即時 RSI 與進場信號
+      - 建議買點區間（支撐位）
+      - 止損價位
+      - 目標價位
+      - 文字說明
+    """
+    if df is None or len(df) < 22:
+        return {}
+
+    close  = df["Close"]
+    high   = df["High"]
+    ma5    = float(close.rolling(5).mean().iloc[-1])
+    ma20   = float(close.rolling(20).mean().iloc[-1])
+    ma60   = float(close.rolling(min(60, len(close))).mean().iloc[-1])
+    atr    = calc_atr(df)
+    rsi    = calc_live_rsi(df, live_price)
+    high20 = float(high.tail(20).max())
+
+    # ── 趨勢判斷 ──────────────────────────────────────────────────────────────
+    if live_price > ma5 > ma20 > ma60:
+        trend = "強勢上漲"
+        trend_icon = "🚀"
+        trend_col  = "#ef5350"
+    elif live_price > ma20:
+        trend = "上漲整理"
+        trend_icon = "📈"
+        trend_col  = "#ef5350"
+    elif live_price > ma60:
+        trend = "短線偏弱"
+        trend_icon = "⚠️"
+        trend_col  = "#ffd54f"
+    else:
+        trend = "下跌趨勢"
+        trend_icon = "📉"
+        trend_col  = "#aaa"
+
+    # ── 建議買點（支撐區）─────────────────────────────────────────────────────
+    if live_price > ma5:
+        # 股價在MA5之上 → 回踩MA5為好買點
+        buy_low  = round(ma5 * 0.99, 1)
+        buy_high = round(ma5 * 1.005, 1)
+        buy_note = f"等回踩 MA5 ({ma5:.1f}) 附近再進場，不要追高"
+    elif live_price > ma20:
+        # 介於MA5和MA20之間 → MA20支撐
+        buy_low  = round(ma20 * 0.995, 1)
+        buy_high = round(ma20 * 1.01, 1)
+        buy_note = f"MA20 ({ma20:.1f}) 附近是支撐，可小量試單"
+    else:
+        # 跌破MA20 → 等待站回
+        buy_low  = round(ma20 * 0.99, 1)
+        buy_high = round(ma20 * 1.005, 1)
+        buy_note = f"跌破均線，等站回 MA20 ({ma20:.1f}) 後再考慮"
+
+    # ── 止損（新手建議稍寬一點，避免被洗出）─────────────────────────────────
+    stop_loss = round(max(live_price - 2.0 * atr, ma20 * 0.95), 1)
+    stop_pct  = round((stop_loss - live_price) / live_price * 100, 1)
+
+    # ── 目標價（1:1.5 風險報酬）──────────────────────────────────────────────
+    risk      = live_price - stop_loss
+    target    = round(live_price + risk * 1.5, 1)
+    target_pct = round((target - live_price) / live_price * 100, 1)
+
+    # ── RSI 進場信號（新手最重要的指標）─────────────────────────────────────
+    if rsi < 30:
+        rsi_signal = "🟢 超賣！強力買入信號"
+        rsi_col    = "#00c853"
+        rsi_action = "RSI 嚴重超賣，歷史上這是難得的低點，可大膽進場"
+    elif rsi < 40:
+        rsi_signal = "🟢 偏低，建議進場"
+        rsi_col    = "#00c853"
+        rsi_action = "RSI 低於40，股價偏低，適合分批買入"
+    elif rsi < 50:
+        rsi_signal = "🟡 中性偏低，可小量"
+        rsi_col    = "#ffd54f"
+        rsi_action = "RSI 接近中性，可小量試水，等更低再加碼"
+    elif rsi < 60:
+        rsi_signal = "🟡 中性，觀望為主"
+        rsi_col    = "#ffd54f"
+        rsi_action = "RSI 中性，不急著進場，等回調到50以下再考慮"
+    elif rsi < 70:
+        rsi_signal = "🟠 偏高，謹慎追高"
+        rsi_col    = "#ff9800"
+        rsi_action = "RSI 偏高，股價可能過熱，追高風險較大，等回調"
+    else:
+        rsi_signal = "🔴 超買！不建議現在進場"
+        rsi_col    = "#ef5350"
+        rsi_action = "RSI 超過70，股票已超買，等 RSI 回落到60以下再進場"
+
+    return {
+        "rsi":         round(rsi, 1),
+        "rsi_signal":  rsi_signal,
+        "rsi_col":     rsi_col,
+        "rsi_action":  rsi_action,
+        "trend":       trend,
+        "trend_icon":  trend_icon,
+        "trend_col":   trend_col,
+        "buy_low":     buy_low,
+        "buy_high":    buy_high,
+        "buy_note":    buy_note,
+        "stop_loss":   stop_loss,
+        "stop_pct":    stop_pct,
+        "target":      target,
+        "target_pct":  target_pct,
+        "ma5":         round(ma5, 1),
+        "ma20":        round(ma20, 1),
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  股票篩選引擎
 # ═══════════════════════════════════════════════════════════════════════════════
 
