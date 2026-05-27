@@ -286,7 +286,7 @@ with st.sidebar:
             st.session_state._close_sidebar = True
 
     _vm_search_active = st.session_state.view_mode == "search"
-    if st.button("🔍 搜尋記錄  ✓" if _vm_search_active else "🔍 搜尋記錄",
+    if st.button("搜尋記錄  ✓" if _vm_search_active else "搜尋記錄",
                  use_container_width=True,
                  type="primary" if _vm_search_active else "secondary",
                  key="nav_search_inline"):
@@ -300,7 +300,7 @@ with st.sidebar:
     vm = st.session_state.view_mode
     _nc1, _nc2, _nc3 = st.columns(3)
     for _col, (_vk, _vl) in zip([_nc1, _nc2, _nc3], [
-        ("picks", "🎯 精選"), ("holdings", "💼 持股"), ("watchlist", "⭐ 追蹤"),
+        ("picks", "精選"), ("holdings", "持股"), ("watchlist", "追蹤"),
     ]):
         _active = vm == _vk
         if _col.button(_vl + (" ✓" if _active else ""), key=f"nav_{_vk}",
