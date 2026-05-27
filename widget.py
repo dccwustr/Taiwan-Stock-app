@@ -454,19 +454,30 @@ def fetch_twse_market_summary() -> Dict:
 def analyze_catalysts(news_list: List[Dict]) -> Tuple[Dict[str, int], List[str]]:
     """
     回傳:
-      catalyst_scores: {ticker: bonus_points}
+      catalyst_scores: {ticker: bonus_points}  ← 每日依新聞量動態計算，不再固定+20
       headlines:       最重要的5條新聞標題
+
+    修正說明（2026-05）：
+      原版給每個觸發催化劑固定+20，導致台積電等大股每天永遠吃滿分，
+      推薦名單永遠不變。現改為：
+        1. 依當日新聞篇數比例縮放（少=小分，多=大分）
+        2. 用 max 累積（避免大股靠多主題堆疊）
+        3. 個股直接被點名才能再疊加直接加分
     """
     catalyst_scores: Dict[str, int] = {}
     key_headlines: List[str] = []
-    all_text = " ".join(n["title"] + " " + n["summary"] for n in news_list)
 
-    triggered = set()
+    # ── 1. 計算每個催化劑今日新聞篇數 ─────────────────────────────────────────
+    catalyst_counts: Dict[str, int] = {}
     for catalyst, keywords in CATALYST_MAP.items():
-        for kw in keywords:
-            if kw.lower() in all_text.lower():
-                triggered.add(catalyst)
-                break
+        count = sum(
+            1 for n in news_list
+            if any(kw.lower() in (n["title"] + " " + n["summary"]).lower() for kw in keywords)
+        )
+        if count > 0:
+            catalyst_counts[catalyst] = count
+
+    triggered = set(catalyst_counts.keys())
 
     # 找出最相關的新聞
     for news in news_list:
@@ -478,11 +489,35 @@ def analyze_catalysts(news_list: List[Dict]) -> Tuple[Dict[str, int], List[str]]
                         key_headlines.append(f"[{news['time']}][{news['source']}] {news['title'][:60]}")
                     break
 
-    # 計算每支股票的催化劑加分
+    # ── 2. 主題加分：依新聞篇數縮放，單催化劑上限15分 ─────────────────────────
+    # 原本固定+20 → 現在依篇數動態給分，讓今日熱度決定分數
+    def _theme_bonus(count: int) -> int:
+        if count >= 12: return 15
+        if count >= 6:  return 11
+        if count >= 3:  return 7
+        if count >= 1:  return 4
+        return 0
+
+    # 用 max（不用+）：每股只取最強的那個催化劑主題，避免台積電靠5個主題疊到滿
     for catalyst in triggered:
-        beneficiaries = CATALYST_BENEFICIARIES.get(catalyst, [])
-        for ticker in beneficiaries:
-            catalyst_scores[ticker] = catalyst_scores.get(ticker, 0) + 20
+        bonus = _theme_bonus(catalyst_counts[catalyst])
+        for ticker in CATALYST_BENEFICIARIES.get(catalyst, []):
+            prev = catalyst_scores.get(ticker, 0)
+            catalyst_scores[ticker] = max(prev, bonus)
+
+    # ── 3. 個股直接被新聞標題點名 → 疊加直接加分（每篇+4分，上限15分）──────────
+    # 這讓今日真正熱門個股能浮出水面，而非永遠是固定受益股
+    for ticker, info in TECH_UNIVERSE.items():
+        name = info.get("name", "")
+        en   = info.get("en", "")
+        direct = sum(
+            1 for n in news_list
+            if (name and name in n["title"])
+            or (en and len(en) > 3 and en.lower() in n["title"].lower())
+        )
+        if direct > 0:
+            direct_bonus = min(15, direct * 4)
+            catalyst_scores[ticker] = catalyst_scores.get(ticker, 0) + direct_bonus
 
     return catalyst_scores, key_headlines[:8]
 
@@ -548,8 +583,9 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     elif macd_hist > 0:   tech += 5
     tech += mas * 2   # max 6
 
-    # 4. 催化劑 (0-20) + 外資調整
-    cat_score = min(20, catalyst_bonus)
+    # 4. 催化劑 (0-30) + 外資調整
+    # 上限從20提高到30，讓直接被點名的個股能獲得更高加分
+    cat_score = min(30, catalyst_bonus)
     fi_bonus  = min(5, int(foreign_net / 500)) if foreign_net > 0 else max(-5, int(foreign_net / 500))
     total = min(100, vol_score + mom_score + tech + cat_score + fi_bonus)
 
