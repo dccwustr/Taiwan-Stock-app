@@ -1067,9 +1067,13 @@ def fetch_global_news() -> List[str]:
         try:
             items = yf.Ticker(sym).news or []
             for item in items[:5]:
+                # yfinance 0.2.x: item["title"] directly
+                # yfinance 1.x:   item["content"]["title"]
                 content = item.get("content", {})
-                title = (content.get("title", "") if isinstance(content, dict)
-                         else item.get("title", ""))
+                title = (
+                    (content.get("title", "") if isinstance(content, dict) else "")
+                    or item.get("title", "")
+                )
                 if not title or title in seen:
                     continue
                 if any(k.lower() in title.lower() for k in KW):
