@@ -831,160 +831,14 @@ def render_query_card(ticker, sres, live_d, key_sfx):
                 st.session_state.watchlist.append(ticker)
         st.rerun()
 
-# ── Market index bar + minimalist refresh ────────────────────────────────────
-_mi_col, _ref_col = st.columns([11, 1])
-with _mi_col:
-    if mkt:
-        idx_val = mkt.get("index", "—")
-        idx_chg = mkt.get("change", "—")
-        is_up   = not str(idx_chg).startswith("-")
-        mkt_col = "#ef5350" if is_up else "#00c853"
-        st.markdown(
-            f'<span style="color:#888;font-size:13px">加權指數　</span>'
-            f'<span style="font-size:16px;font-weight:700;color:#f0f0f0">{idx_val}</span>'
-            f'　<span style="color:{mkt_col};font-size:14px">{idx_chg}</span>'
-            f'　<span style="color:#555;font-size:12px">｜　盤前資料 {_epoch}　載入 {data["ts"]}　｜　漲停 ±10%</span>',
-            unsafe_allow_html=True
-        )
-with _ref_col:
-    st.markdown('<span class="refresh-sentinel"></span>', unsafe_allow_html=True)
-    if st.button("↻", key="top_refresh", help="重新整理", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
-
-
-# ── Main view: Search history ────────────────────────────────────────────────
-if st.session_state.view_mode == "search":
-    st.markdown("## 🔍 搜尋記錄")
-    if not _recent:
-        st.caption("還沒有搜尋記錄。在左側輸入股票代號查詢。")
-    else:
-        for _rt in _recent:
-            if _rt in _recent_results:
-                render_query_card(_rt, _recent_results[_rt], _query_live.get(_rt), f"r_{_rt}")
-            else:
-                st.warning(f"{_rt.replace('.TW','')} — 找不到資料")
-    if _recent and st.button("🗑 清除搜尋記錄", use_container_width=True):
-        st.session_state.recent_searches = []
-        st.session_state.search_ticker   = None
-        st.rerun()
-    st.divider()
-    with st.expander("📰 今日早盤新聞", expanded=False):
-        for h in data["headlines"][:8]:
-            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
-    st.stop()
-
-# ── Main view: Watchlist ─────────────────────────────────────────────────────
-if st.session_state.view_mode == "watchlist":
-    st.markdown("## ⭐ 追蹤清單")
-    if not st.session_state.watchlist:
-        st.caption("還沒有追蹤的股票。在精選推薦或搜尋結果中點 ☆ 加入。")
-    else:
-        for _wt in st.session_state.watchlist:
-            if _wt in _watch_results:
-                render_query_card(_wt, _watch_results[_wt], _query_live.get(_wt), f"wv_{_wt}")
-    st.divider()
-    with st.expander("📰 今日早盤新聞", expanded=False):
-        for h in data["headlines"][:8]:
-            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
-    st.stop()
-
-# ── Main view: Holdings ───────────────────────────────────────────────────────
-if st.session_state.view_mode == "holdings":
-    st.markdown("## 💼 我的持股")
-
-    with st.expander("＋ 新增 / 編輯持股", expanded=False):
-        st.caption("輸入股票代號（如 2454）、股數、買進均價")
-        _hc1, _hc2, _hc3 = st.columns([2, 2, 2])
-        _h_code   = _hc1.text_input("代號",   placeholder="2454",  label_visibility="collapsed", key="hp_code")
-        _h_shares = _hc2.text_input("股數",   placeholder="100",   label_visibility="collapsed", key="hp_shares")
-        _h_cost   = _hc3.text_input("買進價", placeholder="850",   label_visibility="collapsed", key="hp_cost")
-        if st.button("新增", use_container_width=True, key="hp_add"):
-            _code = _h_code.strip().upper()
-            if _code:
-                _hticker = _code + ".TW" if not _code.endswith(".TW") else _code
-                try:
-                    st.session_state.custom_holdings[_hticker] = {
-                        "shares": float(_h_shares) if _h_shares else 0,
-                        "cost":   float(_h_cost)   if _h_cost   else 0,
-                    }
-                    st.rerun()
-                except ValueError:
-                    st.error("請輸入有效數字")
-
-        for _ht, _hv in list(st.session_state.custom_holdings.items()):
-            _hd1, _hd2 = st.columns([4, 1])
-            _hd1.caption(f"{_ht.replace('.TW','')}　{_hv['shares']:.0f}股　成本 {_hv['cost']:.1f}")
-            if _hd2.button("✕", key=f"hp_del_{_ht}"):
-                del st.session_state.custom_holdings[_ht]
-                st.rerun()
-
-        _h_hidden = st.session_state.get("hidden_holdings", set())
-        if _h_hidden:
-            st.caption("已移除的持股：")
-            for _ht in list(_h_hidden):
-                _hname = MY_HOLDINGS.get(_ht, {}).get("name", _ht.replace(".TW",""))
-                _hr1, _hr2 = st.columns([4, 1])
-                _hr1.caption(f"{_ht.replace('.TW','')} {_hname}")
-                if _hr2.button("↩", key=f"hp_restore_{_ht}"):
-                    st.session_state.hidden_holdings.discard(_ht)
-                    st.rerun()
-
-    for h in holdings_info:
-        render_holding_card(h)
-    st.divider()
-    with st.expander("📰 今日早盤新聞", expanded=False):
-        for h in data["headlines"][:8]:
-            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
-    st.stop()
-
-# ── Main view: RSI Monitor ────────────────────────────────────────────────────
-if st.session_state.view_mode == "monitor":
-    st.markdown(
-        "## 📡 RSI 即時監控　"
-        "<span style='font-size:12px;background:#0d2a4a;color:#7eb3ff;"
-        "border-radius:5px;padding:2px 8px;vertical-align:middle'>"
-        "盤中每10秒自動更新</span>",
-        unsafe_allow_html=True
-    )
-    _mon_keys = list(st.session_state.rsi_thresholds.keys())
-
-    # Fetch prices for monitored tickers that aren't in the main cache yet
-    _mon_need = [t for t in _mon_keys if t and t not in prices]
-    if _mon_need:
-        from widget import fetch_prices_batch as _fpb
-        prices.update(_fpb(_mon_need, period="3mo"))
-
-    if not _mon_keys:
-        st.info(
-            "**尚無監控中的股票。**\n\n"
-            "**使用方式：**\n"
-            "1. 在左側搜尋欄輸入任何台股代號（如 2454、0050、6207）\n"
-            "2. 若系統顯示「觀望」或「不建議買進」，會出現原因分析\n"
-            "3. 設定目標 RSI（例如等 RSI 跌破 50）→ 點「📡 開始監控」\n"
-            "4. 回到此頁，即可看到即時 RSI 動態與進場提醒"
-        )
-    else:
-        render_rsi_monitor(_mon_keys, prices)
-
-    st.divider()
-    with st.expander("📰 今日早盤新聞", expanded=False):
-        for h in data["headlines"][:8]:
-            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
-    st.stop()
-
-# ── Picks view header ────────────────────────────────────────────────────────
-st.markdown("## 🎯 今日精選潛力股　<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>全產業・零股小資</span>", unsafe_allow_html=True)
-
-# ── Chip helper ───────────────────────────────────────────────────────────────
-CHIP_CSS = {"NVIDIA":"nv","AMD":"amd","Apple":"apl","AI":"ai","CoWoS":"cow"}
-def supply_chips(supply):
-    return " ".join(
-        f'<span class="chip {CHIP_CSS[s]}">{s}</span>'
-        for s in supply if s in CHIP_CSS
+# ── Helpers & fragments (defined here so they're always available) ───────────
+def _is_market_open() -> bool:
+    tw = _now_tw()
+    return tw.weekday() < 5 and (
+        (tw.hour == 9) or (10 <= tw.hour <= 12) or
+        (tw.hour == 13 and tw.minute <= 30)
     )
 
-# ── RSI Live Monitor (auto-refresh every 10s) ────────────────────────────────
 @st.fragment(run_every="10s")
 def render_rsi_monitor(monitored_tickers: list, prices: dict):
     """
@@ -1171,15 +1025,161 @@ def render_rsi_monitor(monitored_tickers: list, prices: dict):
                 st.session_state.rsi_thresholds.pop(_mt, None)
                 st.rerun()
 
+# ── Market index bar + minimalist refresh ────────────────────────────────────
+_mi_col, _ref_col = st.columns([11, 1])
+with _mi_col:
+    if mkt:
+        idx_val = mkt.get("index", "—")
+        idx_chg = mkt.get("change", "—")
+        is_up   = not str(idx_chg).startswith("-")
+        mkt_col = "#ef5350" if is_up else "#00c853"
+        st.markdown(
+            f'<span style="color:#888;font-size:13px">加權指數　</span>'
+            f'<span style="font-size:16px;font-weight:700;color:#f0f0f0">{idx_val}</span>'
+            f'　<span style="color:{mkt_col};font-size:14px">{idx_chg}</span>'
+            f'　<span style="color:#555;font-size:12px">｜　盤前資料 {_epoch}　載入 {data["ts"]}　｜　漲停 ±10%</span>',
+            unsafe_allow_html=True
+        )
+with _ref_col:
+    st.markdown('<span class="refresh-sentinel"></span>', unsafe_allow_html=True)
+    if st.button("↻", key="top_refresh", help="重新整理", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
 
-# ── Stock cards with embedded live prices (30s auto-refresh) ─────────────────
-def _is_market_open() -> bool:
-    tw = _now_tw()
-    return tw.weekday() < 5 and (
-        (tw.hour == 9) or (10 <= tw.hour <= 12) or
-        (tw.hour == 13 and tw.minute <= 30)
+
+# ── Main view: Search history ────────────────────────────────────────────────
+if st.session_state.view_mode == "search":
+    st.markdown("## 🔍 搜尋記錄")
+    if not _recent:
+        st.caption("還沒有搜尋記錄。在左側輸入股票代號查詢。")
+    else:
+        for _rt in _recent:
+            if _rt in _recent_results:
+                render_query_card(_rt, _recent_results[_rt], _query_live.get(_rt), f"r_{_rt}")
+            else:
+                st.warning(f"{_rt.replace('.TW','')} — 找不到資料")
+    if _recent and st.button("🗑 清除搜尋記錄", use_container_width=True):
+        st.session_state.recent_searches = []
+        st.session_state.search_ticker   = None
+        st.rerun()
+    st.divider()
+    with st.expander("📰 今日早盤新聞", expanded=False):
+        for h in data["headlines"][:8]:
+            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
+    st.stop()
+
+# ── Main view: Watchlist ─────────────────────────────────────────────────────
+if st.session_state.view_mode == "watchlist":
+    st.markdown("## ⭐ 追蹤清單")
+    if not st.session_state.watchlist:
+        st.caption("還沒有追蹤的股票。在精選推薦或搜尋結果中點 ☆ 加入。")
+    else:
+        for _wt in st.session_state.watchlist:
+            if _wt in _watch_results:
+                render_query_card(_wt, _watch_results[_wt], _query_live.get(_wt), f"wv_{_wt}")
+    st.divider()
+    with st.expander("📰 今日早盤新聞", expanded=False):
+        for h in data["headlines"][:8]:
+            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
+    st.stop()
+
+# ── Main view: Holdings ───────────────────────────────────────────────────────
+if st.session_state.view_mode == "holdings":
+    st.markdown("## 💼 我的持股")
+
+    with st.expander("＋ 新增 / 編輯持股", expanded=False):
+        st.caption("輸入股票代號（如 2454）、股數、買進均價")
+        _hc1, _hc2, _hc3 = st.columns([2, 2, 2])
+        _h_code   = _hc1.text_input("代號",   placeholder="2454",  label_visibility="collapsed", key="hp_code")
+        _h_shares = _hc2.text_input("股數",   placeholder="100",   label_visibility="collapsed", key="hp_shares")
+        _h_cost   = _hc3.text_input("買進價", placeholder="850",   label_visibility="collapsed", key="hp_cost")
+        if st.button("新增", use_container_width=True, key="hp_add"):
+            _code = _h_code.strip().upper()
+            if _code:
+                _hticker = _code + ".TW" if not _code.endswith(".TW") else _code
+                try:
+                    st.session_state.custom_holdings[_hticker] = {
+                        "shares": float(_h_shares) if _h_shares else 0,
+                        "cost":   float(_h_cost)   if _h_cost   else 0,
+                    }
+                    st.rerun()
+                except ValueError:
+                    st.error("請輸入有效數字")
+
+        for _ht, _hv in list(st.session_state.custom_holdings.items()):
+            _hd1, _hd2 = st.columns([4, 1])
+            _hd1.caption(f"{_ht.replace('.TW','')}　{_hv['shares']:.0f}股　成本 {_hv['cost']:.1f}")
+            if _hd2.button("✕", key=f"hp_del_{_ht}"):
+                del st.session_state.custom_holdings[_ht]
+                st.rerun()
+
+        _h_hidden = st.session_state.get("hidden_holdings", set())
+        if _h_hidden:
+            st.caption("已移除的持股：")
+            for _ht in list(_h_hidden):
+                _hname = MY_HOLDINGS.get(_ht, {}).get("name", _ht.replace(".TW",""))
+                _hr1, _hr2 = st.columns([4, 1])
+                _hr1.caption(f"{_ht.replace('.TW','')} {_hname}")
+                if _hr2.button("↩", key=f"hp_restore_{_ht}"):
+                    st.session_state.hidden_holdings.discard(_ht)
+                    st.rerun()
+
+    for h in holdings_info:
+        render_holding_card(h)
+    st.divider()
+    with st.expander("📰 今日早盤新聞", expanded=False):
+        for h in data["headlines"][:8]:
+            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
+    st.stop()
+
+# ── Main view: RSI Monitor ────────────────────────────────────────────────────
+if st.session_state.view_mode == "monitor":
+    st.markdown(
+        "## 📡 RSI 即時監控　"
+        "<span style='font-size:12px;background:#0d2a4a;color:#7eb3ff;"
+        "border-radius:5px;padding:2px 8px;vertical-align:middle'>"
+        "盤中每10秒自動更新</span>",
+        unsafe_allow_html=True
+    )
+    _mon_keys = list(st.session_state.rsi_thresholds.keys())
+
+    # Fetch prices for monitored tickers that aren't in the main cache yet
+    _mon_need = [t for t in _mon_keys if t and t not in prices]
+    if _mon_need:
+        from widget import fetch_prices_batch as _fpb
+        prices.update(_fpb(_mon_need, period="3mo"))
+
+    if not _mon_keys:
+        st.info(
+            "**尚無監控中的股票。**\n\n"
+            "**使用方式：**\n"
+            "1. 在左側搜尋欄輸入任何台股代號（如 2454、0050、6207）\n"
+            "2. 若系統顯示「觀望」或「不建議買進」，會出現原因分析\n"
+            "3. 設定目標 RSI（例如等 RSI 跌破 50）→ 點「📡 開始監控」\n"
+            "4. 回到此頁，即可看到即時 RSI 動態與進場提醒"
+        )
+    else:
+        render_rsi_monitor(_mon_keys, prices)
+
+    st.divider()
+    with st.expander("📰 今日早盤新聞", expanded=False):
+        for h in data["headlines"][:8]:
+            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
+    st.stop()
+
+# ── Picks view header ────────────────────────────────────────────────────────
+st.markdown("## 🎯 今日精選潛力股　<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>全產業・零股小資</span>", unsafe_allow_html=True)
+
+# ── Chip helper ───────────────────────────────────────────────────────────────
+CHIP_CSS = {"NVIDIA":"nv","AMD":"amd","Apple":"apl","AI":"ai","CoWoS":"cow"}
+def supply_chips(supply):
+    return " ".join(
+        f'<span class="chip {CHIP_CSS[s]}">{s}</span>'
+        for s in supply if s in CHIP_CSS
     )
 
+
+# ── Stock cards with embedded live prices (10s auto-refresh) ─────────────────
 # Always run every 10s — decorator is evaluated once at import so the
 # conditional would be frozen to whatever time the server started.
 @st.fragment(run_every="10s")
