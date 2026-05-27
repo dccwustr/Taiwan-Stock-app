@@ -37,6 +37,7 @@ from widget import (
     fetch_twse_market_summary, fetch_prices_batch, analyze_catalysts,
     get_catalyst_labels, score_stock, analyze_holdings, fetch_live_prices,
     analyze_holding_sell, get_beginner_advice,
+    calc_rsi, calc_live_rsi, _TW_STOCK_NAMES,
 )
 
 warnings.filterwarnings("ignore")
@@ -256,13 +257,15 @@ def load_data(epoch: str):                       # epoch = "YYYY-MM-DD", changes
 
 # ── Session state init ────────────────────────────────────────────────────────
 if "view_mode"        not in st.session_state: st.session_state.view_mode        = "picks"
-# valid modes: "picks" | "holdings" | "watchlist" | "search"
+# valid modes: "picks" | "holdings" | "watchlist" | "search" | "monitor"
 if "custom_holdings"  not in st.session_state: st.session_state.custom_holdings  = {}
 if "hidden_holdings"  not in st.session_state: st.session_state.hidden_holdings  = set()
 if "search_ticker"    not in st.session_state: st.session_state.search_ticker    = None
 if "watchlist"        not in st.session_state: st.session_state.watchlist        = []
 if "recent_searches"  not in st.session_state: st.session_state.recent_searches  = []
 if "_close_sidebar"   not in st.session_state: st.session_state._close_sidebar   = False
+if "rsi_thresholds"   not in st.session_state: st.session_state.rsi_thresholds   = {}
+# rsi_thresholds: {ticker: {"target": float, "direction": "below"|"above"}}
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -296,11 +299,13 @@ with st.sidebar:
 
     st.divider()
 
-    # Nav: 3 buttons in one row
+    # Nav: 4 buttons in one row
+    _n_mon = len(st.session_state.rsi_thresholds)
+    _mon_lbl = f"📡{_n_mon}" if _n_mon else "📡"
     vm = st.session_state.view_mode
-    _nc1, _nc2, _nc3 = st.columns(3)
-    for _col, (_vk, _vl) in zip([_nc1, _nc2, _nc3], [
-        ("picks", "精選"), ("holdings", "持股"), ("watchlist", "追蹤"),
+    _nc1, _nc2, _nc3, _nc4 = st.columns(4)
+    for _col, (_vk, _vl) in zip([_nc1, _nc2, _nc3, _nc4], [
+        ("picks", "精選"), ("holdings", "持股"), ("watchlist", "追蹤"), ("monitor", _mon_lbl),
     ]):
         _active = vm == _vk
         if _col.button(_vl + (" ✓" if _active else ""), key=f"nav_{_vk}",
@@ -396,6 +401,12 @@ _need = [t for t in _all_extra if t and t not in prices]
 if _need:
     prices.update(fetch_prices_batch(_need, period="3mo"))
 
+# Fetch live prices FIRST — this populates _TW_STOCK_NAMES cache via the TWSE API
+# (the API response carries the Chinese name in the "n" field for every ticker).
+# Scoring functions can then use the cached name for non-universe stocks.
+_live_tickers = [t for t in _all_extra if t]
+_query_live = fetch_live_prices(_live_tickers) if _live_tickers else {}
+
 # Score search ticker
 _sres = None
 if _sticker:
@@ -418,10 +429,6 @@ for _rt in _recent:
     if _rr:
         _rr["catalysts"] = get_catalyst_labels(_rt, all_news)
         _recent_results[_rt] = _rr
-
-# Batch live prices for all extra tickers in one call
-_live_tickers = [t for t in _all_extra if t]
-_query_live = fetch_live_prices(_live_tickers) if _live_tickers else {}
 
 # ── Fill holdings in sidebar ──────────────────────────────────────────────────
 custom = st.session_state.get("custom_holdings", {})
@@ -603,6 +610,72 @@ with sidebar_content:
 def conf_color(s):
     return "#00c853" if s >= 80 else ("#ffd54f" if s >= 60 else "#ef5350")
 
+def _get_score_reasons(sres: dict) -> str:
+    """
+    回傳最誠實的一句話解釋為什麼不建議買進。
+    只選最關鍵的那一個原因，不列清單。
+    """
+    rsi   = sres.get("rsi", 50)
+    vr    = sres.get("vol_ratio", 1.0)
+    mom5d = sres.get("mom5d", 0)
+    cat   = sres.get("cat_score", 0)
+    tech  = sres.get("tech_score", 0)
+    sc    = sres.get("score", 0)
+    price = sres.get("last_price", 0)
+
+    # 優先順序：最嚴重的問題先說
+    if rsi >= 82:
+        return (
+            f"RSI {rsi:.0f}，嚴重超買。你現在買進，是在替已經賺錢的人出貨。"
+            f" 歷史上 RSI 超過 80 進場的散戶，大多數在接下來兩週內虧損。"
+            f" 不是「可能回調」，而是「大概率會拉回」。等 RSI 回到 55 以下再說。"
+        )
+    if rsi >= 72:
+        return (
+            f"RSI {rsi:.0f}，短期漲幅過高。前面的人已經賺了，隨時可能獲利了結壓著你。"
+            f" 追在這裡是最常見的散戶進場時機錯誤。等 RSI 回到 55 左右，籌碼穩定後再考慮。"
+        )
+    if mom5d <= -6:
+        return (
+            f"近5日大跌 {abs(mom5d):.1f}%，股價正在主動下跌。"
+            f" 「跌了就買覺得便宜」是散戶最常見的虧損陷阱——往往買在中途，繼續跌。"
+            f" 等出現連續兩天紅K且量能放大，才代表跌勢真的結束。"
+        )
+    if rsi <= 28:
+        return (
+            f"RSI {rsi:.0f}，超賣但仍在下跌。「很便宜」不等於「不會再跌」。"
+            f" 超賣只代表跌得快，不代表會馬上反彈，現在進場是接一把還在往下掉的刀。"
+            f" 等 RSI 連續兩天向上才是止跌訊號。"
+        )
+    if vr < 0.6:
+        return (
+            f"成交量只剩均量的 {vr:.0%}，市場幾乎沒有人在買這支股票。"
+            f" 沒有資金流入，股價不會上漲。買了之後只能等，"
+            f" 而零股投資最怕的就是把資金鎖在一支沒人關注的股票上。"
+        )
+    if tech <= 3:
+        return (
+            "均線完全空頭排列，短中長期趨勢都往下，不是暫時震盪是結構性下跌。"
+            " 在這種排列進場，方向跟市場完全相反。"
+            " 等股價重新站回 MA20 且 MA20 轉為向上，才是趨勢改變的最基本確認。"
+        )
+    if cat == 0 and vr < 1.0:
+        return (
+            "無題材也無量能，是最容易被套牢的組合。"
+            " 沒有新聞催化，沒有資金流入，買進後只能等，而等待本身也是成本。"
+            " 台股的資金很容易追題材（AI、航運、生技），沒有故事的股票很難獲得關注。"
+        )
+    if rsi <= 40 and mom5d <= -2:
+        return (
+            f"RSI {rsi:.0f} 且近5日跌 {abs(mom5d):.1f}%，動能持續走弱。"
+            f" 兩個指標同時偏空，代表市場對這支股票缺乏信心。等趨勢反轉確認再進場。"
+        )
+    # 兜底：整體分數不足
+    return (
+        f"綜合評分 {sc}/100，各項指標沒有一個特別突出的優勢。"
+        f" 在勝率本就不高的情況下，把資金留著等更明確的機會，比勉強進場更合理。"
+    )
+
 def render_query_card(ticker, sres, live_d, key_sfx):
     sc        = sres["score"]
     bar_color = conf_color(sc)
@@ -642,7 +715,7 @@ def render_query_card(ticker, sres, live_d, key_sfx):
         f'<div style="margin-top:-3rem;pointer-events:none">'
         f'<div class="card">'
         f'<div class="card-top">'
-        f'<span class="stock-name">{ticker.replace(".TW","")} {sres["name"]}</span>'
+        f'<span class="stock-name">{ticker.replace(".TW","").replace(".TWO","")} {sres["name"]}</span>'
         f'<span class="stock-sub">{sres["en"]}</span>'
         f'<span style="font-size:13px;color:{vcolor};font-weight:700;margin-left:auto">{verdict}</span>'
         f'<span style="font-size:20px;color:{_scol};line-height:1;margin-left:10px">{_star}</span>'
@@ -666,6 +739,89 @@ def render_query_card(ticker, sres, live_d, key_sfx):
         f'</div>',
         unsafe_allow_html=True
     )
+
+    # ── 不建議買進時：一句話誠實說明原因 + RSI 即時監控設定 ──────────────────────
+    if sc < 60:
+        _reason      = _get_score_reasons(sres)
+        _border_col  = "#ffd54f" if sc >= 45 else "#c0392b"
+        _reason_col  = "#ffd54f" if sc >= 45 else "#ff8a80"
+        _label       = "⚠️ 為什麼現在不適合買？" if sc >= 45 else "❌ 為什麼強烈不建議現在買？"
+        _score_breakdown = (
+            f'量能 {sres["vol_score"]}/30　動能 {sres["mom_score"]}/25　'
+            f'技術 {sres["tech_score"]}/25　催化劑 {sres["cat_score"]}/30'
+        )
+        st.markdown(
+            f'<div style="background:#0c1018;border-left:3px solid {_border_col};'
+            f'border-radius:0 8px 8px 0;padding:14px 16px;margin:-4px 0 10px 0">'
+            f'<div style="font-size:11px;color:#555;margin-bottom:8px">{_label}</div>'
+            f'<div style="font-size:13px;font-weight:600;color:{_reason_col};line-height:1.7">'
+            f'{_reason}</div>'
+            f'<div style="margin-top:10px;font-size:11px;color:#333;'
+            f'border-top:1px solid #1a1a2a;padding-top:6px">'
+            f'評分細項：{_score_breakdown}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+        # ── RSI 即時監控設定 ────────────────────────────────────────────────────
+        _tkey     = key_sfx                          # already unique per ticker
+        _existing = st.session_state.rsi_thresholds.get(ticker, {})
+        _rsi_now  = sres.get("rsi", 50)
+
+        if _existing:
+            # Already monitoring → show status badge + cancel
+            _et  = _existing.get("target", 50)
+            _ed  = _existing.get("direction", "below")
+            _edl = "跌破" if _ed == "below" else "突破"
+            st.markdown(
+                f'<div style="font-size:12px;color:#7eb3ff;padding:4px 0 6px">'
+                f'📡 RSI 監控中：等待 RSI {_edl} {_et:.0f}　'
+                f'→ 側邊欄「📡」查看即時動態</div>',
+                unsafe_allow_html=True
+            )
+            if st.button("取消 RSI 監控", key=f"rsi_cancel_{_tkey}", use_container_width=True):
+                st.session_state.rsi_thresholds.pop(ticker, None)
+                st.rerun()
+        else:
+            # Smart defaults based on current RSI
+            if _rsi_now >= 70:
+                _def_tgt, _def_dir = 55.0, "below"   # overbought → wait for RSI < 55
+            elif _rsi_now >= 50:
+                _def_tgt, _def_dir = 50.0, "below"   # elevated → wait for RSI < 50
+            elif _rsi_now < 30:
+                _def_tgt, _def_dir = 35.0, "above"   # oversold falling → wait for RSI > 35 (recovery)
+            else:
+                _def_tgt, _def_dir = 45.0, "below"
+
+            st.markdown(
+                '<div style="font-size:12px;color:#666;margin:8px 0 4px">'
+                '📡 設定 RSI 到達目標值時提醒我</div>',
+                unsafe_allow_html=True
+            )
+            _sc1, _sc2, _sc3 = st.columns([3, 3, 3])
+            _rsi_tgt = _sc1.number_input(
+                "目標 RSI", 5.0, 95.0,
+                value=_def_tgt, step=1.0,
+                key=f"rsi_tgt_{_tkey}", label_visibility="collapsed",
+                help="RSI 到達此數值時在「📡 監控」頁顯示進場提醒"
+            )
+            _rsi_dir = _sc2.selectbox(
+                "方向", ["below", "above"],
+                format_func=lambda x: "↓ 跌破（買入）" if x == "below" else "↑ 突破（留意）",
+                index=0 if _def_dir == "below" else 1,
+                key=f"rsi_dir_{_tkey}", label_visibility="collapsed"
+            )
+            if _sc3.button("📡 開始監控", key=f"rsi_set_{_tkey}", use_container_width=True):
+                st.session_state.rsi_thresholds[ticker] = {
+                    "target":    float(_rsi_tgt),
+                    "direction": _rsi_dir,
+                }
+                # Auto-add to watchlist so it's reachable
+                if ticker not in st.session_state.watchlist:
+                    st.session_state.watchlist.append(ticker)
+                st.session_state.view_mode = "monitor"
+                st.session_state._close_sidebar = True
+                st.rerun()
 
     if _clicked:
         if in_watch:
@@ -782,6 +938,41 @@ if st.session_state.view_mode == "holdings":
             st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
     st.stop()
 
+# ── Main view: RSI Monitor ────────────────────────────────────────────────────
+if st.session_state.view_mode == "monitor":
+    st.markdown(
+        "## 📡 RSI 即時監控　"
+        "<span style='font-size:12px;background:#0d2a4a;color:#7eb3ff;"
+        "border-radius:5px;padding:2px 8px;vertical-align:middle'>"
+        "盤中每10秒自動更新</span>",
+        unsafe_allow_html=True
+    )
+    _mon_keys = list(st.session_state.rsi_thresholds.keys())
+
+    # Fetch prices for monitored tickers that aren't in the main cache yet
+    _mon_need = [t for t in _mon_keys if t and t not in prices]
+    if _mon_need:
+        from widget import fetch_prices_batch as _fpb
+        prices.update(_fpb(_mon_need, period="3mo"))
+
+    if not _mon_keys:
+        st.info(
+            "**尚無監控中的股票。**\n\n"
+            "**使用方式：**\n"
+            "1. 在左側搜尋欄輸入任何台股代號（如 2454、0050、6207）\n"
+            "2. 若系統顯示「觀望」或「不建議買進」，會出現原因分析\n"
+            "3. 設定目標 RSI（例如等 RSI 跌破 50）→ 點「📡 開始監控」\n"
+            "4. 回到此頁，即可看到即時 RSI 動態與進場提醒"
+        )
+    else:
+        render_rsi_monitor(_mon_keys, prices)
+
+    st.divider()
+    with st.expander("📰 今日早盤新聞", expanded=False):
+        for h in data["headlines"][:8]:
+            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
+    st.stop()
+
 # ── Picks view header ────────────────────────────────────────────────────────
 st.markdown("## 🎯 今日精選潛力股　<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>全產業・零股小資</span>", unsafe_allow_html=True)
 
@@ -792,6 +983,194 @@ def supply_chips(supply):
         f'<span class="chip {CHIP_CSS[s]}">{s}</span>'
         for s in supply if s in CHIP_CSS
     )
+
+# ── RSI Live Monitor (auto-refresh every 10s) ────────────────────────────────
+@st.fragment(run_every="10s")
+def render_rsi_monitor(monitored_tickers: list, prices: dict):
+    """
+    Auto-refreshing RSI monitoring dashboard.
+    Every 10s: fetches live prices → computes calc_live_rsi → shows gauge + threshold alert.
+    """
+    if not monitored_tickers:
+        st.caption("尚無監控中的股票。搜尋任何股票 → 若系統建議觀望 → 點「📡 開始監控」加入。")
+        return
+
+    now_str = _now_tw().strftime("%H:%M:%S")
+    is_open = _is_market_open()
+    live    = fetch_live_prices(monitored_tickers)
+    badge   = "● 盤中即時" if is_open else "收盤價（非交易時段）"
+    st.caption(f"📡 RSI 即時監控　{badge}　最後更新：{now_str}　每10秒自動刷新")
+
+    for ticker in monitored_tickers:
+        cfg = st.session_state.rsi_thresholds.get(ticker, {})
+        if not cfg:
+            continue
+
+        target_rsi = float(cfg.get("target", 50))
+        direction  = cfg.get("direction", "below")    # "below" | "above"
+
+        live_d     = live.get(ticker) or {}
+        live_price = live_d.get("price", 0)
+        df         = prices.get(ticker)
+        if df is None or len(df) < 15:
+            st.caption(f"{ticker.replace('.TW','').replace('.TWO','')} — 資料不足，請確認代號")
+            continue
+
+        # Current live RSI (appends live price to history for intraday accuracy)
+        current_rsi = round(calc_live_rsi(df, live_price) if live_price > 0
+                            else calc_rsi(df["Close"]), 1)
+
+        # RSI velocity: compare to yesterday's close RSI
+        prev_rsi = round(calc_rsi(df["Close"].iloc[:-1]) if len(df) > 15
+                         else current_rsi, 1)
+        rsi_vel  = round(current_rsi - prev_rsi, 1)
+
+        # Threshold check
+        triggered = (
+            (direction == "below" and current_rsi <= target_rsi) or
+            (direction == "above" and current_rsi >= target_rsi)
+        )
+
+        # ETA estimate (assumes RSI continues at current daily velocity)
+        gap = current_rsi - target_rsi           # + means RSI above target
+        eta_str = ""
+        if not triggered and abs(rsi_vel) > 0.1:
+            moving_right = (direction == "below" and rsi_vel < 0) or \
+                           (direction == "above" and rsi_vel > 0)
+            if moving_right:
+                days = abs(gap / rsi_vel)
+                if days <= 45:
+                    eta_str = f"照此趨勢約 {days:.0f} 個交易日"
+
+        # RSI color zone
+        if current_rsi >= 70:   rsi_col = "#ef5350"
+        elif current_rsi >= 60: rsi_col = "#ff9800"
+        elif current_rsi >= 40: rsi_col = "#ffd54f"
+        elif current_rsi >= 30: rsi_col = "#7eb3ff"
+        else:                   rsi_col = "#00c853"
+
+        # Stock name
+        _info = TECH_UNIVERSE.get(ticker, {})
+        _name = _info.get("name") or _TW_STOCK_NAMES.get(ticker) \
+                or ticker.replace(".TW","").replace(".TWO","")
+        _code = ticker.replace(".TW","").replace(".TWO","")
+
+        # Price HTML
+        if live_price > 0:
+            _chg     = live_d.get("chg", 0)
+            _chg_pct = live_d.get("chg_pct", 0)
+            _lc      = "#ef5350" if _chg >= 0 else "#00c853"
+            _arr     = "▲" if _chg >= 0 else "▼"
+            price_html = (f'<span style="font-size:14px;font-weight:700;color:{_lc}">'
+                          f'NT${live_price:.1f} {_arr}{abs(_chg_pct):.1f}%</span>')
+        else:
+            price_html = '<span style="font-size:13px;color:#555">—</span>'
+
+        # Velocity display
+        _vc  = "#ef5350" if rsi_vel > 0.3 else ("#00c853" if rsi_vel < -0.3 else "#555")
+        _vi  = "↑" if rsi_vel > 0.3 else ("↓" if rsi_vel < -0.3 else "→")
+        _vel_html = f'<span style="font-size:13px;font-weight:700;color:{_vc}">{_vi} {abs(rsi_vel):.1f}/日</span>'
+
+        dir_label = "跌破" if direction == "below" else "突破"
+
+        # Card style: green glow when triggered
+        if triggered:
+            _bg  = "#071a07"; _bdr = "#00c853"
+            _diff_str = ""
+            _status = (
+                f'<div style="background:#00c85322;border:1px solid #00c85366;'
+                f'border-radius:7px;padding:9px 14px;margin-top:10px;text-align:center;'
+                f'font-size:14px;font-weight:700;color:#00c853">'
+                f'🔔 RSI {current_rsi} 已達進場條件！現在可以考慮買入！</div>'
+            )
+        else:
+            _bg  = "#0d1424"; _bdr = "#1e2d45"
+            _diff_abs = abs(current_rsi - target_rsi)
+            _eta_part = f"　｜　{eta_str}" if eta_str else (
+                "　｜　目前趨勢反向，需耐心等待" if not eta_str and abs(rsi_vel) > 0.1 else "")
+            _status = (
+                f'<div style="font-size:12px;color:#777;margin-top:8px">'
+                f'⏳ 等 RSI {dir_label} {target_rsi:.0f}　'
+                f'｜　目前差距 {_diff_abs:.1f}{_eta_part}</div>'
+            )
+
+        # Bar positions (0-100%)
+        _bp = int(min(100, max(0, current_rsi)))  # current RSI pointer
+        _tp = int(min(100, max(0, target_rsi)))   # threshold marker
+
+        st.markdown(
+            f'<div style="background:{_bg};border:1px solid {_bdr};'
+            f'border-radius:10px;padding:14px 18px;margin-bottom:14px">'
+
+            # ── Header ──
+            f'<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
+            f'<span style="font-size:15px;font-weight:700;color:#f0f0f0">{_code} {_name}</span>'
+            f'{price_html}'
+            f'<span style="font-size:11px;color:#444;margin-left:auto">{now_str}</span>'
+            f'</div>'
+
+            # ── RSI big + velocity + target ──
+            f'<div style="display:flex;align-items:baseline;gap:14px;margin-bottom:10px">'
+            f'<span style="font-size:32px;font-weight:800;color:{rsi_col};line-height:1">'
+            f'RSI {current_rsi}</span>'
+            f'{_vel_html}'
+            f'<span style="font-size:12px;color:#555;margin-left:auto">'
+            f'目標：{dir_label} {target_rsi:.0f}</span>'
+            f'</div>'
+
+            # ── RSI bar: color zones + animated pointer + threshold mark ──
+            # Outer wrapper has overflow:visible so the needle tip can stick out
+            f'<div style="position:relative;height:14px;margin:0 0 6px">'
+            # Zone gradient background
+            f'<div style="position:absolute;inset:0;border-radius:7px;overflow:hidden;'
+            f'background:linear-gradient(90deg,'
+            f'#00c85355 0%,#00c85355 30%,'
+            f'#7eb3ff55 30%,#7eb3ff55 50%,'
+            f'#ffd54f55 50%,#ffd54f55 70%,'
+            f'#ef535055 70%,#ef535055 100%)"></div>'
+            # Current RSI needle (colored glow)
+            f'<div style="position:absolute;top:-3px;bottom:-3px;'
+            f'left:calc({_bp}% - 2px);width:4px;'
+            f'background:{rsi_col};border-radius:3px;'
+            f'box-shadow:0 0 8px {rsi_col}88"></div>'
+            # Threshold marker (blue line + label above)
+            f'<div style="position:absolute;top:0;bottom:0;'
+            f'left:calc({_tp}% - 1px);width:2px;background:#7eb3ff;border-radius:1px"></div>'
+            f'<div style="position:absolute;bottom:18px;'
+            f'left:calc({_tp}% - 12px);font-size:10px;color:#7eb3ff;white-space:nowrap">'
+            f'目標 {target_rsi:.0f}</div>'
+            f'</div>'
+
+            # Zone labels
+            f'<div style="display:flex;justify-content:space-between;'
+            f'font-size:10px;color:#333;margin-top:10px">'
+            f'<span>0</span><span>30 超賣</span>'
+            f'<span>50 中性</span><span>70 超買</span><span>100</span>'
+            f'</div>'
+
+            f'{_status}'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+    # ── Manage monitors ──────────────────────────────────────────────────────
+    if monitored_tickers:
+        st.caption("管理監控清單：")
+        for _mt in list(monitored_tickers):
+            _mc  = st.session_state.rsi_thresholds.get(_mt, {})
+            if not _mc:
+                continue
+            _mcode = _mt.replace(".TW","").replace(".TWO","")
+            _minfo = TECH_UNIVERSE.get(_mt, {})
+            _mname = _minfo.get("name") or _TW_STOCK_NAMES.get(_mt, _mcode)
+            _mdl   = "跌破" if _mc.get("direction") == "below" else "突破"
+            _mtgt  = _mc.get("target", 50)
+            _mr1, _mr2 = st.columns([6, 1])
+            _mr1.caption(f"{_mcode} {_mname}　目標 RSI {_mdl} {_mtgt:.0f}")
+            if _mr2.button("✕", key=f"rsi_rm_{_mt.replace('.','_')}", help="移除監控"):
+                st.session_state.rsi_thresholds.pop(_mt, None)
+                st.rerun()
+
 
 # ── Stock cards with embedded live prices (30s auto-refresh) ─────────────────
 def _is_market_open() -> bool:

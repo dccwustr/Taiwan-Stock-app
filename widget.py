@@ -247,6 +247,9 @@ CATALYST_BENEFICIARIES = {
     "建設":    ["5522.TW","2542.TW","2504.TW","1102.TW","1101.TW"],
 }
 
+# ── 動態查詢股票名稱快取（搜尋非宇宙內股票時由 TWSE live API 填入）───────────────
+_TW_STOCK_NAMES: Dict[str, str] = {}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  技術指標計算
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -409,10 +412,14 @@ def _fetch_live_twse(tickers: List[str]) -> Dict[str, Dict]:
         r = session.get(url, timeout=5)
         r.raise_for_status()
         for item in r.json().get("msgArray", []):
-            code   = item.get("c", "")
-            ticker = code + ".TW"
+            code    = item.get("c", "")
+            name_n  = item.get("n", "")   # Chinese name e.g. "台積電"
+            ticker  = code + ".TW"
             if not code or ticker not in tickers:
                 continue
+            # Cache name for dynamically searched stocks not in TECH_UNIVERSE
+            if name_n and ticker not in TECH_UNIVERSE:
+                _TW_STOCK_NAMES[ticker] = name_n
 
             y_str = item.get("y", "")
             prev  = float(y_str) if y_str and y_str not in ("-", "0", "") else 0
@@ -756,14 +763,16 @@ def analyze_catalysts(news_list: List[Dict]) -> Tuple[Dict[str, int], List[str]]
 def get_catalyst_labels(ticker: str, news_list: List[Dict]) -> List[str]:
     """為特定股票找出新聞催化劑標籤"""
     info  = TECH_UNIVERSE.get(ticker, {})
-    name  = info.get("name", "")
+    # For non-universe stocks, fall back to dynamically cached name from TWSE live API
+    name  = info.get("name", "") or _TW_STOCK_NAMES.get(ticker, "")
     en    = info.get("en", "")
     supply_chains = info.get("supply", [])
     labels = []
 
     all_text = " ".join(n["title"] + " " + n["summary"] for n in news_list).lower()
 
-    if name.lower() in all_text or en.lower() in all_text:
+    # Guard: empty name/en must NOT match (every string contains "")
+    if (name and name.lower() in all_text) or (en and len(en) > 3 and en.lower() in all_text):
         labels.append("📰直接受益")
 
     for sc in supply_chains:
@@ -961,10 +970,11 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     else:
         sell_note = "T+1 早盤高點賣出"
 
-    _tinfo = TECH_UNIVERSE.get(ticker, {})
+    _tinfo     = TECH_UNIVERSE.get(ticker, {})
+    _base_code = ticker.replace(".TW", "").replace(".TWO", "")
     return {
         "ticker":      ticker,
-        "name":        _tinfo.get("name", ticker.replace(".TW", "")),
+        "name":        _tinfo.get("name") or _TW_STOCK_NAMES.get(ticker) or _base_code,
         "en":          _tinfo.get("en", ""),
         "sector":      _tinfo.get("sector", ""),
         "supply":      _tinfo.get("supply", []),
@@ -992,10 +1002,17 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def fetch_prices_batch(tickers: List[str], period: str = "3mo") -> Dict[str, pd.DataFrame]:
-    data = {}
+    """
+    批次下載 yfinance 日K資料。
+    yfinance 對台灣股票的 .TW / .TWO 後綴分配不一致（部分上櫃股需用 .TWO）。
+    第一輪嘗試原始後綴；第二輪對空白的 .TW ticker 自動改試 .TWO 補齊。
+    結果統一以原始 ticker（.TW）為 key，保持上層邏輯一致。
+    """
+    data: Dict[str, pd.DataFrame] = {}
     chunk = 25
-    for i in range(0, len(tickers), chunk):
-        batch = tickers[i:i+chunk]
+
+    def _download_chunk(batch: List[str], key_map: Dict[str, str]) -> None:
+        """Download one batch; key_map maps download-ticker → storage-ticker."""
         try:
             raw = yf.download(batch, period=period, auto_adjust=True, progress=False, threads=True)
             if isinstance(raw.columns, pd.MultiIndex):
@@ -1003,14 +1020,31 @@ def fetch_prices_batch(tickers: List[str], period: str = "3mo") -> Dict[str, pd.
                     try:
                         df = raw.xs(t, axis=1, level=1).dropna()
                         if len(df) >= 22:
-                            data[t] = df
+                            data[key_map[t]] = df
                     except Exception:
                         pass
             else:
                 if len(batch) == 1 and len(raw) >= 22:
-                    data[batch[0]] = raw.dropna()
+                    data[key_map[batch[0]]] = raw.dropna()
         except Exception:
             pass
+
+    # ── Round 1: download with original tickers ────────────────────────────────
+    for i in range(0, len(tickers), chunk):
+        batch = tickers[i:i+chunk]
+        _download_chunk(batch, {t: t for t in batch})
+
+    # ── Round 2: retry any .TW ticker that came back empty with .TWO suffix ────
+    # yfinance randomly assigns .TW vs .TWO for TPEx/OTC stocks — there is no
+    # reliable pattern; the only safe strategy is to try the other suffix.
+    failed_tw = [t for t in tickers if t not in data and t.endswith(".TW")]
+    if failed_tw:
+        two_tickers = [t[:-3] + ".TWO" for t in failed_tw]
+        key_map = {two: orig for two, orig in zip(two_tickers, failed_tw)}
+        for i in range(0, len(two_tickers), chunk):
+            batch = two_tickers[i:i+chunk]
+            _download_chunk(batch, key_map)
+
     return data
 
 # ═══════════════════════════════════════════════════════════════════════════════
