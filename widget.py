@@ -20,10 +20,9 @@ warnings.filterwarnings("ignore")
 try:
     import yfinance as yf
     HAS_YF = True
-except ImportError:
+except Exception:
     HAS_YF = False
-    print("請安裝 yfinance: pip3 install yfinance")
-    sys.exit(1)
+    yf = None  # type: ignore
 
 try:
     from rich.console import Console
@@ -35,11 +34,18 @@ try:
     from rich.columns import Columns
     from rich.align import Align
     from rich.progress import Progress, SpinnerColumn, TextColumn
-except ImportError:
-    print("請安裝 rich: pip3 install rich")
-    sys.exit(1)
+    HAS_RICH = True
+except Exception:
+    HAS_RICH = False
 
-console = Console(width=130)
+# Safe console: falls back to a no-op when rich is unavailable (e.g. Streamlit Cloud)
+if HAS_RICH:
+    console = Console(width=130)
+else:
+    class _FakeConsole:
+        def print(self, *a, **kw): pass
+        def rule(self, *a, **kw): pass
+    console = _FakeConsole()  # type: ignore
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  持股設定
