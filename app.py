@@ -43,7 +43,7 @@ warnings.filterwarnings("ignore")
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="台股分析",
+    page_title="台股全產業分析",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -744,7 +744,7 @@ if st.session_state.view_mode == "holdings":
     st.stop()
 
 # ── Picks view header ────────────────────────────────────────────────────────
-st.markdown("## 🎯 今日精選潛力股　<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>零股小資模式</span>", unsafe_allow_html=True)
+st.markdown("## 🎯 今日精選潛力股　<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>全產業・零股小資</span>", unsafe_allow_html=True)
 
 # ── Chip helper ───────────────────────────────────────────────────────────────
 CHIP_CSS = {"NVIDIA":"nv","AMD":"amd","Apple":"apl","AI":"ai","CoWoS":"cow"}

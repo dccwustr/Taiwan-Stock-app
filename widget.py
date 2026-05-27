@@ -47,81 +47,198 @@ console = Console(width=130)
 MY_HOLDINGS = {}
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  股票池：台灣科技股（晶片・記憶體・AI）
+#  股票池：全產業（科技 + 金融 + 航運 + 生技 + 消費 + 綠能 + 傳產…）
+#  原則：只要有潛力，不限產業
 # ═══════════════════════════════════════════════════════════════════════════════
 TECH_UNIVERSE: Dict[str, Dict] = {
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  科技業 Technology
+    # ════════════════════════════════════════════════════════════════════════
+
     # ── 晶圓代工 Foundry ────────────────────────────────────────────────────
-    "2330.TW": {"name":"台積電",   "en":"TSMC",           "sector":"晶圓代工",  "supply":["NVIDIA","AMD","Apple","AI","CoWoS"]},
-    "2303.TW": {"name":"聯電",     "en":"UMC",            "sector":"晶圓代工",  "supply":[]},
-    "5347.TW": {"name":"世界先進", "en":"Vanguard Semi",  "sector":"晶圓代工",  "supply":[]},
-    "6770.TW": {"name":"力積電",   "en":"PSMC",           "sector":"晶圓代工",  "supply":[]},
+    "2330.TW": {"name":"台積電",    "en":"TSMC",              "sector":"晶圓代工",  "supply":["NVIDIA","AMD","Apple","AI","CoWoS"]},
+    "2303.TW": {"name":"聯電",      "en":"UMC",               "sector":"晶圓代工",  "supply":[]},
+    "6770.TW": {"name":"力積電",    "en":"PSMC",              "sector":"晶圓代工",  "supply":[]},
     # ── IC設計 Fabless ──────────────────────────────────────────────────────
-    "2454.TW": {"name":"聯發科",   "en":"MediaTek",       "sector":"IC設計",    "supply":["AI","AMD"]},
-    "3034.TW": {"name":"聯詠",     "en":"Novatek",        "sector":"IC設計",    "supply":["Apple"]},
-    "2379.TW": {"name":"瑞昱",     "en":"Realtek",        "sector":"IC設計",    "supply":[]},
-    "6415.TW": {"name":"矽力-KY",  "en":"Silergy",        "sector":"IC設計",    "supply":["AI"]},
-    "3529.TW": {"name":"力旺",     "en":"eMemory",        "sector":"記憶體IP",  "supply":["AI"]},
-    "2458.TW": {"name":"義隆電",   "en":"Elan Micro",     "sector":"IC設計",    "supply":["Apple"]},
-    "2401.TW": {"name":"凌陽",     "en":"Sunplus",        "sector":"IC設計",    "supply":[]},
+    "2454.TW": {"name":"聯發科",    "en":"MediaTek",          "sector":"IC設計",    "supply":["AI","AMD"]},
+    "3034.TW": {"name":"聯詠",      "en":"Novatek",           "sector":"IC設計",    "supply":["Apple"]},
+    "2379.TW": {"name":"瑞昱",      "en":"Realtek",           "sector":"IC設計",    "supply":[]},
+    "6415.TW": {"name":"矽力-KY",   "en":"Silergy",           "sector":"IC設計",    "supply":["AI"]},
+    "2458.TW": {"name":"義隆電",    "en":"Elan Micro",        "sector":"IC設計",    "supply":["Apple"]},
+    "2401.TW": {"name":"凌陽",      "en":"Sunplus",           "sector":"IC設計",    "supply":[]},
     # ── 記憶體 Memory ───────────────────────────────────────────────────────
-    "2344.TW": {"name":"華邦電",   "en":"Winbond",        "sector":"記憶體",    "supply":[]},
-    "2408.TW": {"name":"南亞科",   "en":"Nanya Tech",     "sector":"DRAM",      "supply":[]},
-    "8299.TW": {"name":"群聯",     "en":"Phison",         "sector":"NAND控制器","supply":["AI"]},
+    "2344.TW": {"name":"華邦電",    "en":"Winbond",           "sector":"記憶體",    "supply":[]},
+    "2408.TW": {"name":"南亞科",    "en":"Nanya Tech",        "sector":"DRAM",      "supply":[]},
+    "8299.TW": {"name":"群聯",      "en":"Phison",            "sector":"NAND控制器","supply":["AI"]},
+    # ── 矽晶圓 Silicon Wafer ─────────────────────────────────────────────────
+    "6488.TW": {"name":"環球晶",    "en":"GlobalWafers",      "sector":"矽晶圓",    "supply":["AI","NVIDIA"]},
+    "5483.TW": {"name":"中美晶",    "en":"Sino-American Si",  "sector":"矽晶圓",    "supply":["AI"]},
     # ── 先進封裝 / 封測 Packaging ───────────────────────────────────────────
-    "3711.TW": {"name":"日月光投控","en":"ASE Technology", "sector":"封測",     "supply":["NVIDIA","AMD","Apple","CoWoS"]},
-    "2449.TW": {"name":"京元電子", "en":"KYEC",           "sector":"IC測試",    "supply":[]},
+    "3711.TW": {"name":"日月光投控","en":"ASE Technology",    "sector":"封測",      "supply":["NVIDIA","AMD","Apple","CoWoS"]},
+    "2449.TW": {"name":"京元電子",  "en":"KYEC",              "sector":"IC測試",    "supply":[]},
     # ── IC載板 / PCB ────────────────────────────────────────────────────────
-    "3037.TW": {"name":"欣興",     "en":"Unimicron",      "sector":"IC載板",    "supply":["NVIDIA","AMD","CoWoS"]},
-    "3044.TW": {"name":"健鼎",     "en":"Tripod Tech",    "sector":"PCB",       "supply":["NVIDIA","AI"]},
+    "3037.TW": {"name":"欣興",      "en":"Unimicron",         "sector":"IC載板",    "supply":["NVIDIA","AMD","CoWoS"]},
+    "3044.TW": {"name":"健鼎",      "en":"Tripod Tech",       "sector":"PCB",       "supply":["NVIDIA","AI"]},
     # ── AI伺服器 / ODM ──────────────────────────────────────────────────────
-    "6669.TW": {"name":"緯穎",     "en":"Wiwynn",         "sector":"AI伺服器",  "supply":["NVIDIA","AI"]},
-    "2382.TW": {"name":"廣達",     "en":"Quanta",         "sector":"伺服器ODM", "supply":["NVIDIA","AI","Apple"]},
-    "3231.TW": {"name":"緯創",     "en":"Wistron",        "sector":"ODM",       "supply":["Apple","AI"]},
-    "4938.TW": {"name":"和碩",     "en":"Pegatron",       "sector":"ODM",       "supply":["Apple"]},
-    "2317.TW": {"name":"鴻海",     "en":"Foxconn",        "sector":"EMS/ODM",   "supply":["Apple","NVIDIA","AI"]},
+    "6669.TW": {"name":"緯穎",      "en":"Wiwynn",            "sector":"AI伺服器",  "supply":["NVIDIA","AI"]},
+    "2382.TW": {"name":"廣達",      "en":"Quanta",            "sector":"伺服器ODM", "supply":["NVIDIA","AI","Apple"]},
+    "3231.TW": {"name":"緯創",      "en":"Wistron",           "sector":"ODM",       "supply":["Apple","AI"]},
+    "4938.TW": {"name":"和碩",      "en":"Pegatron",          "sector":"ODM",       "supply":["Apple"]},
+    "2317.TW": {"name":"鴻海",      "en":"Foxconn",           "sector":"EMS/ODM",   "supply":["Apple","NVIDIA","AI"]},
+    "2324.TW": {"name":"仁寶",      "en":"Compal",            "sector":"ODM",       "supply":["Apple","AI"]},
     # ── 被動元件 Passive Components ─────────────────────────────────────────
-    "2327.TW": {"name":"國巨",     "en":"Yageo",          "sector":"被動元件",  "supply":["NVIDIA","Apple"]},
-    "2492.TW": {"name":"華新科",   "en":"Walsin Tech",    "sector":"被動元件",  "supply":[]},
+    "2327.TW": {"name":"國巨",      "en":"Yageo",             "sector":"被動元件",  "supply":["NVIDIA","Apple"]},
+    "2492.TW": {"name":"華新科",    "en":"Walsin Tech",       "sector":"被動元件",  "supply":[]},
+    # ── 連接器 Connectors ────────────────────────────────────────────────────
+    "3533.TW": {"name":"嘉澤",      "en":"Lotes",             "sector":"連接器",    "supply":["AI","NVIDIA"]},
     # ── 光學 Optics ─────────────────────────────────────────────────────────
-    "3008.TW": {"name":"大立光",   "en":"Largan",         "sector":"光學鏡頭",  "supply":["Apple"]},
-    "3406.TW": {"name":"玉晶光",   "en":"Genius Optical", "sector":"光學鏡頭",  "supply":["Apple"]},
+    "3008.TW": {"name":"大立光",    "en":"Largan",            "sector":"光學鏡頭",  "supply":["Apple"]},
+    "3406.TW": {"name":"玉晶光",    "en":"Genius Optical",    "sector":"光學鏡頭",  "supply":["Apple"]},
     # ── 電源 / 散熱 Power & Thermal ─────────────────────────────────────────
-    "2308.TW": {"name":"台達電",   "en":"Delta Electronics","sector":"電源散熱","supply":["NVIDIA","AI"]},
+    "2308.TW": {"name":"台達電",    "en":"Delta Electronics", "sector":"電源散熱",  "supply":["NVIDIA","AI","綠能"]},
     # ── 面板 Displays ────────────────────────────────────────────────────────
-    "2409.TW": {"name":"友達",     "en":"AUO",            "sector":"面板",      "supply":["Apple"]},
-    "3481.TW": {"name":"群創",     "en":"Innolux",        "sector":"面板",      "supply":[]},
+    "2409.TW": {"name":"友達",      "en":"AUO",               "sector":"面板",      "supply":["Apple"]},
+    "3481.TW": {"name":"群創",      "en":"Innolux",           "sector":"面板",      "supply":[]},
     # ── 機殼 Enclosures ──────────────────────────────────────────────────────
-    "2474.TW": {"name":"可成",     "en":"Catcher Tech",   "sector":"金屬機殼",  "supply":["Apple"]},
-    # ── 品牌 / 主機板 ─────────────────────────────────────────────────────
-    "2376.TW": {"name":"技嘉",     "en":"Gigabyte",       "sector":"主機板",    "supply":["NVIDIA","AMD","AI"]},
-    "2357.TW": {"name":"華碩",     "en":"ASUS",           "sector":"3C品牌",    "supply":["NVIDIA","AMD","AI"]},
-    "2395.TW": {"name":"研華",     "en":"Advantech",      "sector":"工業電腦",  "supply":["AI"]},
+    "2474.TW": {"name":"可成",      "en":"Catcher Tech",      "sector":"金屬機殼",  "supply":["Apple"]},
+    # ── 品牌 / 主機板 ────────────────────────────────────────────────────────
+    "2376.TW": {"name":"技嘉",      "en":"Gigabyte",          "sector":"主機板",    "supply":["NVIDIA","AMD","AI"]},
+    "2357.TW": {"name":"華碩",      "en":"ASUS",              "sector":"3C品牌",    "supply":["NVIDIA","AMD","AI"]},
+    "2395.TW": {"name":"研華",      "en":"Advantech",         "sector":"工業電腦",  "supply":["AI"]},
     # ── ETF ─────────────────────────────────────────────────────────────────
-    "0052.TW": {"name":"富邦科技", "en":"Fubon Tech ETF", "sector":"ETF",       "supply":["ETF"]},
+    "0052.TW": {"name":"富邦科技",  "en":"Fubon Tech ETF",    "sector":"ETF",       "supply":["ETF"]},
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  金融 Financial
+    # ════════════════════════════════════════════════════════════════════════
+    "2881.TW": {"name":"富邦金",    "en":"Fubon Financial",   "sector":"金融",      "supply":["金融"]},
+    "2882.TW": {"name":"國泰金",    "en":"Cathay Financial",  "sector":"金融",      "supply":["金融"]},
+    "2884.TW": {"name":"玉山金",    "en":"E.Sun Financial",   "sector":"金融",      "supply":["金融"]},
+    "2891.TW": {"name":"中信金",    "en":"CTBC Financial",    "sector":"金融",      "supply":["金融"]},
+    "2886.TW": {"name":"兆豐金",    "en":"Mega Financial",    "sector":"金融",      "supply":["金融"]},
+    "2892.TW": {"name":"第一金",    "en":"First Financial",   "sector":"金融",      "supply":["金融"]},
+    "2880.TW": {"name":"華南金",    "en":"Hua Nan Financial", "sector":"金融",      "supply":["金融"]},
+    "2883.TW": {"name":"開發金",    "en":"CDIB Financial",    "sector":"金融",      "supply":["金融"]},
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  航運 Shipping
+    # ════════════════════════════════════════════════════════════════════════
+    "2603.TW": {"name":"長榮",      "en":"Evergreen Marine",  "sector":"航運",      "supply":["航運"]},
+    "2609.TW": {"name":"陽明",      "en":"Yang Ming Marine",  "sector":"航運",      "supply":["航運"]},
+    "2615.TW": {"name":"萬海",      "en":"Wan Hai Lines",     "sector":"航運",      "supply":["航運"]},
+    "2610.TW": {"name":"華航",      "en":"China Airlines",    "sector":"航空",      "supply":["航空"]},
+    "2618.TW": {"name":"長榮航",    "en":"EVA Air",           "sector":"航空",      "supply":["航空"]},
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  鋼鐵 / 石化 / 原材料 Steel / Petrochem / Materials
+    # ════════════════════════════════════════════════════════════════════════
+    "2002.TW": {"name":"中鋼",      "en":"China Steel",       "sector":"鋼鐵",      "supply":["原物料"]},
+    "2015.TW": {"name":"豐興",      "en":"Feng Hsin Steel",   "sector":"鋼鐵",      "supply":["原物料"]},
+    "2023.TW": {"name":"燁聯",      "en":"Yieh United Steel", "sector":"鋼鐵",      "supply":["原物料"]},
+    "1301.TW": {"name":"台塑",      "en":"Formosa Plastics",  "sector":"石化",      "supply":["原物料"]},
+    "1303.TW": {"name":"南亞",      "en":"Nan Ya Plastics",   "sector":"石化",      "supply":["原物料"]},
+    "1326.TW": {"name":"台化",      "en":"Formosa Chemicals", "sector":"石化",      "supply":["原物料"]},
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  電信 Telecom
+    # ════════════════════════════════════════════════════════════════════════
+    "2412.TW": {"name":"中華電",    "en":"Chunghwa Telecom",  "sector":"電信",      "supply":[]},
+    "3045.TW": {"name":"台灣大",    "en":"Taiwan Mobile",     "sector":"電信",      "supply":[]},
+    "4904.TW": {"name":"遠傳",      "en":"Far EasTone",       "sector":"電信",      "supply":[]},
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  消費 / 零售 Consumer / Retail
+    # ════════════════════════════════════════════════════════════════════════
+    "2912.TW": {"name":"統一超",    "en":"President Chain",   "sector":"零售",      "supply":[]},
+    "5903.TW": {"name":"全家",      "en":"FamilyMart TW",     "sector":"零售",      "supply":[]},
+    "5904.TW": {"name":"寶雅",      "en":"Poya",              "sector":"零售",      "supply":[]},
+    "2207.TW": {"name":"和泰車",    "en":"Hotai Motor",       "sector":"汽車",      "supply":[]},
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  建設 / 不動產 Construction / Real Estate
+    # ════════════════════════════════════════════════════════════════════════
+    "5522.TW": {"name":"遠雄",      "en":"Farglory",          "sector":"建設",      "supply":["建設"]},
+    "2542.TW": {"name":"興富發",    "en":"Highwealth Const",  "sector":"建設",      "supply":["建設"]},
+    "2504.TW": {"name":"國產",      "en":"Kuo Chan Const",    "sector":"建設",      "supply":["建設"]},
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  生技醫療 Biotech / Medical
+    # ════════════════════════════════════════════════════════════════════════
+    "6446.TW": {"name":"藥華藥",    "en":"PharmaEngine",      "sector":"生技",      "supply":["生技"]},
+    "6472.TW": {"name":"保瑞",      "en":"Bora Pharma",       "sector":"生技",      "supply":["生技"]},
+    "1789.TW": {"name":"神隆",      "en":"ScinoPharm",        "sector":"生技",      "supply":["生技"]},
+    "1707.TW": {"name":"葡萄王",    "en":"Grape King Bio",    "sector":"保健",      "supply":[]},
+    "4171.TW": {"name":"瑞基",      "en":"Reber Genetics",    "sector":"生技",      "supply":["生技"]},
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  綠能 / 電力 Green Energy / Power
+    # ════════════════════════════════════════════════════════════════════════
+    "1513.TW": {"name":"中興電",    "en":"CENS",              "sector":"電機",      "supply":["綠能"]},
+    "1504.TW": {"name":"東元",      "en":"Teco Electric",     "sector":"電機",      "supply":["綠能"]},
+    "1101.TW": {"name":"台泥",      "en":"Taiwan Cement",     "sector":"水泥/綠能", "supply":["綠能"]},
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  食品 Food
+    # ════════════════════════════════════════════════════════════════════════
+    "1216.TW": {"name":"統一",      "en":"Uni-President",     "sector":"食品",      "supply":[]},
+    "1210.TW": {"name":"大成",      "en":"Great Wall Ent",    "sector":"食品",      "supply":[]},
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  觀光 / 餐飲 Tourism / Hospitality
+    # ════════════════════════════════════════════════════════════════════════
+    "2707.TW": {"name":"晶華",      "en":"Regent Hotel",      "sector":"觀光",      "supply":[]},
+    "2727.TW": {"name":"王品",      "en":"Wowprime",          "sector":"餐飲",      "supply":[]},
+    "2731.TW": {"name":"雄獅",      "en":"Lion Travel",       "sector":"觀光",      "supply":[]},
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  水泥 / 基建 Cement / Infrastructure
+    # ════════════════════════════════════════════════════════════════════════
+    "1102.TW": {"name":"亞泥",      "en":"Asia Cement",       "sector":"水泥",      "supply":[]},
 }
 
-# ── 新聞催化劑關鍵字 ────────────────────────────────────────────────────────
+# ── 新聞催化劑關鍵字（科技 + 多元產業）──────────────────────────────────────
 CATALYST_MAP = {
+    # 科技主題
     "NVIDIA": ["NVIDIA","輝達","Blackwell","GB200","GB300","H100","H200","NVL72","B200","Hopper","HGX","DGX"],
     "AMD":    ["AMD","超微","MI300","MI350","MI400","EPYC","Instinct"],
-    "Apple":  ["Apple","蘋果","iPhone","iPad","Vision Pro","M4","A18","供應商","蘋果鏈"],
-    "AI":     ["AI","人工智慧","生成式","LLM","大模型","算力","推論","訓練","GPU","NPU"],
+    "Apple":  ["Apple","蘋果","iPhone","iPad","Vision Pro","M4","A18","蘋果鏈"],
+    "AI":     ["AI","人工智慧","生成式","LLM","大模型","算力","推論","訓練","GPU","NPU","機器人"],
     "CoWoS":  ["CoWoS","先進封裝","SoIC","2.5D","3D封裝","晶片堆疊"],
     "記憶體": ["HBM","記憶體","DRAM","NAND","高頻寬"],
     "漲價":   ["漲價","調漲","報價提升","price hike","報價上調"],
     "訂單":   ["接單","新訂單","出貨","交貨","獲利","業績","法說"],
     "外資":   ["外資買超","法人買超","外資大買"],
+    # 非科技主題（新增）
+    "降息":   ["Fed降息","降息","利率下降","rate cut","FOMC寬鬆","貨幣寬鬆","央行降息"],
+    "升息":   ["升息","利率上升","rate hike","緊縮","FOMC升息"],
+    "航運":   ["運費","貨櫃","航運景氣","SCFI","FBX","BDI","集運","缺艙","運力"],
+    "生技":   ["FDA","新藥","藥證","臨床試驗","解盲","NDA","IND","藥品核准","解禁"],
+    "綠能":   ["離岸風電","太陽能","儲能","綠能","再生能源","風電","淨零","碳中和","電動車","EV"],
+    "原物料": ["鋼價","銅價","鐵礦石","原油","油價","鋼鐵漲","煤炭","原物料"],
+    "建設":   ["房地產","房市","捷運","新青安","都更","危老重建","土地"],
 }
 
-# 催化劑觸發的受益股票
+# 催化劑觸發的受益股票（科技 + 多元產業）
 CATALYST_BENEFICIARIES = {
-    "NVIDIA":  ["2330.TW","3711.TW","3037.TW","6669.TW","2382.TW","2308.TW","3044.TW","2327.TW"],
+    # 科技
+    "NVIDIA":  ["2330.TW","3711.TW","3037.TW","6669.TW","2382.TW","2308.TW","3044.TW","2327.TW","3533.TW","6488.TW"],
     "AMD":     ["2330.TW","3711.TW","3037.TW","2376.TW","2357.TW"],
-    "Apple":   ["2330.TW","4938.TW","2317.TW","3008.TW","3406.TW","2474.TW","3034.TW","2382.TW"],
-    "AI":      ["2330.TW","2454.TW","6669.TW","2382.TW","3529.TW","2308.TW","8299.TW","3037.TW"],
+    "Apple":   ["2330.TW","4938.TW","2317.TW","3008.TW","3406.TW","2474.TW","3034.TW","2382.TW","2324.TW"],
+    "AI":      ["2330.TW","2454.TW","6669.TW","2382.TW","2308.TW","8299.TW","3037.TW","3533.TW","6488.TW","5483.TW"],
     "CoWoS":   ["2330.TW","3711.TW","3037.TW"],
-    "記憶體":  ["2344.TW","2408.TW","8299.TW","3529.TW"],
-    "漲價":    ["2330.TW","2454.TW","3008.TW","2344.TW","2408.TW"],
+    "記憶體":  ["2344.TW","2408.TW","8299.TW","6488.TW"],
+    "漲價":    ["2330.TW","2454.TW","3008.TW","2344.TW","2408.TW","2002.TW","1301.TW"],
+    "訂單":    ["2330.TW","2454.TW","6669.TW","2382.TW","2317.TW","2603.TW","2609.TW"],
+    # 非科技（新增）
+    "降息":    ["2881.TW","2882.TW","2884.TW","2891.TW","2886.TW","2892.TW","2880.TW","2883.TW",
+                "5522.TW","2542.TW","2504.TW"],   # 降息利多：金融、建設
+    "升息":    ["2412.TW","3045.TW","4904.TW","2881.TW","2882.TW"],  # 升息：電信（高股息防禦）
+    "航運":    ["2603.TW","2609.TW","2615.TW","2610.TW","2618.TW"],
+    "生技":    ["6446.TW","6472.TW","1789.TW","4171.TW"],
+    "綠能":    ["1513.TW","1504.TW","1101.TW","2308.TW","3533.TW"],
+    "原物料":  ["2002.TW","2015.TW","2023.TW","1301.TW","1303.TW","1326.TW"],
+    "建設":    ["5522.TW","2542.TW","2504.TW","1102.TW","1101.TW"],
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
