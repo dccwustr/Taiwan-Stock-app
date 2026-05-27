@@ -1092,7 +1092,8 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
                 macro_bonus: int = 0) -> Dict:
     """
     綜合評分 0-100：
-      量能 30 + 動能 25 + 技術 25 + 催化劑 20（+外資調整）
+      量能 30 + 動能 25 + 技術 25 + 催化劑 30 + 外資 ±5 + 美股盤前 ±10
+    macro_bonus: 由 us_macro_stock_bonus() 計算，反映美股隔夜對個股影響（-10~+10）
     """
     if df is None or len(df) < 22:
         return {}

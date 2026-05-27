@@ -285,12 +285,22 @@ with st.sidebar:
     if qc2.button("Go", use_container_width=True):
         raw = query_input.strip().upper()
         if raw:
-            ticker = raw + ".TW" if not raw.endswith(".TW") else raw
-            st.session_state.search_ticker = ticker
-            rs = [t for t in st.session_state.recent_searches if t != ticker]
-            st.session_state.recent_searches = ([ticker] + rs)[:10]
-            st.session_state.view_mode = "search"
-            st.session_state._close_sidebar = True
+            # Strip any existing suffix so "6207.TWO" or "6207.TW" both normalise to "6207.TW"
+            if   raw.endswith(".TWO"): raw = raw[:-4]
+            elif raw.endswith(".TW"):  raw = raw[:-3]
+            # Validate: Taiwan stock codes are 4-5 digits only
+            if not raw.isdigit() or not (4 <= len(raw) <= 5):
+                st.session_state["_search_err"] = f'「{raw}」不是有效代號，請輸入4-5位數字（如 2330、6207、00878）'
+            else:
+                st.session_state.pop("_search_err", None)
+                ticker = raw + ".TW"
+                st.session_state.search_ticker = ticker
+                rs = [t for t in st.session_state.recent_searches if t != ticker]
+                st.session_state.recent_searches = ([ticker] + rs)[:10]
+                st.session_state.view_mode = "search"
+                st.session_state._close_sidebar = True
+    if st.session_state.get("_search_err"):
+        st.caption(f"⚠️ {st.session_state['_search_err']}")
 
     _vm_search_active = st.session_state.view_mode == "search"
     if st.button("搜尋記錄  ✓" if _vm_search_active else "搜尋記錄",
@@ -756,9 +766,12 @@ def render_query_card(ticker, sres, live_d, key_sfx):
         _border_col  = "#ffd54f" if sc >= 45 else "#c0392b"
         _reason_col  = "#ffd54f" if sc >= 45 else "#ff8a80"
         _label       = "⚠️ 為什麼現在不適合買？" if sc >= 45 else "❌ 為什麼強烈不建議現在買？"
+        _mb = sres.get("macro_bonus", 0)
+        _mb_str = f"　美股 {_mb:+d}" if _mb != 0 else ""
         _score_breakdown = (
             f'量能 {sres["vol_score"]}/30　動能 {sres["mom_score"]}/25　'
             f'技術 {sres["tech_score"]}/25　催化劑 {sres["cat_score"]}/30'
+            f'{_mb_str}'
         )
         st.markdown(
             f'<div style="background:#0c1018;border-left:3px solid {_border_col};'
@@ -1067,7 +1080,25 @@ if st.session_state.view_mode == "search":
             if _rt in _recent_results:
                 render_query_card(_rt, _recent_results[_rt], _query_live.get(_rt), f"r_{_rt}")
             else:
-                st.warning(f"{_rt.replace('.TW','')} — 找不到資料")
+                _code = _rt.replace('.TW','').replace('.TWO','')
+                # Hint: codes 30xx-39xx / 40xx-49xx are often 興櫃 (emerging),
+                # codes starting with 9 are sometimes special-purpose
+                _hint = ""
+                if _code.isdigit() and len(_code) == 4:
+                    _n = int(_code)
+                    if 3000 <= _n <= 3999 or 4000 <= _n <= 4999:
+                        _hint = "（提示：部分3xxx/4xxx為興櫃股，yfinance不支援興櫃）"
+                _hint_html = (f'<br><span style="font-size:11px;color:#777">{_hint}</span>'
+                              if _hint else "")
+                st.markdown(
+                    f'<div style="background:#1a0a0a;border-left:3px solid #c0392b;'
+                    f'border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px;font-size:13px">'
+                    f'❌ <b>{_code}</b> 查無資料——可能是：'
+                    f'<span style="color:#aaa">代號錯誤 ／ 興櫃股（yfinance不支援）'
+                    f' ／ 已下市 ／ 上市未滿1個月</span>'
+                    f'{_hint_html}</div>',
+                    unsafe_allow_html=True
+                )
     if _recent and st.button("🗑 清除搜尋記錄", use_container_width=True):
         st.session_state.recent_searches = []
         st.session_state.search_ticker   = None
