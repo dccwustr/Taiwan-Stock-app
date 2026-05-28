@@ -26,7 +26,16 @@ def _trading_epoch() -> str:
 
 import streamlit as st
 import streamlit.components.v1 as components
-from streamlit_javascript import st_javascript
+
+# Soft-import: app works without it (localStorage persistence disabled),
+# but never crashes the whole app if the package isn't installed.
+try:
+    from streamlit_javascript import st_javascript
+    _HAS_STJS = True
+except Exception:
+    _HAS_STJS = False
+    def st_javascript(js_code, key=None):   # graceful no-op
+        return 0
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -686,25 +695,34 @@ picks = today_picks
 
 # ── Fill sidebar content based on view mode ───────────────────────────────────
 with sidebar_content:
-    # Portfolio summary (always shown at top)
+    # ── Portfolio summary (always shown, only total — not per stock) ──────────
     if total_cost > 0:
-        pnl_col = "#ef5350" if total_pnl >= 0 else "#00c853"
+        pnl_col   = "#ef5350" if total_pnl >= 0 else "#00c853"
         pnl_arrow = "▲" if total_pnl >= 0 else "▼"
+        # Today's portfolio change (quick calc for sidebar)
+        _sb_today = sum(
+            h.get("shares", 0) * h.get("price", 0) * h.get("chg", 0) / (100 + h.get("chg", 0))
+            for h in holdings_info
+            if not h.get("error") and h.get("shares", 0) > 0
+            and h.get("cost", 0) > 0 and abs(h.get("chg", 0)) < 99
+        )
+        _td_col = "#ef5350" if _sb_today >= 0 else "#00c853"
+        _td_arr = "▲" if _sb_today >= 0 else "▼"
         st.markdown(
-            f'<div style="background:#0d1117;border:1px solid #252d45;border-radius:8px;padding:10px 14px;margin-bottom:8px">'
-            f'<div style="font-size:11px;color:#555;margin-bottom:4px">總成本　NT${total_cost:,.0f}</div>'
-            f'<div style="font-size:15px;font-weight:700;color:{pnl_col}">'
+            f'<div style="background:#0d1117;border:1px solid #252d45;border-radius:8px;'
+            f'padding:10px 14px;margin-bottom:8px">'
+            f'<div style="font-size:11px;color:#555;margin-bottom:4px">'
+            f'💼 持股總覽　成本 NT${total_cost:,.0f}</div>'
+            f'<div style="font-size:16px;font-weight:700;color:{pnl_col};margin-bottom:2px">'
             f'{pnl_arrow} {abs(total_pct):.2f}%　NT${total_pnl:+,.0f}</div>'
+            f'<div style="font-size:12px;color:{_td_col}">'
+            f'今日 {_td_arr} NT${abs(_sb_today):,.0f}</div>'
             f'</div>',
             unsafe_allow_html=True
         )
 
-    if st.session_state.view_mode == "picks":
-        # Sidebar shows holdings (compact)
-        for h in holdings_info:
-            render_holding_card(h)
-    else:
-        # Sidebar shows compact picks list
+    if st.session_state.view_mode != "picks":
+        # Sidebar shows compact picks list when NOT on the picks main view
         st.caption("今日可進場（點左上按鈕返回）")
         for i, p in enumerate(today_picks if today_picks else [], 1):
             chg_col = "#ef5350" if p["mom1d"] >= 0 else "#00c853"

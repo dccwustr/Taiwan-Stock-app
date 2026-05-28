@@ -8,7 +8,7 @@ Taiwan Tech Stock Pre-Market Analysis Widget
 """
 
 import sys, re, json, time, warnings, argparse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 import requests
 import pandas as pd
