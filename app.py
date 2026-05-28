@@ -40,6 +40,7 @@ from widget import (
     analyze_holding_sell, get_beginner_advice,
     calc_rsi, calc_live_rsi, _TW_STOCK_NAMES,
     fetch_us_overnight, us_macro_stock_bonus, fetch_global_news,
+    fetch_market_alerts,
 )
 
 warnings.filterwarnings("ignore")
@@ -276,6 +277,8 @@ if "recent_searches"  not in st.session_state: st.session_state.recent_searches 
 if "_close_sidebar"   not in st.session_state: st.session_state._close_sidebar   = False
 if "rsi_thresholds"   not in st.session_state: st.session_state.rsi_thresholds   = {}
 # rsi_thresholds: {ticker: {"target": float, "direction": "below"|"above"}}
+if "seen_alert_ids"   not in st.session_state: st.session_state.seen_alert_ids   = set()
+if "alert_snoozed"    not in st.session_state: st.session_state.alert_snoozed    = 0  # epoch sec
 
 # ── localStorage persistence (watchlist + holdings survive redeployments) ─────
 #
@@ -387,6 +390,19 @@ with st.sidebar:
     st.divider()
     st.caption("資料來源：鉅亨網・TWSE・Yahoo Finance")
     st.caption("⚠ 非投資建議，僅供參考")
+    st.divider()
+    # ── Push notification permission (persists in browser, not session_state) ──
+    _np = st_javascript(
+        "typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'"
+    )
+    if _np == "granted":
+        st.caption("🔔 重大警報推播：已開啟 ✅")
+    elif _np == "denied":
+        st.caption("🔕 推播已封鎖，請在瀏覽器網址列 → 網站設定 → 允許通知")
+    elif _np in (0, "default", None):
+        if st.button("🔔 開啟重大新聞推播", use_container_width=True, help="戰爭・崩盤・聯準會緊急決議 自動通知"):
+            st_javascript("await Notification.requestPermission()")
+            st.rerun()
 
 # ── Auto-close sidebar on mobile ──────────────────────────────────────────────
 if st.session_state.get("_close_sidebar"):
@@ -933,6 +949,84 @@ def render_query_card(ticker, sres, live_d, key_sfx):
         st.rerun()
 
 # ── Helpers & fragments (defined here so they're always available) ───────────
+
+@st.cache_data(ttl=180, show_spinner=False)
+def _fetch_alerts_cached():
+    """Cache RSS fetch results for 3 min so multiple simultaneous users share one poll."""
+    return fetch_market_alerts(hours_back=6)
+
+
+@st.fragment(run_every="180s")
+def render_news_alerts():
+    """
+    Polls breaking-news RSS every 3 minutes.
+    • Shows a red/orange sticky banner for critical/high alerts.
+    • Fires a browser push notification for each NEW critical alert
+      (if the user granted permission via the sidebar button).
+    • 'Snooze 1 hour' button to hide the banner without missing future alerts.
+    """
+    now_ts = _now_tw().timestamp()
+    if now_ts < st.session_state.alert_snoozed:
+        return   # user snoozed for 1 h
+
+    alerts = _fetch_alerts_cached()
+    if not alerts:
+        return
+
+    critical = [a for a in alerts if a["severity"] == "critical"]
+    high     = [a for a in alerts if a["severity"] == "high"]
+    all_shown = (critical + high)[:5]
+
+    if not all_shown:
+        return
+
+    # ── Banner ──────────────────────────────────────────────────────────────
+    for a in all_shown:
+        sev    = a["severity"]
+        bg     = "#2d0808" if sev == "critical" else "#2a1500"
+        border = "#ef5350" if sev == "critical" else "#ff9800"
+        icon   = "🚨" if sev == "critical" else "⚠️"
+        label  = "重大危機" if sev == "critical" else "市場警示"
+        am     = a["age_min"]
+        age_s  = f"{am}分鐘前" if am > 0 else "剛發布"
+        st.markdown(
+            f'<div style="background:{bg};border:1px solid {border};'
+            f'border-left:5px solid {border};border-radius:8px;'
+            f'padding:10px 16px;margin:3px 0">'
+            f'<div style="color:{border};font-size:11px;font-weight:700;'
+            f'letter-spacing:0.5px">{icon} {label}'
+            f'　<span style="color:#666;font-weight:400">'
+            f'{a["source"]}　{age_s}</span></div>'
+            f'<div style="color:#f0f0f0;font-size:14px;margin-top:4px;'
+            f'line-height:1.45">{a["title"]}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    _snz_col, _ = st.columns([3, 7])
+    if _snz_col.button("✓ 已知悉，暫時隱藏 (1小時)", key="snooze_alerts"):
+        st.session_state.alert_snoozed = now_ts + 3600
+        st.rerun()
+
+    # ── Browser push notification for NEW critical alerts ─────────────────
+    new_crit = [a for a in critical
+                if a["alert_id"] not in st.session_state.seen_alert_ids]
+    for a in new_crit[:3]:
+        st.session_state.seen_alert_ids.add(a["alert_id"])
+        # Escape for JS string literal
+        _t = a["title"].replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"')
+        _s = a["source"].replace("'", "\\'")
+        _id = a["alert_id"]
+        st_javascript(f"""(
+            typeof Notification !== 'undefined' && Notification.permission === 'granted'
+            ? new Notification('🚨 市場緊急警報', {{
+                body: '{_t}',
+                tag:  'tw-alert-{_id}',
+                requireInteraction: true
+              }})
+            : null, 1)""")
+
+
 def _is_market_open() -> bool:
     tw = _now_tw()
     return tw.weekday() < 5 and (
@@ -1126,6 +1220,9 @@ def render_rsi_monitor(monitored_tickers: list, prices: dict):
                 st.session_state.rsi_thresholds.pop(_mt, None)
                 st.session_state._needs_save = True
                 st.rerun()
+
+# ── Breaking-news alert banner (runs every 3 min, shown in all views) ────────
+render_news_alerts()
 
 # ── Market index bar + minimalist refresh ────────────────────────────────────
 _mi_col, _ref_col = st.columns([11, 1])

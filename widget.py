@@ -1094,6 +1094,177 @@ def fetch_global_news() -> List[str]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  Breaking-news market alert surveillance
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Polls Google News RSS + BBC World RSS every time the fragment fires (every 3
+# minutes in app.py).  Headlines are scored against two keyword lists:
+#
+#   CRITICAL — geopolitical events, market halts, bank collapses, nuclear/war
+#   HIGH     — Fed decisions, oil shocks, major earnings, chip bans, recessions
+#
+# Returns a list of dicts sorted by (severity DESC, age ASC).
+
+# Google News RSS search feeds — each query targets a specific risk cluster
+_ALERT_FEEDS: List[tuple] = [
+    (
+        "https://news.google.com/rss/search?"
+        "q=iran+attack+OR+airstrike+OR+%22missile+strike%22+OR+%22nuclear+test%22"
+        "+OR+%22war+declared%22+OR+%22north+korea%22+missile"
+        "&hl=en-US&gl=US&ceid=US:en",
+        "Google News · 軍事地緣",
+    ),
+    (
+        "https://news.google.com/rss/search?"
+        "q=%22market+crash%22+OR+%22circuit+breaker%22+OR+%22trading+halted%22"
+        "+OR+%22bank+collapse%22+OR+%22bank+failure%22+OR+%22fed+emergency%22"
+        "&hl=en-US&gl=US&ceid=US:en",
+        "Google News · 市場危機",
+    ),
+    (
+        "https://news.google.com/rss/search?"
+        "q=taiwan+invasion+OR+%22taiwan+strait%22+military+OR+%22pla+enters%22"
+        "&hl=en-US&gl=US&ceid=US:en",
+        "Google News · 台海",
+    ),
+    (
+        "https://news.google.com/rss/search?"
+        "q=fomc+OR+%22fed+rate+decision%22+OR+%22rate+hike%22+OR+%22rate+cut%22"
+        "+OR+%22emergency+rate%22"
+        "&hl=en-US&gl=US&ceid=US:en",
+        "Google News · 聯準會",
+    ),
+    # BBC World — broad geopolitical coverage
+    (
+        "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "BBC World",
+    ),
+]
+
+# Phrases whose presence anywhere in a headline → CRITICAL alert
+_CRITICAL_KW: List[str] = [
+    "airstrike", "air strike", "missile strike", "missile attack",
+    "nuclear test", "nuclear weapon", "nuclear detonation",
+    "war declared", "war begins", "invasion begins",
+    "military strike", "armed attack",
+    "circuit breaker", "market halted", "market halt", "trading halted",
+    "market crash", "stock market crash",
+    "bank run", "bank collapse", "bank failure",
+    "fed emergency", "emergency rate cut", "emergency rate hike",
+    "world war", "nuclear war",
+]
+
+# Phrases → HIGH alert (market-moving within hours, not minutes)
+_HIGH_KW: List[str] = [
+    "fomc", "rate hike", "rate cut", "interest rate decision",
+    "oil embargo", "oil surge", "opec", "crude oil",
+    "nvidia earnings", "tsmc earnings", "apple earnings",
+    "trade war", "chip ban", "semiconductor ban",
+    "recession declared", "gdp contraction",
+    "taiwan military", "taiwan strait",
+    "iran sanction", "iran nuclear", "north korea",
+    "earthquake magnitude", "typhoon taiwan",
+]
+
+
+def _rss_age_minutes(pub_str: str) -> int:
+    """Return how many minutes ago an RFC-2822 pubDate string was.  -1 if unparseable."""
+    from email.utils import parsedate_to_datetime
+    try:
+        pub = parsedate_to_datetime(pub_str)
+        if pub.tzinfo is None:
+            pub = pub.replace(tzinfo=timezone.utc)
+        delta = datetime.now(timezone.utc) - pub.astimezone(timezone.utc)
+        return max(0, int(delta.total_seconds() / 60))
+    except Exception:
+        return -1
+
+
+def fetch_market_alerts(hours_back: int = 6) -> List[Dict]:
+    """
+    Poll RSS feeds for market-critical breaking news from the last `hours_back` hours.
+
+    Returns list of dicts sorted by severity then freshness:
+        {title, source, link, severity: 'critical'|'high', age_min, alert_id}
+    """
+    import hashlib
+    import re
+    from bs4 import BeautifulSoup
+
+    cutoff_min = hours_back * 60
+    seen: set = set()
+    alerts: List[Dict] = []
+
+    for feed_url, feed_name in _ALERT_FEEDS:
+        try:
+            r = requests.get(
+                feed_url, timeout=7,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; marketalert/1.0)"},
+            )
+            r.raise_for_status()
+            soup = BeautifulSoup(r.content, "xml")
+
+            for item in soup.find_all("item")[:30]:
+                # ── title ─────────────────────────────────────────────────────
+                t_el = item.find("title")
+                title = t_el.get_text(strip=True) if t_el else ""
+                # Strip any residual HTML tags (Google News sometimes leaves them)
+                title = re.sub(r"<[^>]+>", "", title).strip()
+                if not title:
+                    continue
+
+                # ── link ──────────────────────────────────────────────────────
+                l_el = item.find("link")
+                link = l_el.get_text(strip=True) if l_el else ""
+
+                # ── age ───────────────────────────────────────────────────────
+                p_el = item.find("pubDate")
+                pub_str = p_el.get_text(strip=True) if p_el else ""
+                age_min = _rss_age_minutes(pub_str)
+                if age_min != -1 and age_min > cutoff_min:
+                    continue   # too old
+
+                # ── deduplicate on first 55 chars ─────────────────────────────
+                key = title.lower()[:55]
+                if key in seen:
+                    continue
+                seen.add(key)
+
+                # ── classify ──────────────────────────────────────────────────
+                tl = title.lower()
+                severity = None
+                for kw in _CRITICAL_KW:
+                    if kw in tl:
+                        severity = "critical"
+                        break
+                if not severity:
+                    for kw in _HIGH_KW:
+                        if kw in tl:
+                            severity = "high"
+                            break
+
+                if severity:
+                    aid = hashlib.md5(title[:80].encode()).hexdigest()[:12]
+                    alerts.append({
+                        "title":    title,
+                        "source":   feed_name,
+                        "link":     link,
+                        "severity": severity,
+                        "age_min":  age_min if age_min != -1 else 0,
+                        "alert_id": aid,
+                    })
+        except Exception:
+            continue   # one feed failing should not kill the whole check
+
+    # Critical first, then by freshness (youngest first)
+    alerts.sort(key=lambda x: (
+        0 if x["severity"] == "critical" else 1,
+        x.get("age_min", 9999),
+    ))
+    return alerts[:12]
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  股票篩選引擎
 # ═══════════════════════════════════════════════════════════════════════════════
 
