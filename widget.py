@@ -867,30 +867,35 @@ def get_beginner_advice(df: pd.DataFrame, live_price: float) -> Dict:
     target_pct = round((target - live_price) / live_price * 100, 1)
 
     # ── RSI 進場信號（新手最重要的指標）─────────────────────────────────────
+    # 進場甜蜜區間 45–68；RSI < 73 才出現在「今日可進場」名單
     if rsi < 30:
-        rsi_signal = "🟢 超賣！強力買入信號"
+        rsi_signal = "🟢 超賣！可分批進場"
         rsi_col    = "#00c853"
-        rsi_action = "RSI 嚴重超賣，歷史上這是難得的低點，可大膽進場"
-    elif rsi < 40:
-        rsi_signal = "🟢 偏低，建議進場"
+        rsi_action = "RSI 嚴重超賣，可分批零股買入，但留意是否仍在下跌趨勢"
+    elif rsi < 45:
+        rsi_signal = "🟢 低檔，適合進場"
         rsi_col    = "#00c853"
-        rsi_action = "RSI 低於40，股價偏低，適合分批買入"
-    elif rsi < 50:
-        rsi_signal = "🟡 中性偏低，可小量"
-        rsi_col    = "#ffd54f"
-        rsi_action = "RSI 接近中性，可小量試水，等更低再加碼"
+        rsi_action = "RSI 偏低，股價相對便宜，適合分批零股累積"
     elif rsi < 60:
-        rsi_signal = "🟡 中性，觀望為主"
+        rsi_signal = "✅ 理想進場區間"
+        rsi_col    = "#00c853"
+        rsi_action = "RSI 在 45–60 最佳甜蜜區：趨勢向上但未過熱，現在進場最穩健"
+    elif rsi < 68:
+        rsi_signal = "✅ 趨勢向上，可進場"
+        rsi_col    = "#7eb3ff"
+        rsi_action = "RSI 60–68：多頭趨勢強，仍在合理範圍，可分批買入"
+    elif rsi < 73:
+        rsi_signal = "🟡 偏高，小量試探"
         rsi_col    = "#ffd54f"
-        rsi_action = "RSI 中性，不急著進場，等回調到50以下再考慮"
-    elif rsi < 70:
-        rsi_signal = "🟠 偏高，謹慎追高"
+        rsi_action = "RSI 68–72：偏熱邊緣，建議先買三成，等回調至 65 以下再加碼"
+    elif rsi < 80:
+        rsi_signal = "🟠 偏熱，等回落"
         rsi_col    = "#ff9800"
-        rsi_action = "RSI 偏高，股價可能過熱，追高風險較大，等回調"
+        rsi_action = "RSI 已超過 73，追高風險上升，建議等 RSI 回落至 68 以下再進場"
     else:
-        rsi_signal = "🔴 超買！不建議現在進場"
+        rsi_signal = "🔴 超買！暫勿追高"
         rsi_col    = "#ef5350"
-        rsi_action = "RSI 超過70，股票已超買，等 RSI 回落到60以下再進場"
+        rsi_action = "RSI 超過 80，短期嚴重超買，耐心等待回調，切勿追漲"
 
     return {
         "rsi":         round(rsi, 1),
