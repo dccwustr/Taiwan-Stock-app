@@ -597,17 +597,28 @@ for ticker in TECH_UNIVERSE:
     res = score_stock(ticker, prices.get(ticker), cat_sc.get(ticker, 0), foreign.get(ticker, 0),
                       us_macro_stock_bonus(ticker, us_data))
     if res:
-        # 零股小資調整：RSI過熱難買到低點；高價股零股難累積
+        # 零股小資調整：RSI是否在適合進場區間；高價股零股難累積
         _adj = 0
-        if res.get("rsi", 50) > 75: _adj -= 10  # overbought = bad accumulation entry
-        if res.get("rsi", 50) < 40: _adj +=  5  # oversold = good accumulation entry
+        _rsi = res.get("rsi", 50)
+        if   _rsi > 82:  _adj -= 30  # 嚴重超買：不追
+        elif _rsi > 78:  _adj -= 20  # 很熱：等回落
+        elif _rsi > 72:  _adj -= 12  # 偏熱：不適合進場
+        elif _rsi > 68:  _adj -=  4  # 微熱：謹慎
+        elif _rsi >= 45: _adj +=  8  # 甜蜜區間 45-68：最佳進場
+        elif _rsi >= 35: _adj +=  3  # 輕微超賣：還不錯
+        else:            _adj -= 15  # 極度超賣：可能下跌趨勢
         if res.get("last_price", 0) > 500: _adj -= 8  # expensive per share
         res["score"] = max(0, min(100, res["score"] + _adj))
         if res["score"] >= min_score:
             res["catalysts"] = get_catalyst_labels(ticker, all_news)
             scored.append(res)
 scored.sort(key=lambda x: x["score"], reverse=True)
-picks = scored[:top_n]
+# 今日可進場：RSI 在合理區間 (< 73) 且信心分數夠高 (>= 52)
+today_picks = [r for r in scored if r.get("rsi", 50) < 73 and r["score"] >= 52][:top_n]
+# 準備中：RSI偏熱，等回落後進場（最多3支）
+watch_picks = [r for r in scored if r.get("rsi", 50) >= 73 and r["score"] >= 45][:3]
+# backward compat
+picks = today_picks
 
 # ── Fill sidebar content based on view mode ───────────────────────────────────
 with sidebar_content:
@@ -630,8 +641,8 @@ with sidebar_content:
             render_holding_card(h)
     else:
         # Sidebar shows compact picks list
-        st.caption("今日精選（點左上按鈕返回）")
-        for i, p in enumerate(scored[:top_n] if scored else [], 1):
+        st.caption("今日可進場（點左上按鈕返回）")
+        for i, p in enumerate(today_picks if today_picks else [], 1):
             chg_col = "#ef5350" if p["mom1d"] >= 0 else "#00c853"
             st.markdown(
                 f'<div style="padding:6px 0;border-bottom:1px solid #1a1a2e">'
@@ -1298,7 +1309,12 @@ if us_data and (us_data.get("macro_score", 0) != 0 or us_data.get("sox", {}).get
                 st.markdown(f'<div class="news-line">🌐 {_gh}</div>', unsafe_allow_html=True)
 
 # ── Picks view header ────────────────────────────────────────────────────────
-st.markdown("## 🎯 今日精選潛力股　<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>全產業・零股小資</span>", unsafe_allow_html=True)
+st.markdown(
+    "## ✅ 今日可進場股　"
+    "<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>"
+    "RSI 合理區間・零股小資</span>",
+    unsafe_allow_html=True
+)
 
 # ── Chip helper ───────────────────────────────────────────────────────────────
 CHIP_CSS = {"NVIDIA":"nv","AMD":"amd","Apple":"apl","AI":"ai","CoWoS":"cow"}
@@ -1328,9 +1344,15 @@ def render_stock_cards(picks, prices, show_chart):
         cats    = p.get("catalysts") or ["技術面突破"]
         cat_str = "　".join(cats)
 
-        if sc >= 88:  acq = "📈 強勢股，可逢低分批零股累積"
-        elif sc >= 72: acq = "💡 趨勢向上，適合定期定額布局"
-        else:          acq = "⏳ 等 RSI 回落至 50 以下再考慮進場"
+        rsi = p.get("rsi", 50)
+        if rsi <= 72 and sc >= 65:
+            acq = "✅ 今日可進場：分批零股買入"
+        elif rsi <= 72 and sc >= 52:
+            acq = "🟡 今日可小量試探：先買三成"
+        elif rsi > 72:
+            acq = f"⏳ RSI {rsi:.0f} 偏熱，等回落至 68 以下再進場"
+        else:
+            acq = "👀 觀察中：等量能與趨勢確認"
 
         if fi > 100:    fi_str = f"外資買超 {fi:.0f}千張 📥"
         elif fi < -100: fi_str = f"外資賣超 {abs(fi):.0f}千張 📤"
@@ -1522,24 +1544,35 @@ def render_stock_cards(picks, prices, show_chart):
                     st.session_state.watchlist.append(p["ticker"])
             st.rerun()
 
-if not picks:
-    st.warning("目前無符合條件的股票，請降低評分門檻後重試。")
+if not today_picks:
+    st.info(
+        "🌡️ **今日市場偏熱，暫無理想進場點。**\n\n"
+        "多數科技股 RSI 超過 72，追高風險大。\n"
+        "建議等待回調再進場，或查看下方「準備中」名單。",
+    )
 else:
-    render_stock_cards(picks, prices, show_chart)
+    render_stock_cards(today_picks, prices, show_chart)
+
+# ── 準備中：RSI偏熱，觀察等回落 ──────────────────────────────────────────────
+if watch_picks:
+    st.divider()
+    with st.expander(f"👀 準備中・等 RSI 回落（{len(watch_picks)} 支）", expanded=False):
+        st.caption("這些股票體質不錯但 RSI 偏熱，等回落至 68 以下再考慮進場")
+        render_stock_cards(watch_picks, prices, show_chart)
 
 # ── 備選股 toggle ─────────────────────────────────────────────────────────────
-backups = scored[top_n:top_n + 5]
+backups = [r for r in scored if r not in today_picks and r not in watch_picks and r["score"] >= 45][: 5]
 if backups:
     if "show_backups" not in st.session_state:
         st.session_state.show_backups = False
 
-    label = "▲ 收起備選股" if st.session_state.show_backups else "＋ 查看備選股（第 6–10 名）"
+    label = "▲ 收起備選股" if st.session_state.show_backups else "＋ 查看更多備選（觀察用）"
     if st.button(label, use_container_width=True):
         st.session_state.show_backups = not st.session_state.show_backups
         st.rerun()
 
     if st.session_state.show_backups:
-        st.caption("備選股為今日評分第 6–10 名，信心指數相對較低，建議謹慎操作")
+        st.caption("備選股僅供觀察，建議等待更佳進場訊號後再考慮")
         render_stock_cards(backups, prices, show_chart)
 
 # ── News (collapsed by default) ───────────────────────────────────────────────
