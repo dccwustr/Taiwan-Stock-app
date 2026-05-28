@@ -1304,6 +1304,152 @@ if st.session_state.view_mode == "watchlist":
 if st.session_state.view_mode == "holdings":
     st.markdown("## 💼 我的持股")
 
+    # ── Portfolio overview dashboard ──────────────────────────────────────────
+    _pov = [h for h in holdings_info
+            if not h.get("error") and h.get("cost", 0) > 0 and h.get("shares", 0) > 0]
+
+    if _pov and total_cost > 0:
+        # Today's portfolio NT$ change
+        _td_chg = sum(
+            h["shares"] * h["price"] * h["chg"] / (100 + h["chg"])
+            for h in _pov if abs(h.get("chg", 0)) < 99
+        )
+        _td_pct = _td_chg / (total_val - _td_chg) * 100 if abs(total_val - _td_chg) > 0.01 else 0
+
+        # Taiwan convention: RED ▲ = profit, GREEN ▼ = loss
+        _pc = "#ef5350" if total_pnl >= 0 else "#00c853"
+        _pa = "▲" if total_pnl >= 0 else "▼"
+        _tc = "#ef5350" if _td_chg >= 0 else "#00c853"
+        _ta = "▲" if _td_chg >= 0 else "▼"
+
+        # Gain/loss bar: ±20% maps to ±50% of bar width (capped)
+        _bar_half = min(50.0, abs(total_pct) / 20.0 * 50.0)
+        _bar_side = "left:50%;" if total_pnl >= 0 else "right:50%;"
+        _bar_rad  = "0 5px 5px 0" if total_pnl >= 0 else "5px 0 0 5px"
+
+        # ── Hero summary card ─────────────────────────────────────────────────
+        st.markdown(
+            f'<div class="card">'
+
+            # Row 1 — invested vs current value
+            f'<div style="display:flex;justify-content:space-between;margin-bottom:14px">'
+            f'  <div><div style="font-size:11px;color:#555">總投入成本</div>'
+            f'  <div style="font-size:18px;font-weight:700;color:#e0e0e0">NT${total_cost:,.0f}</div></div>'
+            f'  <div style="text-align:right">'
+            f'  <div style="font-size:11px;color:#555">目前市值</div>'
+            f'  <div style="font-size:18px;font-weight:700;color:#e0e0e0">NT${total_val:,.0f}</div>'
+            f'  </div>'
+            f'</div>'
+
+            # Row 2 — big P&L number (the answer to "am I making money?")
+            f'<div style="text-align:center;padding:10px 0 12px;'
+            f'border-top:1px solid #252d45;border-bottom:1px solid #252d45">'
+            f'  <div style="font-size:11px;color:#777;letter-spacing:0.8px;margin-bottom:6px">總損益</div>'
+            f'  <div style="font-size:44px;font-weight:900;color:{_pc};line-height:1.05">'
+            f'    {_pa}&nbsp;NT${abs(total_pnl):,.0f}'
+            f'  </div>'
+            f'  <div style="font-size:22px;font-weight:700;color:{_pc};margin-top:2px">'
+            f'    {_pa}&nbsp;{abs(total_pct):.2f}%'
+            f'  </div>'
+            f'</div>'
+
+            # Row 3 — breakeven bar
+            f'<div style="margin:14px 0 4px">'
+            f'  <div style="position:relative;background:#1a1a2e;border-radius:5px;height:10px">'
+            f'    <div style="position:absolute;left:50%;top:0;width:2px;height:10px;background:#2a2a4a"></div>'
+            f'    <div style="position:absolute;{_bar_side}width:{_bar_half:.1f}%;height:10px;'
+            f'background:{_pc};border-radius:{_bar_rad}"></div>'
+            f'  </div>'
+            f'  <div style="display:flex;justify-content:space-between;font-size:10px;'
+            f'color:#3a3a5a;margin-top:4px"><span>← 虧損</span><span>損平點</span><span>獲利 →</span></div>'
+            f'</div>'
+
+            # Row 4 — today's change footer
+            f'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a1a2e;'
+            f'display:flex;justify-content:space-between;align-items:center">'
+            f'  <span style="font-size:12px;color:#555">今日損益</span>'
+            f'  <div>'
+            f'    <span style="font-size:15px;font-weight:700;color:{_tc}">'
+            f'      {_ta}&nbsp;NT${abs(_td_chg):,.0f}</span>'
+            f'    <span style="font-size:12px;color:{_tc};margin-left:6px">'
+            f'      ({_ta}{abs(_td_pct):.2f}%)</span>'
+            f'  </div>'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        # ── Per-stock breakdown ───────────────────────────────────────────────
+        st.markdown(
+            '<div style="font-size:13px;font-weight:600;color:#888;'
+            'margin:14px 0 6px;letter-spacing:0.3px">個股損益明細</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Sort: biggest profit first, biggest loss last
+        for _h in sorted(_pov, key=lambda x: x.get("pnl_pct", 0), reverse=True):
+            _pp   = _h.get("pnl_pct", 0)
+            _pa2  = _h.get("pnl_amt") or 0
+            _hc   = _h.get("chg", 0)
+            _pc2  = "#ef5350" if _pp >= 0 else "#00c853"
+            _pa2c = "▲" if _pp >= 0 else "▼"
+            _tc2  = "#ef5350" if _hc >= 0 else "#00c853"
+            _ta2  = "▲" if _hc >= 0 else "▼"
+            _bw   = min(100, abs(_pp) * 5)   # 20% P&L = full bar
+            _mval = _h["shares"] * _h["price"]
+            _mpc  = _mval / total_val * 100 if total_val > 0 else 0
+            # Today's NT$ change for this holding
+            _hnt  = _h["shares"] * _h["price"] * _hc / (100 + _hc) if abs(_hc) < 99 else 0
+
+            st.markdown(
+                f'<div style="background:#0e1117;border:1px solid #1e2235;'
+                f'border-radius:10px;padding:12px 14px;margin-bottom:8px">'
+
+                # Stock name + overall P&L
+                f'<div style="display:flex;justify-content:space-between;'
+                f'align-items:flex-start;margin-bottom:8px">'
+                f'  <div>'
+                f'    <span style="font-size:15px;font-weight:700;color:#e0e0e0">'
+                f'      {_h["ticker"].replace(".TW","")}&nbsp;{_h["name"]}</span>'
+                f'    <span style="font-size:11px;color:#555;margin-left:6px">'
+                f'      {_h["shares"]:.0f}股</span>'
+                f'  </div>'
+                f'  <div style="text-align:right">'
+                f'    <div style="font-size:18px;font-weight:800;color:{_pc2}">'
+                f'      {_pa2c}&nbsp;{abs(_pp):.1f}%</div>'
+                f'    <div style="font-size:12px;color:{_pc2}">'
+                f'      {_pa2c}&nbsp;NT${abs(_pa2):,.0f}</div>'
+                f'  </div>'
+                f'</div>'
+
+                # Cost → current price + today change
+                f'<div style="display:flex;align-items:center;gap:8px;'
+                f'font-size:12px;margin-bottom:8px">'
+                f'  <span style="color:#555">成本&nbsp;NT${_h["cost"]:.1f}</span>'
+                f'  <span style="color:#333">→</span>'
+                f'  <span style="color:#aaa">現價&nbsp;NT${_h["price"]:.1f}</span>'
+                f'  <span style="margin-left:auto;color:{_tc2}">'
+                f'    今日&nbsp;{_ta2}{abs(_hc):.1f}%&nbsp;'
+                f'    ({_ta2}NT${abs(_hnt):,.0f})</span>'
+                f'</div>'
+
+                # P&L progress bar
+                f'<div style="background:#1a1a2e;border-radius:3px;height:5px">'
+                f'  <div style="width:{_bw:.1f}%;height:5px;background:{_pc2};'
+                f'border-radius:3px"></div></div>'
+
+                # Footer: market value share
+                f'<div style="font-size:10px;color:#3a3a5a;margin-top:5px">'
+                f'  市值&nbsp;NT${_mval:,.0f}　佔組合&nbsp;{_mpc:.1f}%'
+                f'</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    elif holdings_info and total_cost == 0:
+        st.info("💡 點選下方「＋ 新增 / 編輯持股」輸入買進均價和股數，即可看到完整損益總覽")
+
+    st.divider()
     with st.expander("＋ 新增 / 編輯持股", expanded=False):
         st.caption("輸入股票代號（如 2454）、股數、買進均價")
         _hc1, _hc2, _hc3 = st.columns([2, 2, 2])
