@@ -26,6 +26,7 @@ def _trading_epoch() -> str:
 
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit_javascript import st_javascript
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -276,6 +277,50 @@ if "_close_sidebar"   not in st.session_state: st.session_state._close_sidebar  
 if "rsi_thresholds"   not in st.session_state: st.session_state.rsi_thresholds   = {}
 # rsi_thresholds: {ticker: {"target": float, "direction": "below"|"above"}}
 
+# ── localStorage persistence (watchlist + holdings survive redeployments) ─────
+#
+# Architecture:
+#   SAVE path  – any mutation sets st.session_state._needs_save = True before
+#                st.rerun(); on the very next render this block writes to LS.
+#   LOAD path  – on the first render of a brand-new browser session (ls_loaded
+#                absent) we read LS; st_javascript is async so render-1 returns 0,
+#                Streamlit auto-reruns, render-2 returns the real value.
+#
+# Using a fixed code position (not a helper function) keeps the component key
+# stable across renders and avoids duplicate-component collisions.
+#
+if st.session_state.pop("_needs_save", False):
+    # ── SAVE ──────────────────────────────────────────────────────────────────
+    _payload = json.dumps({
+        "watchlist":      list(st.session_state.get("watchlist",         [])),
+        "holdings":       st.session_state.get("custom_holdings",         {}),
+        "hidden":         list(st.session_state.get("hidden_holdings", set())),
+        "rsi_thresholds": st.session_state.get("rsi_thresholds",         {}),
+    })
+    # Comma-expression returns 1 so st_javascript gets a clean non-undefined value
+    st_javascript(f"(localStorage.setItem('tw_user_data_v1', {json.dumps(_payload)}), 1)")
+
+elif "ls_loaded" not in st.session_state:
+    # ── LOAD (once per new browser session) ───────────────────────────────────
+    _ls_raw = st_javascript("localStorage.getItem('tw_user_data_v1')")
+    if _ls_raw == 0:
+        pass   # JS not yet executed; Streamlit auto-reruns → we try again
+    else:
+        if _ls_raw:   # None means key was never set → keep defaults
+            try:
+                _ls = json.loads(_ls_raw)
+                if isinstance(_ls.get("watchlist"),      list):
+                    st.session_state.watchlist       = _ls["watchlist"]
+                if isinstance(_ls.get("holdings"),       dict):
+                    st.session_state.custom_holdings = _ls["holdings"]
+                if isinstance(_ls.get("hidden"),         list):
+                    st.session_state.hidden_holdings = set(_ls["hidden"])
+                if isinstance(_ls.get("rsi_thresholds"), dict):
+                    st.session_state.rsi_thresholds  = _ls["rsi_thresholds"]
+            except Exception:
+                pass   # corrupt data → keep defaults
+        st.session_state.ls_loaded = True
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("#### 📈 台股分析")
@@ -514,6 +559,7 @@ def render_holding_card(h, container=None):
             if st.button("🗑 移除", key=f"del_err_{ticker}"):
                 st.session_state.custom_holdings.pop(ticker, None)
                 st.session_state.hidden_holdings.add(ticker)
+                st.session_state._needs_save = True
                 st.rerun()
         return
 
@@ -540,6 +586,7 @@ def render_holding_card(h, container=None):
             if st.button("💾 儲存", key=f"save_{ticker}", use_container_width=True):
                 st.session_state.custom_holdings[ticker] = {"shares": new_shares, "cost": new_cost}
                 st.session_state[edit_key] = False
+                st.session_state._needs_save = True
                 st.rerun()
         st.divider()
 
@@ -580,6 +627,7 @@ def render_holding_card(h, container=None):
         if st.button("🗑 已賣出，移除此股", key=f"del_{ticker}", use_container_width=True):
             st.session_state.custom_holdings.pop(ticker, None)
             st.session_state.hidden_holdings.add(ticker)
+            st.session_state._needs_save = True
             st.rerun()
 
 # ── Total portfolio summary ───────────────────────────────────────────────────
@@ -831,6 +879,7 @@ def render_query_card(ticker, sres, live_d, key_sfx):
             )
             if st.button("取消 RSI 監控", key=f"rsi_cancel_{_tkey}", use_container_width=True):
                 st.session_state.rsi_thresholds.pop(ticker, None)
+                st.session_state._needs_save = True
                 st.rerun()
         else:
             # Smart defaults based on current RSI
@@ -871,6 +920,7 @@ def render_query_card(ticker, sres, live_d, key_sfx):
                     st.session_state.watchlist.append(ticker)
                 st.session_state.view_mode = "monitor"
                 st.session_state._close_sidebar = True
+                st.session_state._needs_save = True
                 st.rerun()
 
     if _clicked:
@@ -879,6 +929,7 @@ def render_query_card(ticker, sres, live_d, key_sfx):
         else:
             if ticker not in st.session_state.watchlist:
                 st.session_state.watchlist.append(ticker)
+        st.session_state._needs_save = True
         st.rerun()
 
 # ── Helpers & fragments (defined here so they're always available) ───────────
@@ -1073,6 +1124,7 @@ def render_rsi_monitor(monitored_tickers: list, prices: dict):
             _mr1.caption(f"{_mcode} {_mname}　目標 RSI {_mdl} {_mtgt:.0f}")
             if _mr2.button("✕", key=f"rsi_rm_{_mt.replace('.','_')}", help="移除監控"):
                 st.session_state.rsi_thresholds.pop(_mt, None)
+                st.session_state._needs_save = True
                 st.rerun()
 
 # ── Market index bar + minimalist refresh ────────────────────────────────────
@@ -1170,6 +1222,7 @@ if st.session_state.view_mode == "holdings":
                         "shares": float(_h_shares) if _h_shares else 0,
                         "cost":   float(_h_cost)   if _h_cost   else 0,
                     }
+                    st.session_state._needs_save = True
                     st.rerun()
                 except ValueError:
                     st.error("請輸入有效數字")
@@ -1179,6 +1232,7 @@ if st.session_state.view_mode == "holdings":
             _hd1.caption(f"{_ht.replace('.TW','')}　{_hv['shares']:.0f}股　成本 {_hv['cost']:.1f}")
             if _hd2.button("✕", key=f"hp_del_{_ht}"):
                 del st.session_state.custom_holdings[_ht]
+                st.session_state._needs_save = True
                 st.rerun()
 
         _h_hidden = st.session_state.get("hidden_holdings", set())
@@ -1190,6 +1244,7 @@ if st.session_state.view_mode == "holdings":
                 _hr1.caption(f"{_ht.replace('.TW','')} {_hname}")
                 if _hr2.button("↩", key=f"hp_restore_{_ht}"):
                     st.session_state.hidden_holdings.discard(_ht)
+                    st.session_state._needs_save = True
                     st.rerun()
 
     for h in holdings_info:
@@ -1542,6 +1597,7 @@ def render_stock_cards(picks, prices, show_chart):
             else:
                 if p["ticker"] not in st.session_state.watchlist:
                     st.session_state.watchlist.append(p["ticker"])
+            st.session_state._needs_save = True
             st.rerun()
 
 if not today_picks:
