@@ -174,6 +174,11 @@ st.markdown("""
     font-size: 13px; color: #c0d4ff; margin: 8px 0;
   }
   .sell-note { font-size: 13px; color: #ffd54f; margin-top: 4px; }
+  .near-limit-warn {
+    font-size: 13px; font-weight: 700; color: #ff5252;
+    background: #1a0505; border-left: 3px solid #c0392b;
+    border-radius: 0 6px 6px 0; padding: 6px 10px; margin-top: 6px;
+  }
 
   /* Confidence bar */
   .conf-wrap { background: #2a2a2a; border-radius: 4px; height: 6px; width: 100%; margin-top: 10px; }
@@ -793,13 +798,33 @@ if _is_market_open() and scored:
                 _r["score"] = max(0, min(100, _r["score"] + (_new_m1s - _old_m1s)))
                 _r["mom1d"] = round(_live_mom1d, 2)
 
+        # ── 3. Near-limit-up guard ─────────────────────────────────────────────
+        # RSI cannot catch this: a stock at RSI 35 (oversold) that jumps +9%
+        # today only moves to live RSI ~47 — still in the "sweet spot".
+        # But buying near limit-up is one of the most common retail traps:
+        # you're the last buyer before profit-taking reversal.
+        # Apply a hard penalty so these stocks EXIT today_picks regardless.
+        _live_chg_pct = round(_ld.get("chg_pct", 0), 2)
+        _r["live_chg_pct"] = _live_chg_pct  # stored for fragment warning display
+        if _live_chg_pct >= 9.0:
+            # Near/at limit-up (+10%): guaranteed removal from today_picks
+            _r["score"]      = max(0, _r["score"] - 45)
+            _r["near_limit"] = True
+        elif _live_chg_pct >= 7.0:
+            # Strong up-day: high reversal risk tomorrow, especially for 零股 investors
+            _r["score"]      = max(0, _r["score"] - 22)
+            _r["near_limit"] = True
+
     # Re-sort with live-updated scores
     scored.sort(key=lambda x: x["score"], reverse=True)
 
 # ── Final picks split ──────────────────────────────────────────────────────────
-# 今日可進場：RSI 在合理區間 (< 73) 且信心分數夠高 (>= 52)
-today_picks = [r for r in scored if r.get("rsi", 50) < 73 and r["score"] >= 52][:top_n]
-# 準備中：RSI偏熱，等回落後進場（最多3支）
+# 今日可進場：RSI合理 + 分數達標 + 今日未大漲 (near-limit guard — belt AND suspenders)
+today_picks = [r for r in scored
+               if r.get("rsi", 50) < 73
+               and r["score"] >= 52
+               and r.get("live_chg_pct", 0) < 9.0][:top_n]
+# 準備中：RSI偏熱，或今日大漲，等回落後進場（最多3支）
 watch_picks = [r for r in scored if r.get("rsi", 50) >= 73 and r["score"] >= 45][:3]
 # backward compat
 picks = today_picks
@@ -1968,6 +1993,19 @@ def render_stock_cards(picks, prices, show_chart):
         else:
             live_block = '<div class="live-in-card"><span style="color:#555">等待開盤資料…</span></div>'
 
+        # ── Live near-limit-up safety guard (fragment-level, overrides scored acq) ──
+        # The main body scoring only runs on user interaction, NOT every 10 seconds.
+        # A stock scored fine at 9 AM might be at +8% by 10 AM.
+        # Without this override, the card would show +8% live price AND "✅ 今日可進場" —
+        # a dangerous contradiction that could cause the user to chase.
+        _live_chg_now = d["chg_pct"] if d and d["price"] > 0 else 0
+        if _live_chg_now >= 9.0:
+            acq = (f"🚫 今日已漲 {_live_chg_now:.1f}%，接近漲停——"
+                   f"現在進場是散戶常見陷阱，等明日 RSI 冷卻後再評估")
+        elif _live_chg_now >= 7.0:
+            acq = (f"⚠️ 今日已大漲 {_live_chg_now:.1f}%——追高風險極高。"
+                   f"建議等股價回落、RSI 冷卻至 65 以下再考慮進場")
+
         ref_price  = (d["price"] if d and d["price"] > 0 else p["last_price"])
         shares_10k = int(10000 / ref_price) if ref_price > 0 else 0
 
@@ -2027,7 +2065,7 @@ def render_stock_cards(picks, prices, show_chart):
             f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
             f'<div class="info-row">{info_html}</div>'
             f'<div class="catalyst">📌 {cat_str}</div>'
-            f'<div class="sell-note">{acq}</div>'
+            f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
             f'{_score_delta_html}'
             f'</div>'
