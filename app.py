@@ -11,18 +11,66 @@ from typing import Dict, List
 _TW = timezone(timedelta(hours=8))
 def _now_tw(): return datetime.now(tz=_TW)
 
+def _is_market_open() -> bool:
+    """True during Taiwan stock market hours: weekdays 09:00–13:30 TWN."""
+    tw = _now_tw()
+    if tw.weekday() >= 5:
+        return False
+    h, m = tw.hour, tw.minute
+    return (h == 9) or (10 <= h <= 12) or (h == 13 and m <= 30)
+
 def _trading_epoch() -> str:
-    """Returns the trading-date string this session belongs to.
-    Changes at 08:00 TWN each weekday — Streamlit uses this as a cache key,
-    so load_data() re-runs exactly once per trading morning on first visit.
-    Before 08:00 TWN, or on weekends, rolls back to the last valid trading day.
+    """Returns the trading-date + intraday slot string used as the cache key.
+    Changes 4× per trading day so load_data() re-fetches fresh news, foreign
+    buying and market data at each slot boundary:
+
+      PRE  08:00–08:59  盤前 — overnight news + US data
+      MRN  09:00–10:59  早盤 — opening momentum + fresh catalysts
+      MID  11:00–13:29  午盤 — mid-session updates
+      AFT  13:30+       盤後 — final close prices + foreign buying
     """
     tw = _now_tw()
-    if tw.hour < 8:
+    h, m = tw.hour, tw.minute
+
+    # Before 8 AM on any day → use previous trading day's AFT slot
+    if h < 8:
         tw -= timedelta(days=1)
-    while tw.weekday() >= 5:   # Sat=5, Sun=6
-        tw -= timedelta(days=1)
-    return tw.strftime("%Y-%m-%d")
+        while tw.weekday() >= 5:
+            tw -= timedelta(days=1)
+        return tw.strftime("%Y-%m-%d-AFT")
+
+    # Weekend → use Friday's AFT slot
+    if tw.weekday() >= 5:
+        while tw.weekday() >= 5:
+            tw -= timedelta(days=1)
+        return tw.strftime("%Y-%m-%d-AFT")
+
+    # Weekday 08:00+: intraday slots
+    date_str = tw.strftime("%Y-%m-%d")
+    if h < 9:
+        return f"{date_str}-PRE"                        # 08:00–08:59
+    elif h < 11:
+        return f"{date_str}-MRN"                        # 09:00–10:59
+    elif h < 13 or (h == 13 and m < 30):
+        return f"{date_str}-MID"                        # 11:00–13:29
+    else:
+        return f"{date_str}-AFT"                        # 13:30+
+
+def _epoch_slot_info() -> tuple:
+    """Returns (slot_label, next_update_str) for the current trading slot."""
+    tw = _now_tw()
+    h, m = tw.hour, tw.minute
+    if tw.weekday() >= 5:
+        return "盤後分析", "下週一 08:00"
+    if h < 8:
+        return "盤後分析", "今日 08:00"
+    if h < 9:
+        return "盤前分析", "09:00 早盤更新"
+    if h < 11:
+        return "早盤分析", "11:00 午盤更新"
+    if h < 13 or (h == 13 and m < 30):
+        return "午盤分析", "13:30 收盤更新"
+    return "盤後分析", "明日 08:00"
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -255,8 +303,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Data loading ──────────────────────────────────────────────────────────────
-@st.cache_data(ttl=28800, show_spinner=False)   # 8-hour TTL; epoch param busts cache each trading morning
-def load_data(epoch: str):                       # epoch = "YYYY-MM-DD", changes at 08:00 TWN each weekday
+@st.cache_data(ttl=3600, show_spinner=False)     # 1-hour TTL; epoch param busts cache at each slot boundary
+def load_data(epoch: str):                       # epoch = "YYYY-MM-DD-SLOT", changes 4× per trading day
     import io, contextlib
     tickers  = list(TECH_UNIVERSE.keys())
     # Suppress yfinance stdout/stderr chatter inside the cached function
@@ -288,6 +336,8 @@ if "rsi_thresholds"   not in st.session_state: st.session_state.rsi_thresholds  
 # rsi_thresholds: {ticker: {"target": float, "direction": "below"|"above"}}
 if "seen_alert_ids"   not in st.session_state: st.session_state.seen_alert_ids   = set()
 if "alert_snoozed"    not in st.session_state: st.session_state.alert_snoozed    = 0  # epoch sec
+if "_last_epoch"      not in st.session_state: st.session_state._last_epoch      = ""
+if "_prev_pick_tickers" not in st.session_state: st.session_state._prev_pick_tickers = set()
 
 # ── localStorage persistence (watchlist + holdings survive redeployments) ─────
 #
@@ -681,17 +731,67 @@ for ticker in TECH_UNIVERSE:
         elif _rsi >= 35: _adj +=  3  # 輕微超賣：還不錯
         else:            _adj -= 15  # 極度超賣：可能下跌趨勢
         if res.get("last_price", 0) > 500: _adj -= 8  # expensive per share
-        res["score"] = max(0, min(100, res["score"] + _adj))
+        res["score"]    = max(0, min(100, res["score"] + _adj))
+        res["_rsi_adj"] = _adj   # stored so live-RSI update can undo and reapply
         if res["score"] >= min_score:
             res["catalysts"] = get_catalyst_labels(ticker, all_news)
             scored.append(res)
 scored.sort(key=lambda x: x["score"], reverse=True)
+
+# ── Live RSI update during market hours ────────────────────────────────────────
+# Fetch live prices for the full universe in ONE batch API call.
+# Use them to recompute RSI (and adjust score) with today's intraday moves.
+# This runs uncached so picks always reflect the current trading session.
+if _is_market_open() and scored:
+    _score_live_tickers = [r["ticker"] for r in scored]
+    _score_live_prices  = fetch_live_prices(_score_live_tickers)
+    for _r in scored:
+        _ld  = _score_live_prices.get(_r["ticker"], {})
+        _lp  = _ld.get("price", 0) if _ld else 0
+        if _lp > 0:
+            _df = prices.get(_r["ticker"])
+            if _df is not None and len(_df) >= 15:
+                _new_rsi = round(calc_live_rsi(_df, _lp), 1)
+                _old_rsi = _r.get("rsi", 50)
+                if abs(_new_rsi - _old_rsi) >= 0.5:   # only update if RSI moved
+                    # Undo the old RSI score adjustment, apply the new one
+                    _old_adj = _r.pop("_rsi_adj", 0)
+                    _new_adj = 0
+                    if   _new_rsi > 82:  _new_adj -= 30
+                    elif _new_rsi > 78:  _new_adj -= 20
+                    elif _new_rsi > 72:  _new_adj -= 12
+                    elif _new_rsi > 68:  _new_adj -=  4
+                    elif _new_rsi >= 45: _new_adj +=  8
+                    elif _new_rsi >= 35: _new_adj +=  3
+                    else:                _new_adj -= 15
+                    _r["score"] = max(0, min(100, _r["score"] - _old_adj + _new_adj))
+                    _r["rsi"]   = _new_rsi
+    # Re-sort with updated scores
+    scored.sort(key=lambda x: x["score"], reverse=True)
+
+# ── Final picks split ──────────────────────────────────────────────────────────
 # 今日可進場：RSI 在合理區間 (< 73) 且信心分數夠高 (>= 52)
 today_picks = [r for r in scored if r.get("rsi", 50) < 73 and r["score"] >= 52][:top_n]
 # 準備中：RSI偏熱，等回落後進場（最多3支）
 watch_picks = [r for r in scored if r.get("rsi", 50) >= 73 and r["score"] >= 45][:3]
 # backward compat
 picks = today_picks
+
+# ── "新進榜" badge: mark picks that weren't in the previous slot ───────────────
+_prev_tickers = st.session_state._prev_pick_tickers
+_prev_epoch   = st.session_state._last_epoch
+for _p in today_picks:
+    # Show badge if: prev slot had data AND this ticker wasn't in prev slot's picks
+    _p["is_new"] = bool(_prev_tickers) and _p["ticker"] not in _prev_tickers
+
+# Update session state at slot boundaries
+if _prev_epoch != _epoch:
+    st.session_state._prev_pick_tickers = {_p["ticker"] for _p in today_picks}
+    st.session_state._last_epoch = _epoch
+elif not _prev_epoch:
+    # First load this browser session: initialise so next slot change can compare
+    st.session_state._prev_pick_tickers = {_p["ticker"] for _p in today_picks}
+    st.session_state._last_epoch = _epoch
 
 # ── Fill sidebar content based on view mode ───────────────────────────────────
 with sidebar_content:
@@ -1045,13 +1145,6 @@ def render_news_alerts():
             : null, 1)""")
 
 
-def _is_market_open() -> bool:
-    tw = _now_tw()
-    return tw.weekday() < 5 and (
-        (tw.hour == 9) or (10 <= tw.hour <= 12) or
-        (tw.hour == 13 and tw.minute <= 30)
-    )
-
 @st.fragment(run_every="10s")
 def render_rsi_monitor(monitored_tickers: list, prices: dict):
     """
@@ -1250,11 +1343,18 @@ with _mi_col:
         idx_chg = mkt.get("change", "—")
         is_up   = not str(idx_chg).startswith("-")
         mkt_col = "#ef5350" if is_up else "#00c853"
+        _slot_label, _next_upd = _epoch_slot_info()
+        _epoch_date = _epoch.split("-")[:3]   # ["YYYY", "MM", "DD"]
+        _epoch_ymd  = "-".join(_epoch_date)
         st.markdown(
             f'<span style="color:#888;font-size:13px">加權指數　</span>'
             f'<span style="font-size:16px;font-weight:700;color:#f0f0f0">{idx_val}</span>'
             f'　<span style="color:{mkt_col};font-size:14px">{idx_chg}</span>'
-            f'　<span style="color:#555;font-size:12px">｜　盤前資料 {_epoch}　載入 {data["ts"]}　｜　漲停 ±10%</span>',
+            f'　<span style="color:#555;font-size:12px">｜　'
+            f'<span style="color:#7eb3ff;font-weight:600">{_slot_label}</span>'
+            f'　{_epoch_ymd} {data["ts"]}'
+            f'　｜　下次 {_next_upd}'
+            f'　｜　漲停 ±10%</span>',
             unsafe_allow_html=True
         )
 with _ref_col:
@@ -1625,10 +1725,29 @@ if us_data and (us_data.get("macro_score", 0) != 0 or us_data.get("sox", {}).get
                 st.markdown(f'<div class="news-line">🌐 {_gh}</div>', unsafe_allow_html=True)
 
 # ── Picks view header ────────────────────────────────────────────────────────
+_slot_lbl, _next_lbl = _epoch_slot_info()
+_is_mkt_open = _is_market_open()
+_freshness_col  = "#00c853" if _is_mkt_open else "#555"
+_freshness_icon = "🟢" if _is_mkt_open else "⚫"
+_live_rsi_note  = "　●　已套用即時RSI" if _is_mkt_open else ""
+
 st.markdown(
     "## ✅ 今日可進場股　"
     "<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>"
     "RSI 合理區間・零股小資</span>",
+    unsafe_allow_html=True
+)
+st.markdown(
+    f'<div style="background:#0a0f1a;border:1px solid #1a2035;border-radius:8px;'
+    f'padding:8px 14px;margin:-4px 0 12px;display:flex;align-items:center;gap:10px">'
+    f'<span style="font-size:11px;color:{_freshness_col}">{_freshness_icon}</span>'
+    f'<span style="font-size:12px;color:#7eb3ff;font-weight:700">{_slot_lbl}</span>'
+    f'<span style="font-size:12px;color:#555">'
+    f'　分析時間：{data["ts"]}　｜　下次更新：{_next_lbl}{_live_rsi_note}'
+    f'</span>'
+    f'<span style="margin-left:auto;font-size:11px;color:#333">'
+    f'今日精選由系統自動計算，每個時段重新評分排序</span>'
+    f'</div>',
     unsafe_allow_html=True
 )
 
@@ -1730,12 +1849,20 @@ def render_stock_cards(picks, prices, show_chart):
             st.markdown('<span class="star-sentinel"></span>', unsafe_allow_html=True)
             _star_clicked = st.button(_star, key=f"star_pick_{p['ticker']}", use_container_width=True, help="追蹤")
 
+        _is_new_pick = p.get("is_new", False)
+        _new_badge   = (
+            '<span style="background:#1a4a1a;color:#00c853;font-size:10px;'
+            'font-weight:700;border:1px solid #00c85366;border-radius:4px;'
+            'padding:2px 6px;margin-left:6px">🆕 新進榜</span>'
+            if _is_new_pick else ""
+        )
         st.markdown(
             f'<div style="margin-top:-3rem;pointer-events:none">'
             f'<div class="card">'
             f'<div class="card-top">'
             f'<div class="rank">{rank}</div>'
             f'<span class="stock-name">{p["ticker"].replace(".TW","")} {p["name"]}</span>'
+            f'{_new_badge}'
             f'<span class="stock-sub">{p["en"]}</span>'
             f'<span style="margin-left:auto;font-size:20px;color:{_scol};line-height:1">{_star}</span>'
             f'</div>'
