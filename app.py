@@ -336,8 +336,16 @@ if "rsi_thresholds"   not in st.session_state: st.session_state.rsi_thresholds  
 # rsi_thresholds: {ticker: {"target": float, "direction": "below"|"above"}}
 if "seen_alert_ids"   not in st.session_state: st.session_state.seen_alert_ids   = set()
 if "alert_snoozed"    not in st.session_state: st.session_state.alert_snoozed    = 0  # epoch sec
-if "_last_epoch"      not in st.session_state: st.session_state._last_epoch      = ""
+if "_last_epoch"        not in st.session_state: st.session_state._last_epoch        = ""
+# Two-variable slot-tracking so the "新進榜" badge stays visible the ENTIRE slot:
+#   _prev_pick_tickers — previous slot's tickers; STABLE throughout current slot (badge ref)
+#   _cur_slot_tickers  — current slot's tickers; updated once per slot change
+#   _prev_slot_scores  — previous slot's {ticker: score}; for delta display
+#   _cur_slot_scores   — current slot's {ticker: score}
 if "_prev_pick_tickers" not in st.session_state: st.session_state._prev_pick_tickers = set()
+if "_cur_slot_tickers"  not in st.session_state: st.session_state._cur_slot_tickers  = set()
+if "_prev_slot_scores"  not in st.session_state: st.session_state._prev_slot_scores  = {}
+if "_cur_slot_scores"   not in st.session_state: st.session_state._cur_slot_scores   = {}
 
 # ── localStorage persistence (watchlist + holdings survive redeployments) ─────
 #
@@ -738,35 +746,54 @@ for ticker in TECH_UNIVERSE:
             scored.append(res)
 scored.sort(key=lambda x: x["score"], reverse=True)
 
-# ── Live RSI update during market hours ────────────────────────────────────────
-# Fetch live prices for the full universe in ONE batch API call.
-# Use them to recompute RSI (and adjust score) with today's intraday moves.
-# This runs uncached so picks always reflect the current trading session.
+# ── Live intraday scoring update (market hours only) ──────────────────────────
+# ONE batch TWSE call fetches live price + yesterday's close for every scored ticker.
+# Updates TWO key signals with today's actual intraday data:
+#   1. RSI  — appends live price to historical series, re-computes + re-applies adj
+#   2. mom1d — live momentum = (live_price / prev_close - 1) × 100
+#              replaces the stale "yesterday vs the day before" value from yfinance
+# Both run uncached so picks always reflect the current trading session.
 if _is_market_open() and scored:
     _score_live_tickers = [r["ticker"] for r in scored]
     _score_live_prices  = fetch_live_prices(_score_live_tickers)
     for _r in scored:
         _ld  = _score_live_prices.get(_r["ticker"], {})
         _lp  = _ld.get("price", 0) if _ld else 0
-        if _lp > 0:
-            _df = prices.get(_r["ticker"])
-            if _df is not None and len(_df) >= 15:
-                _new_rsi = round(calc_live_rsi(_df, _lp), 1)
-                _old_rsi = _r.get("rsi", 50)
-                if abs(_new_rsi - _old_rsi) >= 0.5:   # only update if RSI moved
-                    # Undo the old RSI score adjustment, apply the new one
-                    _old_adj = _r.pop("_rsi_adj", 0)
-                    _new_adj = 0
-                    if   _new_rsi > 82:  _new_adj -= 30
-                    elif _new_rsi > 78:  _new_adj -= 20
-                    elif _new_rsi > 72:  _new_adj -= 12
-                    elif _new_rsi > 68:  _new_adj -=  4
-                    elif _new_rsi >= 45: _new_adj +=  8
-                    elif _new_rsi >= 35: _new_adj +=  3
-                    else:                _new_adj -= 15
-                    _r["score"] = max(0, min(100, _r["score"] - _old_adj + _new_adj))
-                    _r["rsi"]   = _new_rsi
-    # Re-sort with updated scores
+        if _lp <= 0:
+            continue
+        _df = prices.get(_r["ticker"])
+
+        # ── 1. Live RSI ────────────────────────────────────────────────────────
+        if _df is not None and len(_df) >= 15:
+            _new_rsi = round(calc_live_rsi(_df, _lp), 1)
+            _old_rsi = _r.get("rsi", 50)
+            if abs(_new_rsi - _old_rsi) >= 0.5:
+                _old_adj = _r.pop("_rsi_adj", 0)
+                _new_adj = 0
+                if   _new_rsi > 82:  _new_adj -= 30
+                elif _new_rsi > 78:  _new_adj -= 20
+                elif _new_rsi > 72:  _new_adj -= 12
+                elif _new_rsi > 68:  _new_adj -=  4
+                elif _new_rsi >= 45: _new_adj +=  8
+                elif _new_rsi >= 35: _new_adj +=  3
+                else:                _new_adj -= 15
+                _r["score"] = max(0, min(100, _r["score"] - _old_adj + _new_adj))
+                _r["rsi"]   = _new_rsi
+
+        # ── 2. Live 1-day momentum ─────────────────────────────────────────────
+        # TWSE API "prev" field = yesterday's official close price
+        _live_prev = _ld.get("prev", 0)
+        if _live_prev > 0:
+            _live_mom1d = (_lp / _live_prev - 1) * 100
+            _old_mom1d  = _r.get("mom1d", 0)
+            if abs(_live_mom1d - _old_mom1d) >= 0.3:
+                # score_stock uses: mom1d_s = min(10, max(0, mom1d * 2))
+                _old_m1s = min(10, max(0, _old_mom1d * 2))
+                _new_m1s = min(10, max(0, _live_mom1d * 2))
+                _r["score"] = max(0, min(100, _r["score"] + (_new_m1s - _old_m1s)))
+                _r["mom1d"] = round(_live_mom1d, 2)
+
+    # Re-sort with live-updated scores
     scored.sort(key=lambda x: x["score"], reverse=True)
 
 # ── Final picks split ──────────────────────────────────────────────────────────
@@ -777,20 +804,36 @@ watch_picks = [r for r in scored if r.get("rsi", 50) >= 73 and r["score"] >= 45]
 # backward compat
 picks = today_picks
 
-# ── "新進榜" badge: mark picks that weren't in the previous slot ───────────────
-_prev_tickers = st.session_state._prev_pick_tickers
-_prev_epoch   = st.session_state._last_epoch
-for _p in today_picks:
-    # Show badge if: prev slot had data AND this ticker wasn't in prev slot's picks
-    _p["is_new"] = bool(_prev_tickers) and _p["ticker"] not in _prev_tickers
+# ── Slot-change tracking: badge + score delta ─────────────────────────────────
+# _prev_pick_tickers / _prev_slot_scores  = PREVIOUS slot's data — NEVER changes
+#   during current slot, so badge and delta display are stable across renders.
+# _cur_slot_tickers / _cur_slot_scores    = CURRENT slot's data — recorded once
+#   at slot boundary and stays fixed until the next slot change.
+#
+# Rotation at slot change:
+#   prev ← cur  (old current becomes prev for badge comparison)
+#   cur  ← new  (today's picks recorded as new current)
+_prev_tickers     = st.session_state._prev_pick_tickers   # stable ref, don't mutate
+_prev_sc_map      = st.session_state._prev_slot_scores
 
-# Update session state at slot boundaries
-if _prev_epoch != _epoch:
-    st.session_state._prev_pick_tickers = {_p["ticker"] for _p in today_picks}
+for _p in today_picks:
+    # 新進榜 badge: visible the ENTIRE slot, not just first render
+    _p["is_new"]      = bool(_prev_tickers) and _p["ticker"] not in _prev_tickers
+    # Score delta vs previous slot (None = no previous data yet)
+    _ps = _prev_sc_map.get(_p["ticker"])
+    _p["score_delta"] = round(_p["score"] - _ps) if _ps is not None else None
+
+# Rotate slot tracking at slot boundaries (or initialise on first session load)
+if st.session_state._last_epoch != _epoch:
+    st.session_state._prev_pick_tickers = st.session_state._cur_slot_tickers
+    st.session_state._prev_slot_scores  = st.session_state._cur_slot_scores
+    st.session_state._cur_slot_tickers  = {_p["ticker"] for _p in today_picks}
+    st.session_state._cur_slot_scores   = {_p["ticker"]: _p["score"] for _p in today_picks}
     st.session_state._last_epoch = _epoch
-elif not _prev_epoch:
-    # First load this browser session: initialise so next slot change can compare
-    st.session_state._prev_pick_tickers = {_p["ticker"] for _p in today_picks}
+elif not st.session_state._last_epoch:
+    # First browser session load: seed cur-slot so next slot change can compare
+    st.session_state._cur_slot_tickers = {_p["ticker"] for _p in today_picks}
+    st.session_state._cur_slot_scores  = {_p["ticker"]: _p["score"] for _p in today_picks}
     st.session_state._last_epoch = _epoch
 
 # ── Fill sidebar content based on view mode ───────────────────────────────────
@@ -1067,6 +1110,225 @@ def render_query_card(ticker, sres, live_d, key_sfx):
         st.rerun()
 
 # ── Helpers & fragments (defined here so they're always available) ───────────
+
+def _analyze_holding_with_live(df, live_price: float):
+    """
+    Injects today's live price as a synthetic 'today close' row and runs
+    analyze_holding_sell() on the modified DataFrame so all signals
+    (RSI, MACD, MA, resistance) reflect the CURRENT price, not yesterday's.
+    """
+    if df is None or len(df) < 22 or live_price <= 0:
+        return analyze_holding_sell(df)
+    try:
+        df_live = df.copy()
+        last_idx = df_live.index[-1]
+        new_idx  = last_idx + pd.Timedelta(days=1)
+        new_row  = pd.DataFrame({
+            "Open":   [live_price],
+            "High":   [max(float(df_live["High"].iloc[-1]), live_price)],
+            "Low":    [min(float(df_live["Low"].iloc[-1]),  live_price)],
+            "Close":  [live_price],
+            "Volume": [float(df_live["Volume"].iloc[-1])],   # use yesterday vol as proxy
+        }, index=[new_idx])
+        return analyze_holding_sell(pd.concat([df_live, new_row]))
+    except Exception:
+        return analyze_holding_sell(df)
+
+
+@st.fragment(run_every="10s")
+def render_holdings_live(holdings_list: list, prices: dict, total_cost_: float):
+    """
+    Auto-refreshing holdings dashboard — every 10 s during market hours.
+    Shows:
+      • Portfolio hero card with live-updated total P&L
+      • Per-stock row: live price · today's P&L · prominent HOLD / SELL signal
+    """
+    if not holdings_list:
+        return
+
+    _pov = [h for h in holdings_list
+            if not h.get("error") and h.get("cost", 0) > 0 and h.get("shares", 0) > 0]
+    if not _pov:
+        return
+
+    _tickers  = [h["ticker"] for h in _pov]
+    _live     = fetch_live_prices(_tickers)
+    _is_open  = _is_market_open()
+    _badge_s  = "● 盤中即時" if _is_open else "收盤價"
+    st.caption(f"💼 即時持股　{_badge_s}　更新：{_now_tw().strftime('%H:%M:%S')}　每10秒自動刷新")
+
+    # ── Recompute totals with live prices ────────────────────────────────────
+    def _lp(h):
+        ld = _live.get(h["ticker"], {})
+        p  = ld.get("price", 0) if ld else 0
+        return p if p > 0 else h.get("price", 0)
+
+    _live_val  = sum(h["shares"] * _lp(h) for h in _pov)
+    _live_pnl  = _live_val - total_cost_ if total_cost_ > 0 else 0
+    _live_pct  = (_live_pnl / total_cost_ * 100) if total_cost_ > 0 else 0
+    _live_td   = sum(
+        h["shares"] * _lp(h) * _live.get(h["ticker"], {}).get("chg_pct", h.get("chg",0))
+        / (100 + _live.get(h["ticker"], {}).get("chg_pct", h.get("chg",0)))
+        for h in _pov
+        if abs(_live.get(h["ticker"], {}).get("chg_pct", h.get("chg",0))) < 99
+    )
+
+    _pc  = "#ef5350" if _live_pnl >= 0 else "#00c853"
+    _pa  = "▲" if _live_pnl >= 0 else "▼"
+    _tc  = "#ef5350" if _live_td >= 0 else "#00c853"
+    _ta  = "▲" if _live_td >= 0 else "▼"
+    _bh  = min(50.0, abs(_live_pct) / 20.0 * 50.0)
+    _bsi = "left:50%;" if _live_pnl >= 0 else "right:50%;"
+    _bra = "0 5px 5px 0" if _live_pnl >= 0 else "5px 0 0 5px"
+
+    # ── Hero portfolio card ───────────────────────────────────────────────────
+    st.markdown(
+        f'<div class="card">'
+        f'<div style="display:flex;justify-content:space-between;margin-bottom:14px">'
+        f'<div><div style="font-size:11px;color:#555">總投入成本</div>'
+        f'<div style="font-size:18px;font-weight:700;color:#e0e0e0">NT${total_cost_:,.0f}</div></div>'
+        f'<div style="text-align:right">'
+        f'<div style="font-size:11px;color:#555">即時市值</div>'
+        f'<div style="font-size:18px;font-weight:700;color:#e0e0e0">NT${_live_val:,.0f}</div>'
+        f'</div></div>'
+        f'<div style="text-align:center;padding:10px 0 12px;'
+        f'border-top:1px solid #252d45;border-bottom:1px solid #252d45">'
+        f'<div style="font-size:11px;color:#777;letter-spacing:0.8px;margin-bottom:6px">總損益</div>'
+        f'<div style="font-size:44px;font-weight:900;color:{_pc};line-height:1.05">'
+        f'{_pa}&nbsp;NT${abs(_live_pnl):,.0f}</div>'
+        f'<div style="font-size:22px;font-weight:700;color:{_pc};margin-top:2px">'
+        f'{_pa}&nbsp;{abs(_live_pct):.2f}%</div>'
+        f'</div>'
+        f'<div style="margin:14px 0 4px">'
+        f'<div style="position:relative;background:#1a1a2e;border-radius:5px;height:10px">'
+        f'<div style="position:absolute;left:50%;top:0;width:2px;height:10px;background:#2a2a4a"></div>'
+        f'<div style="position:absolute;{_bsi}width:{_bh:.1f}%;height:10px;'
+        f'background:{_pc};border-radius:{_bra}"></div></div>'
+        f'<div style="display:flex;justify-content:space-between;font-size:10px;'
+        f'color:#3a3a5a;margin-top:4px"><span>← 虧損</span><span>損平點</span><span>獲利 →</span></div>'
+        f'</div>'
+        f'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a1a2e;'
+        f'display:flex;justify-content:space-between;align-items:center">'
+        f'<span style="font-size:12px;color:#555">今日損益</span>'
+        f'<div>'
+        f'<span style="font-size:15px;font-weight:700;color:{_tc}">'
+        f'{_ta}&nbsp;NT${abs(_live_td):,.0f}</span>'
+        f'<span style="font-size:12px;color:{_tc};margin-left:6px">'
+        f'（{_ta}{abs(_live_td / (total_cost_ or 1) * 100):.2f}%）</span>'
+        f'</div></div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+    # ── Per-stock rows: live price + hold/sell signal ─────────────────────────
+    st.markdown(
+        '<div style="font-size:13px;font-weight:600;color:#888;'
+        'margin:14px 0 6px;letter-spacing:0.3px">個股損益 ＆ 操作建議</div>',
+        unsafe_allow_html=True
+    )
+
+    for _h in sorted(_pov, key=lambda x: x.get("pnl_pct", 0), reverse=True):
+        _t    = _h["ticker"]
+        _code = _t.replace(".TW","")
+        _name = _h["name"]
+        _ld   = _live.get(_t, {})
+        _lp_v = _ld.get("price", 0) if _ld else 0
+        _use_lp = _lp_v if _lp_v > 0 else _h.get("price", 0)
+        _lchg = _ld.get("chg_pct", _h.get("chg", 0)) if _ld else _h.get("chg", 0)
+
+        _cost_v  = _h.get("cost", 0)
+        _shr     = _h.get("shares", 0)
+        _pnl_pct = (_use_lp / _cost_v - 1) * 100   if _cost_v > 0 else 0
+        _pnl_amt = (_use_lp - _cost_v) * _shr       if _cost_v > 0 and _shr > 0 else 0
+        _pc2 = "#ef5350" if _pnl_pct >= 0 else "#00c853"
+        _pa2 = "▲" if _pnl_pct >= 0 else "▼"
+        _lcc = "#ef5350" if _lchg >= 0 else "#00c853"
+        _lca = "▲" if _lchg >= 0 else "▼"
+
+        # ── Hold/sell signal ──────────────────────────────────────────────────
+        _df_h = prices.get(_t)
+        _sell = _analyze_holding_with_live(_df_h, _use_lp)
+        if _sell:
+            _urg = _sell.get("urgency", "低")
+            _act = _sell.get("action", "繼續持有")
+            _tgt = _sell.get("target_sell", 0)
+            _stp = _sell.get("stop_loss", 0)
+            _reasons = _sell.get("reasons", [])
+            if _urg == "高":
+                _sbg, _scl, _ico = "#2d0808", "#ef5350", "🔴"
+            elif _urg == "中":
+                _sbg, _scl, _ico = "#2a1800", "#ffd54f", "🟡"
+            else:
+                _sbg, _scl, _ico = "#071a07", "#00c853", "🟢"
+        else:
+            _urg, _act = "—", "資料不足"
+            _tgt, _stp = 0, 0
+            _reasons = []
+            _sbg, _scl, _ico = "#0d1117", "#555", "⚫"
+
+        _live_badge = (
+            f'<span style="font-size:10px;background:#1a3a1a;color:#00c853;'
+            f'border-radius:3px;padding:1px 5px;margin-left:4px">● LIVE</span>'
+            if _is_open and _lp_v > 0 else ""
+        )
+
+        # Target & stop line (if data available)
+        _ts_line = ""
+        if _tgt > 0 and _stp > 0:
+            _ts_line = (
+                f'<div style="font-size:11px;color:#555;margin-top:4px">'
+                f'🎯 目標 NT${_tgt}　　🛡 止損 NT${_stp}</div>'
+            )
+
+        # Primary reason (the single most important signal)
+        _reason_line = ""
+        if _reasons:
+            _reason_line = (
+                f'<div style="font-size:11px;color:{_scl};opacity:0.85;margin-top:3px">'
+                f'{_reasons[0]}</div>'
+            )
+
+        st.markdown(
+            f'<div style="background:#0e1117;border:1px solid #1e2235;'
+            f'border-radius:10px;padding:12px 14px;margin-bottom:8px">'
+
+            # Row 1: name + live price + today change
+            f'<div style="display:flex;justify-content:space-between;align-items:center;'
+            f'margin-bottom:6px">'
+            f'<span style="font-size:15px;font-weight:700;color:#e0e0e0">'
+            f'{_code}&nbsp;{_name}</span>'
+            f'<div style="text-align:right">'
+            f'<span style="font-size:18px;font-weight:800;color:{_lcc}">'
+            f'NT${_use_lp:.1f}</span>{_live_badge}'
+            f'<span style="font-size:12px;color:{_lcc};margin-left:5px">'
+            f'{_lca}{abs(_lchg):.2f}%</span>'
+            f'</div></div>'
+
+            # Row 2: P&L vs cost
+            f'<div style="display:flex;align-items:center;gap:8px;'
+            f'font-size:12px;margin-bottom:8px">'
+            f'<span style="color:#555">成本&nbsp;NT${_cost_v:.1f}</span>'
+            f'<span style="color:#333">→</span>'
+            f'<span style="font-size:15px;font-weight:800;color:{_pc2}">'
+            f'{_pa2}&nbsp;{abs(_pnl_pct):.1f}%</span>'
+            f'<span style="font-size:12px;color:{_pc2}">'
+            f'NT${_pa2}{abs(_pnl_amt):,.0f}</span>'
+            f'</div>'
+
+            # Row 3: HOLD/SELL signal badge
+            f'<div style="background:{_sbg};border:1px solid {_scl}44;'
+            f'border-left:4px solid {_scl};border-radius:0 8px 8px 0;'
+            f'padding:8px 12px;margin-bottom:0">'
+            f'<div style="font-size:13px;font-weight:700;color:{_scl}">'
+            f'{_ico}&nbsp;{_act}</div>'
+            f'{_reason_line}'
+            f'{_ts_line}'
+            f'</div>'
+
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
 
 @st.cache_data(ttl=180, show_spinner=False)
 def _fetch_alerts_cached():
@@ -1420,151 +1682,23 @@ if st.session_state.view_mode == "watchlist":
 
 # ── Main view: Holdings ───────────────────────────────────────────────────────
 if st.session_state.view_mode == "holdings":
-    st.markdown("## 💼 我的持股")
+    st.markdown(
+        "## 💼 我的持股　"
+        "<span style='font-size:12px;background:#0d2a4a;color:#7eb3ff;"
+        "border-radius:5px;padding:2px 8px;vertical-align:middle'>"
+        "盤中每10秒自動更新</span>",
+        unsafe_allow_html=True
+    )
 
-    # ── Portfolio overview dashboard ──────────────────────────────────────────
-    _pov = [h for h in holdings_info
-            if not h.get("error") and h.get("cost", 0) > 0 and h.get("shares", 0) > 0]
+    _has_cost = any(
+        h.get("cost", 0) > 0 and h.get("shares", 0) > 0
+        for h in holdings_info if not h.get("error")
+    )
 
-    if _pov and total_cost > 0:
-        # Today's portfolio NT$ change
-        _td_chg = sum(
-            h["shares"] * h["price"] * h["chg"] / (100 + h["chg"])
-            for h in _pov if abs(h.get("chg", 0)) < 99
-        )
-        _td_pct = _td_chg / (total_val - _td_chg) * 100 if abs(total_val - _td_chg) > 0.01 else 0
-
-        # Taiwan convention: RED ▲ = profit, GREEN ▼ = loss
-        _pc = "#ef5350" if total_pnl >= 0 else "#00c853"
-        _pa = "▲" if total_pnl >= 0 else "▼"
-        _tc = "#ef5350" if _td_chg >= 0 else "#00c853"
-        _ta = "▲" if _td_chg >= 0 else "▼"
-
-        # Gain/loss bar: ±20% maps to ±50% of bar width (capped)
-        _bar_half = min(50.0, abs(total_pct) / 20.0 * 50.0)
-        _bar_side = "left:50%;" if total_pnl >= 0 else "right:50%;"
-        _bar_rad  = "0 5px 5px 0" if total_pnl >= 0 else "5px 0 0 5px"
-
-        # ── Hero summary card ─────────────────────────────────────────────────
-        st.markdown(
-            f'<div class="card">'
-
-            # Row 1 — invested vs current value
-            f'<div style="display:flex;justify-content:space-between;margin-bottom:14px">'
-            f'  <div><div style="font-size:11px;color:#555">總投入成本</div>'
-            f'  <div style="font-size:18px;font-weight:700;color:#e0e0e0">NT${total_cost:,.0f}</div></div>'
-            f'  <div style="text-align:right">'
-            f'  <div style="font-size:11px;color:#555">目前市值</div>'
-            f'  <div style="font-size:18px;font-weight:700;color:#e0e0e0">NT${total_val:,.0f}</div>'
-            f'  </div>'
-            f'</div>'
-
-            # Row 2 — big P&L number (the answer to "am I making money?")
-            f'<div style="text-align:center;padding:10px 0 12px;'
-            f'border-top:1px solid #252d45;border-bottom:1px solid #252d45">'
-            f'  <div style="font-size:11px;color:#777;letter-spacing:0.8px;margin-bottom:6px">總損益</div>'
-            f'  <div style="font-size:44px;font-weight:900;color:{_pc};line-height:1.05">'
-            f'    {_pa}&nbsp;NT${abs(total_pnl):,.0f}'
-            f'  </div>'
-            f'  <div style="font-size:22px;font-weight:700;color:{_pc};margin-top:2px">'
-            f'    {_pa}&nbsp;{abs(total_pct):.2f}%'
-            f'  </div>'
-            f'</div>'
-
-            # Row 3 — breakeven bar
-            f'<div style="margin:14px 0 4px">'
-            f'  <div style="position:relative;background:#1a1a2e;border-radius:5px;height:10px">'
-            f'    <div style="position:absolute;left:50%;top:0;width:2px;height:10px;background:#2a2a4a"></div>'
-            f'    <div style="position:absolute;{_bar_side}width:{_bar_half:.1f}%;height:10px;'
-            f'background:{_pc};border-radius:{_bar_rad}"></div>'
-            f'  </div>'
-            f'  <div style="display:flex;justify-content:space-between;font-size:10px;'
-            f'color:#3a3a5a;margin-top:4px"><span>← 虧損</span><span>損平點</span><span>獲利 →</span></div>'
-            f'</div>'
-
-            # Row 4 — today's change footer
-            f'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a1a2e;'
-            f'display:flex;justify-content:space-between;align-items:center">'
-            f'  <span style="font-size:12px;color:#555">今日損益</span>'
-            f'  <div>'
-            f'    <span style="font-size:15px;font-weight:700;color:{_tc}">'
-            f'      {_ta}&nbsp;NT${abs(_td_chg):,.0f}</span>'
-            f'    <span style="font-size:12px;color:{_tc};margin-left:6px">'
-            f'      ({_ta}{abs(_td_pct):.2f}%)</span>'
-            f'  </div>'
-            f'</div>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-
-        # ── Per-stock breakdown ───────────────────────────────────────────────
-        st.markdown(
-            '<div style="font-size:13px;font-weight:600;color:#888;'
-            'margin:14px 0 6px;letter-spacing:0.3px">個股損益明細</div>',
-            unsafe_allow_html=True,
-        )
-
-        # Sort: biggest profit first, biggest loss last
-        for _h in sorted(_pov, key=lambda x: x.get("pnl_pct", 0), reverse=True):
-            _pp   = _h.get("pnl_pct", 0)
-            _pa2  = _h.get("pnl_amt") or 0
-            _hc   = _h.get("chg", 0)
-            _pc2  = "#ef5350" if _pp >= 0 else "#00c853"
-            _pa2c = "▲" if _pp >= 0 else "▼"
-            _tc2  = "#ef5350" if _hc >= 0 else "#00c853"
-            _ta2  = "▲" if _hc >= 0 else "▼"
-            _bw   = min(100, abs(_pp) * 5)   # 20% P&L = full bar
-            _mval = _h["shares"] * _h["price"]
-            _mpc  = _mval / total_val * 100 if total_val > 0 else 0
-            # Today's NT$ change for this holding
-            _hnt  = _h["shares"] * _h["price"] * _hc / (100 + _hc) if abs(_hc) < 99 else 0
-
-            st.markdown(
-                f'<div style="background:#0e1117;border:1px solid #1e2235;'
-                f'border-radius:10px;padding:12px 14px;margin-bottom:8px">'
-
-                # Stock name + overall P&L
-                f'<div style="display:flex;justify-content:space-between;'
-                f'align-items:flex-start;margin-bottom:8px">'
-                f'  <div>'
-                f'    <span style="font-size:15px;font-weight:700;color:#e0e0e0">'
-                f'      {_h["ticker"].replace(".TW","")}&nbsp;{_h["name"]}</span>'
-                f'    <span style="font-size:11px;color:#555;margin-left:6px">'
-                f'      {_h["shares"]:.0f}股</span>'
-                f'  </div>'
-                f'  <div style="text-align:right">'
-                f'    <div style="font-size:18px;font-weight:800;color:{_pc2}">'
-                f'      {_pa2c}&nbsp;{abs(_pp):.1f}%</div>'
-                f'    <div style="font-size:12px;color:{_pc2}">'
-                f'      {_pa2c}&nbsp;NT${abs(_pa2):,.0f}</div>'
-                f'  </div>'
-                f'</div>'
-
-                # Cost → current price + today change
-                f'<div style="display:flex;align-items:center;gap:8px;'
-                f'font-size:12px;margin-bottom:8px">'
-                f'  <span style="color:#555">成本&nbsp;NT${_h["cost"]:.1f}</span>'
-                f'  <span style="color:#333">→</span>'
-                f'  <span style="color:#aaa">現價&nbsp;NT${_h["price"]:.1f}</span>'
-                f'  <span style="margin-left:auto;color:{_tc2}">'
-                f'    今日&nbsp;{_ta2}{abs(_hc):.1f}%&nbsp;'
-                f'    ({_ta2}NT${abs(_hnt):,.0f})</span>'
-                f'</div>'
-
-                # P&L progress bar
-                f'<div style="background:#1a1a2e;border-radius:3px;height:5px">'
-                f'  <div style="width:{_bw:.1f}%;height:5px;background:{_pc2};'
-                f'border-radius:3px"></div></div>'
-
-                # Footer: market value share
-                f'<div style="font-size:10px;color:#3a3a5a;margin-top:5px">'
-                f'  市值&nbsp;NT${_mval:,.0f}　佔組合&nbsp;{_mpc:.1f}%'
-                f'</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-    elif holdings_info and total_cost == 0:
+    if _has_cost and total_cost > 0:
+        # ── Live hero card + per-stock rows + hold/sell signals (auto-refresh) ─
+        render_holdings_live(holdings_info, prices, total_cost)
+    elif holdings_info:
         st.info("💡 點選下方「＋ 新增 / 編輯持股」輸入買進均價和股數，即可看到完整損益總覽")
 
     st.divider()
@@ -1849,6 +1983,23 @@ def render_stock_cards(picks, prices, show_chart):
             st.markdown('<span class="star-sentinel"></span>', unsafe_allow_html=True)
             _star_clicked = st.button(_star, key=f"star_pick_{p['ticker']}", use_container_width=True, help="追蹤")
 
+        # Score delta vs previous slot
+        _sdelta = p.get("score_delta")
+        if _sdelta is not None and abs(_sdelta) >= 1:
+            _sd_col = "#ef5350" if _sdelta > 0 else "#00c853"
+            _sd_arr = "↑" if _sdelta > 0 else "↓"
+            _score_delta_html = (
+                f'<div style="font-size:11px;color:#555;margin-top:3px">'
+                f'信心指數 {sc}/100'
+                f'　<span style="color:{_sd_col};font-weight:700">{_sd_arr}{abs(_sdelta):.0f}</span>'
+                f'　<span style="color:#333">vs 上一時段</span>'
+                f'</div>'
+            )
+        else:
+            _score_delta_html = (
+                f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
+            )
+
         _is_new_pick = p.get("is_new", False)
         _new_badge   = (
             '<span style="background:#1a4a1a;color:#00c853;font-size:10px;'
@@ -1878,7 +2029,7 @@ def render_stock_cards(picks, prices, show_chart):
             f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="sell-note">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
-            f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
+            f'{_score_delta_html}'
             f'</div>'
             f'</div>',
             unsafe_allow_html=True
