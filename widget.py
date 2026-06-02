@@ -496,6 +496,7 @@ def _fetch_live_yf(tickers: List[str]) -> Dict[str, Dict]:
             interval="1m",
             progress=False,
             auto_adjust=True,
+            timeout=15,
         )
     except Exception:
         return result
@@ -946,7 +947,7 @@ def fetch_us_overnight() -> Dict:
     try:
         syms = ["^GSPC", "^IXIC", "^SOX", "^VIX", "USDTWD=X", "TSM", "NVDA"]
         raw = yf.download(syms, period="5d", progress=False,
-                          auto_adjust=True, threads=True)
+                          auto_adjust=True, threads=True, timeout=15)
         if raw is None or raw.empty:
             return empty
 
@@ -1369,7 +1370,7 @@ def fetch_prices_batch(tickers: List[str], period: str = "3mo") -> Dict[str, pd.
     def _download_chunk(batch: List[str], key_map: Dict[str, str]) -> None:
         """Download one batch; key_map maps download-ticker → storage-ticker."""
         try:
-            raw = yf.download(batch, period=period, auto_adjust=True, progress=False, threads=True)
+            raw = yf.download(batch, period=period, auto_adjust=True, progress=False, threads=True, timeout=20)
             if isinstance(raw.columns, pd.MultiIndex):
                 for t in batch:
                     try:
