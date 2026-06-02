@@ -307,6 +307,92 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ── Category universe ─────────────────────────────────────────────────────────
+# Each entry: emoji, name (zh), en, desc (tag line), why (investment thesis),
+# tickers (curated universe ~8-14 stocks — scoring engine picks the best 5).
+CATEGORY_UNIVERSE = {
+    "ai": {
+        "emoji": "🤖", "name": "AI人工智能", "en": "AI / Machine Learning",
+        "desc": "AI推論晶片・大型語言模型硬體・AI應用",
+        "why": "NVIDIA供應鏈爆量、資料中心AI建設週期長，台灣廠商直接受益於每一層",
+        "tickers": ["3661.TW","5274.TW","3443.TW","2454.TW","2379.TW",
+                    "3034.TW","8299.TW","6669.TW","2382.TW","2356.TW","3231.TW"],
+    },
+    "ic_design": {
+        "emoji": "🔧", "name": "IC設計", "en": "IC Design",
+        "desc": "SoC・驅動IC・電源管理・特殊應用晶片",
+        "why": "台灣IC設計全球第二，聚焦AI邊緣、車用、伺服器三大成長引擎",
+        "tickers": ["2454.TW","3034.TW","2379.TW","6415.TW","3661.TW",
+                    "4966.TW","5274.TW","8299.TW","3443.TW","4919.TW","2344.TW"],
+    },
+    "foundry": {
+        "emoji": "🏭", "name": "半導體製造", "en": "Semiconductor Foundry",
+        "desc": "晶圓代工・先進製程・成熟/特殊製程",
+        "why": "AI晶片全靠台積電N3/N2；CoWoS先進封裝嚴重缺產能，整個代工鏈受惠",
+        "tickers": ["2330.TW","2303.TW","5347.TW","6770.TW","3037.TW"],
+    },
+    "osat": {
+        "emoji": "📦", "name": "封裝測試", "en": "IC Packaging & Testing",
+        "desc": "先進封裝・CoWoS・SoIC・晶片測試・基板",
+        "why": "AI GPU需要CoWoS先進封裝，日月光訂單滿載；封測是AI供應鏈現在的瓶頸",
+        "tickers": ["3711.TW","8150.TW","6271.TW","2408.TW","6274.TW","3037.TW","2475.TW"],
+    },
+    "ai_server": {
+        "emoji": "🖥️", "name": "AI伺服器", "en": "AI Servers / Cloud",
+        "desc": "GPU伺服器・液冷機櫃・AI基礎建設ODM",
+        "why": "雲巨頭AI資本支出2024年翻倍；台廠ODM廣達、緯穎搶訂AI伺服器直接受惠",
+        "tickers": ["2382.TW","6669.TW","2356.TW","3231.TW","2301.TW","4977.TW","2324.TW"],
+    },
+    "thermal": {
+        "emoji": "🌡️", "name": "散熱模組", "en": "Thermal / Cooling",
+        "desc": "熱管・均熱板・液冷系統・AI伺服器散熱",
+        "why": "AI GPU功耗600W+，散熱需求暴增；液冷滲透率從低位飛速成長，是被忽視的主題",
+        "tickers": ["3017.TW","8163.TW","6413.TW","1626.TW","2369.TW","2362.TW","3529.TW"],
+    },
+    "networking": {
+        "emoji": "📡", "name": "網通設備", "en": "Networking Equipment",
+        "desc": "資料中心交換器・400G/800G光模組・AI叢集互連",
+        "why": "AI叢集需要超高頻寬互連，400G→800G升級週期剛啟動，智邦等台廠接單滿",
+        "tickers": ["2345.TW","6277.TW","2332.TW","4706.TW","6197.TW","3706.TW"],
+    },
+    "gaming": {
+        "emoji": "🎮", "name": "遊戲", "en": "Gaming",
+        "desc": "手遊・PC遊戲・電競・遊戲發行平台",
+        "why": "生成式AI大幅降低遊戲製作成本，台灣遊戲股題材活絡；電競市場持續擴張",
+        "tickers": ["5478.TW","6180.TW","6111.TW","3060.TW","4943.TW","6491.TW","5536.TW"],
+    },
+    "software": {
+        "emoji": "💻", "name": "應用軟體", "en": "Software / SaaS",
+        "desc": "ERP・設計工具・雲端SaaS・企業管理系統",
+        "why": "AI賦能軟體訂閱轉型，台灣軟體股基本面改善、本益比修復空間大",
+        "tickers": ["6510.TW","3658.TW","6104.TW","3686.TW","4916.TW","3062.TW","2353.TW"],
+    },
+    "ev": {
+        "emoji": "🔋", "name": "電動車", "en": "EV Components",
+        "desc": "電控系統・充電模組・BMS・馬達驅動IC",
+        "why": "全球EV滲透率加速，台廠在電控、充電樁、連接器取得關鍵供應地位",
+        "tickers": ["2308.TW","1504.TW","1590.TW","1537.TW","6409.TW","2059.TW","5483.TW"],
+    },
+    "green_energy": {
+        "emoji": "☀️", "name": "綠能太陽能", "en": "Green Energy",
+        "desc": "太陽能模組・離岸風電・儲能系統・電網",
+        "why": "RE100採購+政府2050淨零目標；台灣離岸風電裝機量持續上升，政策多頭",
+        "tickers": ["3576.TW","6443.TW","3533.TW","6412.TW","1513.TW","1519.TW","3519.TW"],
+    },
+    "biotech": {
+        "emoji": "💊", "name": "生技醫療", "en": "Biotech / Healthcare",
+        "desc": "新藥研發・醫療器材・體外診斷・AI醫療",
+        "why": "高齡化社會+AI加速新藥研發；台灣生技股授權金題材具備爆發力",
+        "tickers": ["4743.TW","6547.TW","4119.TW","1786.TW","4166.TW","6446.TW","4110.TW"],
+    },
+    "mobile": {
+        "emoji": "📱", "name": "手機零組件", "en": "Mobile Supply Chain",
+        "desc": "鏡頭模組・金屬機殼・OLED驅動IC・連接器",
+        "why": "iPhone供應鏈補庫存+Android高階機復甦；蘋果新品發布前台廠拉貨明顯",
+        "tickers": ["3008.TW","2474.TW","2327.TW","6285.TW","5483.TW","2357.TW","4938.TW"],
+    },
+}
+
 # ── Data loading ──────────────────────────────────────────────────────────────
 @st.cache_data(ttl=3600, show_spinner=False)     # 1-hour TTL; epoch param busts cache at each slot boundary
 def load_data(epoch: str):                       # epoch = "YYYY-MM-DD-SLOT", changes 4× per trading day
@@ -328,9 +414,18 @@ def load_data(epoch: str):                       # epoch = "YYYY-MM-DD-SLOT", ch
                 foreign=foreign, market=market, prices=prices,
                 us_data=us_data, global_news=g_news, ts=ts)
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_category_prices(category_key: str, epoch: str) -> dict:
+    """Fetch OHLCV price history for a category's universe. Cached per slot."""
+    import io, contextlib
+    tickers = CATEGORY_UNIVERSE[category_key]["tickers"]
+    _buf = io.StringIO()
+    with contextlib.redirect_stdout(_buf), contextlib.redirect_stderr(_buf):
+        return fetch_prices_batch(tickers, period="3mo")
+
 # ── Session state init ────────────────────────────────────────────────────────
 if "view_mode"        not in st.session_state: st.session_state.view_mode        = "picks"
-# valid modes: "picks" | "holdings" | "watchlist" | "search" | "monitor"
+# valid modes: "picks" | "categories" | "holdings" | "watchlist" | "search" | "monitor"
 if "custom_holdings"  not in st.session_state: st.session_state.custom_holdings  = {}
 if "hidden_holdings"  not in st.session_state: st.session_state.hidden_holdings  = set()
 if "search_ticker"    not in st.session_state: st.session_state.search_ticker    = None
@@ -351,6 +446,7 @@ if "_prev_pick_tickers" not in st.session_state: st.session_state._prev_pick_tic
 if "_cur_slot_tickers"  not in st.session_state: st.session_state._cur_slot_tickers  = set()
 if "_prev_slot_scores"  not in st.session_state: st.session_state._prev_slot_scores  = {}
 if "_cur_slot_scores"   not in st.session_state: st.session_state._cur_slot_scores   = {}
+if "selected_category"  not in st.session_state: st.session_state.selected_category  = "ai"
 
 # ── localStorage persistence (watchlist + holdings survive redeployments) ─────
 #
@@ -438,13 +534,13 @@ with st.sidebar:
 
     st.divider()
 
-    # Nav: 4 buttons across two rows (2+2)
+    # Nav: 5 buttons (2 top + 3 bottom)
     _n_mon   = len(st.session_state.rsi_thresholds)
     _mon_lbl = f"📡{_n_mon}" if _n_mon else "📡"
     vm       = st.session_state.view_mode
-    _nc1, _nc2 = st.columns(2)
-    for _col, (_vk, _vl) in zip([_nc1, _nc2], [
-        ("picks", "精選推薦"), ("holdings", "持股"),
+    _nr1, _nr2 = st.columns(2)
+    for _col, (_vk, _vl) in zip([_nr1, _nr2], [
+        ("picks", "精選推薦"), ("categories", "🏷️ 分類"),
     ]):
         _active = vm == _vk
         if _col.button(_vl + (" ✓" if _active else ""), key=f"nav_{_vk}",
@@ -452,9 +548,9 @@ with st.sidebar:
             st.session_state.view_mode = _vk
             st.session_state._close_sidebar = True
             st.rerun()
-    _nc3, _nc4 = st.columns(2)
-    for _col, (_vk, _vl) in zip([_nc3, _nc4], [
-        ("watchlist", "追蹤"), ("monitor", _mon_lbl),
+    _nr3, _nr4, _nr5 = st.columns(3)
+    for _col, (_vk, _vl) in zip([_nr3, _nr4, _nr5], [
+        ("holdings", "持股"), ("watchlist", "追蹤"), ("monitor", _mon_lbl),
     ]):
         _active = vm == _vk
         if _col.button(_vl + (" ✓" if _active else ""), key=f"nav_{_vk}",
@@ -462,6 +558,22 @@ with st.sidebar:
             st.session_state.view_mode = _vk
             st.session_state._close_sidebar = True
             st.rerun()
+
+    # ── Category selector (visible only in 分類 view) ─────────────────────────
+    if vm == "categories":
+        st.divider()
+        st.caption("選擇產業類別")
+        _ca_cols = st.columns(2)
+        for _ci, (_ck, _cv) in enumerate(CATEGORY_UNIVERSE.items()):
+            _is_sel = st.session_state.selected_category == _ck
+            _btn_lbl = f"{_cv['emoji']} {_cv['name']}"
+            if _ca_cols[_ci % 2].button(
+                _btn_lbl, key=f"cat_{_ck}",
+                type="primary" if _is_sel else "secondary",
+                use_container_width=True,
+            ):
+                st.session_state.selected_category = _ck
+                st.rerun()
 
     sidebar_content = st.container()
 
@@ -1711,6 +1823,175 @@ if st.session_state.view_mode == "watchlist":
         for _wt in st.session_state.watchlist:
             if _wt in _watch_results:
                 render_query_card(_wt, _watch_results[_wt], _query_live.get(_wt), f"wv_{_wt}")
+    st.divider()
+    with st.expander("📰 今日早盤新聞", expanded=False):
+        for h in data["headlines"][:8]:
+            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
+    st.stop()
+
+# ── Main view: Category Picks ─────────────────────────────────────────────────
+if st.session_state.view_mode == "categories":
+    _sel_cat = st.session_state.selected_category
+    _cinfo   = CATEGORY_UNIVERSE.get(_sel_cat, next(iter(CATEGORY_UNIVERSE.values())))
+
+    # ── Header ────────────────────────────────────────────────────────────────
+    st.markdown(
+        f"## {_cinfo['emoji']} {_cinfo['name']}　"
+        f"<span style='font-size:12px;background:#1e2740;color:#7eb3ff;"
+        f"border-radius:5px;padding:2px 8px;vertical-align:middle'>"
+        f"{_cinfo['en']}</span>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div style="font-size:13px;color:#777;margin:2px 0 6px">{_cinfo["desc"]}</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div style="background:#0d1f3c;border-left:3px solid #1a56db;border-radius:0 8px 8px 0;'
+        f'padding:8px 12px;font-size:13px;color:#c0d4ff;margin-bottom:16px">'
+        f'💡 {_cinfo["why"]}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Load prices for this category (cached per epoch slot) ─────────────────
+    with st.spinner(f"載入 {_cinfo['name']} 價格資料…"):
+        _cat_prices = load_category_prices(_sel_cat, _epoch)
+
+    # ── Score every ticker in the universe using already-loaded context ────────
+    # Same scoring formula as the main picks loop: score_stock → RSI adj → live update
+    _cat_scored = []
+    for _ct in _cinfo["tickers"]:
+        _cdf = _cat_prices.get(_ct)
+        if _cdf is None or len(_cdf) < 22:
+            continue
+        _cres = score_stock(_ct, _cdf, cat_sc.get(_ct, 0), foreign.get(_ct, 0),
+                            us_macro_stock_bonus(_ct, us_data))
+        if not _cres:
+            continue
+        # Zero-stock RSI + price adjustments (identical to main picks loop)
+        _cadj = 0
+        _crsi = _cres.get("rsi", 50)
+        if   _crsi > 82:  _cadj -= 30
+        elif _crsi > 78:  _cadj -= 20
+        elif _crsi > 72:  _cadj -= 12
+        elif _crsi > 68:  _cadj -=  4
+        elif _crsi >= 45: _cadj +=  8
+        elif _crsi >= 35: _cadj +=  3
+        else:             _cadj -= 15
+        if _cres.get("last_price", 0) > 500: _cadj -= 8
+        _cres["score"]       = max(0, min(100, _cres["score"] + _cadj))
+        _cres["_rsi_adj"]    = _cadj
+        _cres["catalysts"]   = get_catalyst_labels(_ct, all_news)
+        _cres["is_new"]      = False
+        _cres["score_delta"] = None
+        _cat_scored.append(_cres)
+
+    # ── Live intraday scoring (market hours) — same 3-layer guard as main picks ─
+    if _is_market_open() and _cat_scored:
+        _cl_tickers = [r["ticker"] for r in _cat_scored]
+        _cl_live    = fetch_live_prices(_cl_tickers)
+        for _cr in _cat_scored:
+            _cld = _cl_live.get(_cr["ticker"], {})
+            _clp = _cld.get("price", 0) if _cld else 0
+            if _clp <= 0:
+                continue
+            _cdf2 = _cat_prices.get(_cr["ticker"])
+            # 1. Live RSI
+            if _cdf2 is not None and len(_cdf2) >= 15:
+                _cn_rsi = round(calc_live_rsi(_cdf2, _clp), 1)
+                _co_rsi = _cr.get("rsi", 50)
+                if abs(_cn_rsi - _co_rsi) >= 0.5:
+                    _co_adj = _cr.pop("_rsi_adj", 0)
+                    _cn_adj = 0
+                    if   _cn_rsi > 82:  _cn_adj -= 30
+                    elif _cn_rsi > 78:  _cn_adj -= 20
+                    elif _cn_rsi > 72:  _cn_adj -= 12
+                    elif _cn_rsi > 68:  _cn_adj -=  4
+                    elif _cn_rsi >= 45: _cn_adj +=  8
+                    elif _cn_rsi >= 35: _cn_adj +=  3
+                    else:               _cn_adj -= 15
+                    _cr["score"] = max(0, min(100, _cr["score"] - _co_adj + _cn_adj))
+                    _cr["rsi"]   = _cn_rsi
+            # 2. Live mom1d
+            _cl_prev = _cld.get("prev", 0)
+            if _cl_prev > 0:
+                _cl_mom = (_clp / _cl_prev - 1) * 100
+                _co_mom = _cr.get("mom1d", 0)
+                if abs(_cl_mom - _co_mom) >= 0.3:
+                    _co_ms = min(10, max(0, _co_mom * 2))
+                    _cn_ms = min(10, max(0, _cl_mom * 2))
+                    _cr["score"] = max(0, min(100, _cr["score"] + (_cn_ms - _co_ms)))
+                    _cr["mom1d"] = round(_cl_mom, 2)
+            # 3. Near-limit-up guard
+            _cl_chg = round(_cld.get("chg_pct", 0), 2)
+            _cr["live_chg_pct"] = _cl_chg
+            if _cl_chg >= 9.0:
+                _cr["score"]      = max(0, _cr["score"] - 45)
+                _cr["near_limit"] = True
+            elif _cl_chg >= 7.0:
+                _cr["score"]      = max(0, _cr["score"] - 22)
+                _cr["near_limit"] = True
+
+    _cat_scored.sort(key=lambda x: x["score"], reverse=True)
+    _cat_picks = [r for r in _cat_scored
+                  if r.get("rsi", 50) < 73
+                  and r["score"] >= 40
+                  and r.get("live_chg_pct", 0) < 9.0][:5]
+
+    # ── Sector momentum summary bar ───────────────────────────────────────────
+    if _cat_scored:
+        _n_sample  = min(len(_cat_scored), 8)
+        _avg_rsi   = round(sum(p["rsi"]   for p in _cat_scored[:_n_sample]) / _n_sample, 1)
+        _avg_mom5  = round(sum(p["mom5d"] for p in _cat_scored[:_n_sample]) / _n_sample, 1)
+        _avg_mom1  = round(sum(p["mom1d"] for p in _cat_scored[:_n_sample]) / _n_sample, 2)
+        _rsi_emoji = "🔥" if _avg_rsi > 68 else ("✅" if _avg_rsi >= 40 else "📉")
+        _rsi_label = "偏熱，需謹慎" if _avg_rsi > 68 else ("適中，可進場" if _avg_rsi >= 40 else "偏冷，觀察中")
+        _n_hot     = sum(1 for p in _cat_scored if p.get("near_limit"))
+        st.markdown(
+            f'<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:stretch">'
+            # RSI tile
+            f'<div style="background:#0a0f1a;border-radius:8px;padding:10px 16px;min-width:120px">'
+            f'<div style="font-size:10px;color:#555;margin-bottom:2px">板塊平均 RSI</div>'
+            f'<div style="font-size:18px;font-weight:700;color:#e0e0e0">{_avg_rsi}'
+            f' <span style="font-size:12px">{_rsi_emoji}</span></div>'
+            f'<div style="font-size:11px;color:#666">{_rsi_label}</div>'
+            f'</div>'
+            # 5d momentum tile
+            f'<div style="background:#0a0f1a;border-radius:8px;padding:10px 16px;min-width:120px">'
+            f'<div style="font-size:10px;color:#555;margin-bottom:2px">5日板塊動能</div>'
+            f'<div style="font-size:18px;font-weight:700;'
+            f'color:{"#ef5350" if _avg_mom5>=0 else "#00c853"}">{_avg_mom5:+.1f}%</div>'
+            f'<div style="font-size:11px;color:#666">近5個交易日均漲跌</div>'
+            f'</div>'
+            # Today tile
+            f'<div style="background:#0a0f1a;border-radius:8px;padding:10px 16px;min-width:120px">'
+            f'<div style="font-size:10px;color:#555;margin-bottom:2px">今日板塊表現</div>'
+            f'<div style="font-size:18px;font-weight:700;'
+            f'color:{"#ef5350" if _avg_mom1>=0 else "#00c853"}">{_avg_mom1:+.2f}%</div>'
+            f'<div style="font-size:11px;color:#666">{"盤中即時" if _is_market_open() else "昨日收盤"}</div>'
+            f'</div>'
+            # Near-limit warning tile (only if relevant)
+            + (f'<div style="background:#1a0505;border:1px solid #c0392b;border-radius:8px;'
+               f'padding:10px 16px;min-width:120px">'
+               f'<div style="font-size:10px;color:#c0392b;margin-bottom:2px">⚠️ 近漲停已排除</div>'
+               f'<div style="font-size:18px;font-weight:700;color:#ff5252">{_n_hot} 檔</div>'
+               f'<div style="font-size:11px;color:#666">已自動過濾，不建議追高</div>'
+               f'</div>'
+               if _n_hot > 0 else "")
+            + f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Render picks or empty state ───────────────────────────────────────────
+    if _cat_picks:
+        render_stock_cards(_cat_picks, _cat_prices, show_chart)
+    else:
+        st.warning(
+            f"目前 **{_cinfo['name']}** 沒有符合條件的推薦。\n\n"
+            f"可能原因：整個板塊 RSI 過熱（>{_avg_rsi:.0f}），或評分不足。\n"
+            f"建議：等板塊回落後再看，或在左側調低「最低評分門檻」。"
+        )
+
     st.divider()
     with st.expander("📰 今日早盤新聞", expanded=False):
         for h in data["headlines"][:8]:
