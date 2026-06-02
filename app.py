@@ -2002,11 +2002,13 @@ def render_category_cards(picks, prices, show_chart):
                     f'</div>'
                     f'<div class="advice-row" style="margin-top:10px">'
                     f'  <span class="advice-label">📈 趨勢</span>'
-                    f'  <span style="color:{_adv["trend_col"]};font-weight:700">{_adv["trend_signal"]}</span>'
+                    f'  <span style="color:{_adv["trend_col"]};font-weight:700">'
+                    f'    {_adv["trend_icon"]} {_adv["trend"]}'
+                    f'  </span>'
                     f'</div>'
                     f'<div class="advice-row" style="margin-top:8px">'
                     f'  <span class="advice-label">💡 建議</span>'
-                    f'  <span style="font-size:13px;color:#c0d4ff">{_adv["action"]}</span>'
+                    f'  <span style="font-size:13px;color:#c0d4ff">{_adv["buy_note"]}</span>'
                     f'</div>'
                     f'</div>',
                     unsafe_allow_html=True,
@@ -2147,9 +2149,10 @@ if st.session_state.view_mode == "categories":
     #   • live_chg ≥ 9%  (near limit-up — dangerous to chase)
     # Score threshold dropped to 20 (vs 52 for main picks) so hot sectors
     # (e.g. all foundry stocks overbought) still yield picks + a warning.
+    # Show top-5 by score. Only hard-filter near-limit-up (≥9%) — dangerous to chase.
+    # RSI overbought is handled via card advice text (⏳ wait for pullback), NOT filtering.
     _cat_picks = [r for r in _cat_scored
-                  if r.get("rsi", 50) < 73
-                  and r.get("live_chg_pct", 0) < 9.0][:5]
+                  if r.get("live_chg_pct", 0) < 9.0][:5]
 
     # ── Sector momentum summary bar ───────────────────────────────────────────
     _avg_rsi, _avg_mom5, _avg_mom1, _n_hot = 50.0, 0.0, 0.0, 0  # safe defaults
