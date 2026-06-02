@@ -102,7 +102,60 @@ TECH_UNIVERSE: Dict[str, Dict] = {
     "3008.TW": {"name":"大立光",    "en":"Largan",            "sector":"光學鏡頭",  "supply":["Apple"]},
     "3406.TW": {"name":"玉晶光",    "en":"Genius Optical",    "sector":"光學鏡頭",  "supply":["Apple"]},
     # ── 電源 / 散熱 Power & Thermal ─────────────────────────────────────────
-    "2308.TW": {"name":"台達電",    "en":"Delta Electronics", "sector":"電源散熱",  "supply":["NVIDIA","AI","綠能"]},
+    "2308.TW": {"name":"台達電",    "en":"Delta Electronics",  "sector":"電源散熱",  "supply":["NVIDIA","AI","綠能"]},
+    "3017.TW": {"name":"奇鋐科技",  "en":"Asia Vital Comp",    "sector":"散熱模組",  "supply":["NVIDIA","AI"]},
+    "3324.TW": {"name":"雙鴻科技",  "en":"Auras Technology",   "sector":"散熱模組",  "supply":["NVIDIA","AI"]},
+    "8163.TW": {"name":"達方電子",  "en":"Darfon Electronics", "sector":"散熱/鍵盤", "supply":[]},
+    "1626.TW": {"name":"艾美特",    "en":"Airmate",            "sector":"散熱風扇",  "supply":[]},
+    "2369.TW": {"name":"菱生精密",  "en":"Lingsen Precision",  "sector":"精密零件",  "supply":[]},
+    # ── AI/特殊IC ────────────────────────────────────────────────────────────
+    "3661.TW": {"name":"世芯-KY",   "en":"Alchip Technologies","sector":"ASIC設計",  "supply":["NVIDIA","AI","AMD"]},
+    "3443.TW": {"name":"創意電子",  "en":"Global Unichip",     "sector":"ASIC設計",  "supply":["AI","NVIDIA","TSMC"]},
+    "5274.TW": {"name":"信驊科技",  "en":"ASPEED Technology",  "sector":"伺服器IC",  "supply":["AI"]},
+    "4966.TW": {"name":"譜瑞-KY",   "en":"Parade Technologies","sector":"顯示IC",    "supply":["Apple","AI"]},
+    "4919.TW": {"name":"新唐科技",  "en":"Nuvoton Technology", "sector":"MCU/嵌入式","supply":[]},
+    # ── 伺服器ODM 補充 ───────────────────────────────────────────────────────
+    "2356.TW": {"name":"英業達",    "en":"Inventec",           "sector":"伺服器ODM", "supply":["NVIDIA","AI"]},
+    "2301.TW": {"name":"光寶科技",  "en":"Lite-On Technology", "sector":"電源/伺服器","supply":["AI"]},
+    # ── 封測補充 ─────────────────────────────────────────────────────────────
+    "8150.TW": {"name":"南茂科技",  "en":"ChipMOS Technologies","sector":"IC封測",   "supply":[]},
+    "6271.TW": {"name":"同欣電子",  "en":"Tong Hsing Electronic","sector":"IC封測",  "supply":[]},
+    # ── 晶圓代工補充 ──────────────────────────────────────────────────────────
+    "5347.TW": {"name":"世界先進",  "en":"Vanguard Intl Semi", "sector":"晶圓代工",  "supply":[]},
+    # ── 網通設備 ─────────────────────────────────────────────────────────────
+    "2345.TW": {"name":"智邦科技",  "en":"Accton Technology",  "sector":"網通設備",  "supply":["AI"]},
+    "6277.TW": {"name":"宏正自動",  "en":"ATEN International", "sector":"KVM/網通",  "supply":[]},
+    "2332.TW": {"name":"友訊科技",  "en":"D-Link",             "sector":"網通設備",  "supply":[]},
+    "3062.TW": {"name":"建漢科技",  "en":"CyberTAN Technology","sector":"網通ODM",   "supply":["AI"]},
+    "3706.TW": {"name":"神基科技",  "en":"MiTAC Holdings",     "sector":"網通/電腦", "supply":[]},
+    # ── 遊戲 Gaming ──────────────────────────────────────────────────────────
+    "5478.TW": {"name":"智冠科技",  "en":"Soft-World Int'l",   "sector":"遊戲發行",  "supply":[]},
+    "6180.TW": {"name":"加奇數位",  "en":"Gamania Digital",    "sector":"手遊",      "supply":[]},
+    "6111.TW": {"name":"大宇資訊",  "en":"Softstar Entertainment","sector":"電腦遊戲","supply":[]},
+    "4943.TW": {"name":"康控-KY",   "en":"Concraft Holding",   "sector":"精密電子",  "supply":[]},
+    # ── 應用軟體 / IT服務 ────────────────────────────────────────────────────
+    "6510.TW": {"name":"精誠資訊",  "en":"Systex Corporation", "sector":"IT服務",    "supply":["AI"]},
+    "6104.TW": {"name":"創惟科技",  "en":"Genesys Logic",      "sector":"USB/橋接IC","supply":["Apple"]},
+    "2353.TW": {"name":"宏碁",      "en":"Acer",               "sector":"3C品牌",    "supply":[]},
+    # ── 電動車 EV ────────────────────────────────────────────────────────────
+    "1590.TW": {"name":"亞德客-KY", "en":"Airtac Int'l",       "sector":"氣動元件",  "supply":["EV"]},
+    "1537.TW": {"name":"廣隆電池",  "en":"Kung Long Batteries","sector":"EV電池",    "supply":["EV"]},
+    "5536.TW": {"name":"聖暉工程",  "en":"Saint-Gobain TW?",   "sector":"EV充電基礎","supply":["EV","綠能"]},
+    # ── 綠能 Green Energy ────────────────────────────────────────────────────
+    "3576.TW": {"name":"聯合再生",  "en":"United Renewable Energy","sector":"太陽能", "supply":["綠能"]},
+    "6443.TW": {"name":"元晶太陽能","en":"TSEC Corporation",   "sector":"太陽能電池","supply":["綠能"]},
+    "6412.TW": {"name":"奇士達",    "en":"Chicony Power Tech", "sector":"電源模組",  "supply":["AI","綠能"]},
+    "1519.TW": {"name":"華城電機",  "en":"Fortune Electric",   "sector":"電力系統",  "supply":["綠能"]},
+    "3519.TW": {"name":"碩天科技",  "en":"Voltronic Power",    "sector":"UPS/電源",  "supply":["綠能"]},
+    # ── 生技醫療 Biotech ─────────────────────────────────────────────────────
+    "4743.TW": {"name":"合一生技",  "en":"CHC Healthcare",     "sector":"生技",      "supply":["生技"]},
+    "6547.TW": {"name":"高端疫苗",  "en":"Medigen Vaccine",    "sector":"疫苗/生技", "supply":["生技"]},
+    "4119.TW": {"name":"旭富製藥",  "en":"SCI Pharmtech",      "sector":"原料藥",    "supply":["生技"]},
+    "1786.TW": {"name":"科妍生醫",  "en":"SciVision Biotech",  "sector":"醫美/生技", "supply":["生技"]},
+    "4166.TW": {"name":"智擎生技",  "en":"PharmaEngine",       "sector":"新藥",      "supply":["生技"]},
+    "4110.TW": {"name":"東洋製藥",  "en":"TTY Biopharm",       "sector":"學名藥",    "supply":["生技"]},
+    # ── 手機供應鏈補充 ──────────────────────────────────────────────────────
+    "6285.TW": {"name":"華通電腦",  "en":"WNC Corporation",    "sector":"無線模組",  "supply":["Apple"]},
     # ── 面板 Displays ────────────────────────────────────────────────────────
     "2409.TW": {"name":"友達",      "en":"AUO",               "sector":"面板",      "supply":["Apple"]},
     "3481.TW": {"name":"群創",      "en":"Innolux",           "sector":"面板",      "supply":[]},

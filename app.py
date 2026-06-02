@@ -329,61 +329,72 @@ CATEGORY_UNIVERSE = {
         "emoji": "🏭", "name": "半導體製造", "en": "Semiconductor Foundry",
         "desc": "晶圓代工・先進製程・成熟/特殊製程",
         "why": "AI晶片全靠台積電N3/N2；CoWoS先進封裝嚴重缺產能，整個代工鏈受惠",
-        "tickers": ["2330.TW","2303.TW","5347.TW","6770.TW","3037.TW"],
+        # 3037 removed (欣興 = PCB/substrate, not a foundry)
+        "tickers": ["2330.TW","2303.TW","5347.TW","6770.TW"],
     },
     "osat": {
         "emoji": "📦", "name": "封裝測試", "en": "IC Packaging & Testing",
         "desc": "先進封裝・CoWoS・SoIC・晶片測試・基板",
         "why": "AI GPU需要CoWoS先進封裝，日月光訂單滿載；封測是AI供應鏈現在的瓶頸",
-        "tickers": ["3711.TW","8150.TW","6271.TW","2408.TW","6274.TW","3037.TW","2475.TW"],
+        # 2408=Nanya Tech(DRAM,not OSAT) removed; 2449=KYEC(IC testing) added
+        "tickers": ["3711.TW","8150.TW","6271.TW","2449.TW"],
     },
     "ai_server": {
         "emoji": "🖥️", "name": "AI伺服器", "en": "AI Servers / Cloud",
         "desc": "GPU伺服器・液冷機櫃・AI基礎建設ODM",
         "why": "雲巨頭AI資本支出2024年翻倍；台廠ODM廣達、緯穎搶訂AI伺服器直接受惠",
-        "tickers": ["2382.TW","6669.TW","2356.TW","3231.TW","2301.TW","4977.TW","2324.TW"],
+        # 4977=PCL(PCB maker,not server ODM) removed; 2317=Foxconn added
+        "tickers": ["2382.TW","6669.TW","2356.TW","3231.TW","2301.TW","2317.TW","2324.TW"],
     },
     "thermal": {
         "emoji": "🌡️", "name": "散熱模組", "en": "Thermal / Cooling",
         "desc": "熱管・均熱板・液冷系統・AI伺服器散熱",
         "why": "AI GPU功耗600W+，散熱需求暴增；液冷滲透率從低位飛速成長，是被忽視的主題",
-        "tickers": ["3017.TW","8163.TW","6413.TW","1626.TW","2369.TW","2362.TW","3529.TW"],
+        # Removed: 6413(delisted), 3529(力旺=memory IP), 2362(藍天=PC ODM), 3003(KS Terminals=connectors)
+        # Added: 3324=雙鴻科技(vapor chambers for AI servers)
+        "tickers": ["3017.TW","3324.TW","8163.TW","1626.TW","2369.TW"],
     },
     "networking": {
         "emoji": "📡", "name": "網通設備", "en": "Networking Equipment",
         "desc": "資料中心交換器・400G/800G光模組・AI叢集互連",
         "why": "AI叢集需要超高頻寬互連，400G→800G升級週期剛啟動，智邦等台廠接單滿",
-        "tickers": ["2345.TW","6277.TW","2332.TW","4706.TW","6197.TW","3706.TW"],
+        # Added 3062=建漢(networking ODM), kept 2345=智邦, 6277=宏正, 2332=友訊
+        "tickers": ["2345.TW","6277.TW","2332.TW","3062.TW","4706.TW","3706.TW"],
     },
     "gaming": {
         "emoji": "🎮", "name": "遊戲", "en": "Gaming",
         "desc": "手遊・PC遊戲・電競・遊戲發行平台",
         "why": "生成式AI大幅降低遊戲製作成本，台灣遊戲股題材活絡；電競市場持續擴張",
-        "tickers": ["5478.TW","6180.TW","6111.TW","3060.TW","4943.TW","6491.TW","5536.TW"],
+        # 3060=Min Aik(motors,not gaming), 6491=Pegavision(contact lenses!) removed
+        "tickers": ["5478.TW","6180.TW","6111.TW","4943.TW"],
     },
     "software": {
         "emoji": "💻", "name": "應用軟體", "en": "Software / SaaS",
-        "desc": "ERP・設計工具・雲端SaaS・企業管理系統",
-        "why": "AI賦能軟體訂閱轉型，台灣軟體股基本面改善、本益比修復空間大",
-        "tickers": ["6510.TW","3658.TW","6104.TW","3686.TW","4916.TW","3062.TW","2353.TW"],
+        "desc": "ERP・IT服務・雲端應用・企業管理系統",
+        "why": "AI賦能軟體訂閱轉型，台灣IT服務股基本面改善、本益比修復空間大",
+        # 3658 missing, 3686=Danen(PCB not software), 4916=Parpro(plastics) removed
+        "tickers": ["6510.TW","6104.TW","2353.TW","2395.TW","2376.TW"],
     },
     "ev": {
         "emoji": "🔋", "name": "電動車", "en": "EV Components",
         "desc": "電控系統・充電模組・BMS・馬達驅動IC",
         "why": "全球EV滲透率加速，台廠在電控、充電樁、連接器取得關鍵供應地位",
-        "tickers": ["2308.TW","1504.TW","1590.TW","1537.TW","6409.TW","2059.TW","5483.TW"],
+        # Removed 2059(中興電=5075元，價格過高for零股), kept core EV plays
+        "tickers": ["2308.TW","1504.TW","1590.TW","1537.TW","5536.TW","5483.TW"],
     },
     "green_energy": {
         "emoji": "☀️", "name": "綠能太陽能", "en": "Green Energy",
         "desc": "太陽能模組・離岸風電・儲能系統・電網",
         "why": "RE100採購+政府2050淨零目標；台灣離岸風電裝機量持續上升，政策多頭",
-        "tickers": ["3576.TW","6443.TW","3533.TW","6412.TW","1513.TW","1519.TW","3519.TW"],
+        # 3533=Lotes(AI connectors,not green) removed; 3519(missing) removed
+        "tickers": ["3576.TW","6443.TW","6412.TW","1513.TW","1519.TW"],
     },
     "biotech": {
         "emoji": "💊", "name": "生技醫療", "en": "Biotech / Healthcare",
         "desc": "新藥研發・醫療器材・體外診斷・AI醫療",
         "why": "高齡化社會+AI加速新藥研發；台灣生技股授權金題材具備爆發力",
-        "tickers": ["4743.TW","6547.TW","4119.TW","1786.TW","4166.TW","6446.TW","4110.TW"],
+        # 4110=東洋製藥(missing from yfinance data) removed
+        "tickers": ["4743.TW","6547.TW","4119.TW","1786.TW","4166.TW","6446.TW"],
     },
     "mobile": {
         "emoji": "📱", "name": "手機零組件", "en": "Mobile Supply Chain",
@@ -1933,12 +1944,18 @@ if st.session_state.view_mode == "categories":
                 _cr["near_limit"] = True
 
     _cat_scored.sort(key=lambda x: x["score"], reverse=True)
+    # Category view: show top 5 by score regardless of absolute threshold —
+    # the user chose this category intentionally.  Only hard-filter:
+    #   • RSI ≥ 73  (technically overbought — wait for pullback)
+    #   • live_chg ≥ 9%  (near limit-up — dangerous to chase)
+    # Score threshold dropped to 20 (vs 52 for main picks) so hot sectors
+    # (e.g. all foundry stocks overbought) still yield picks + a warning.
     _cat_picks = [r for r in _cat_scored
                   if r.get("rsi", 50) < 73
-                  and r["score"] >= 40
                   and r.get("live_chg_pct", 0) < 9.0][:5]
 
     # ── Sector momentum summary bar ───────────────────────────────────────────
+    _avg_rsi, _avg_mom5, _avg_mom1, _n_hot = 50.0, 0.0, 0.0, 0  # safe defaults
     if _cat_scored:
         _n_sample  = min(len(_cat_scored), 8)
         _avg_rsi   = round(sum(p["rsi"]   for p in _cat_scored[:_n_sample]) / _n_sample, 1)
