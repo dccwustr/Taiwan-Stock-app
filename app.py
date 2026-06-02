@@ -570,23 +570,6 @@ with st.sidebar:
             st.session_state._close_sidebar = True
             st.rerun()
 
-    # ── Category selector (visible only in 分類 view) ─────────────────────────
-    if vm == "categories":
-        st.divider()
-        _cat_keys = list(CATEGORY_UNIVERSE.keys())
-        _cur_idx  = _cat_keys.index(st.session_state.selected_category) if st.session_state.selected_category in _cat_keys else 0
-        _sb_sel   = st.selectbox(
-            "選擇產業",
-            options=_cat_keys,
-            index=_cur_idx,
-            format_func=lambda k: f"{CATEGORY_UNIVERSE[k]['emoji']} {CATEGORY_UNIVERSE[k]['name']}",
-            key="sidebar_cat_select",
-            label_visibility="collapsed",
-        )
-        if _sb_sel != st.session_state.selected_category:
-            st.session_state.selected_category = _sb_sel
-            st.rerun()
-
     sidebar_content = st.container()
 
     st.divider()
@@ -2041,6 +2024,21 @@ def render_category_cards(picks, prices, show_chart):
 
 # ── Main view: Category Picks ─────────────────────────────────────────────────
 if st.session_state.view_mode == "categories":
+
+    # ── Inline category dropdown ───────────────────────────────────────────────
+    _cat_keys = list(CATEGORY_UNIVERSE.keys())
+    _cur_idx  = _cat_keys.index(st.session_state.selected_category) if st.session_state.selected_category in _cat_keys else 0
+    _main_sel = st.selectbox(
+        "選擇產業類別",
+        options=_cat_keys,
+        index=_cur_idx,
+        format_func=lambda k: f"{CATEGORY_UNIVERSE[k]['emoji']} {CATEGORY_UNIVERSE[k]['name']}",
+        key="main_cat_select",
+    )
+    if _main_sel != st.session_state.selected_category:
+        st.session_state.selected_category = _main_sel
+        st.rerun()
+
     _sel_cat = st.session_state.selected_category
     _cinfo   = CATEGORY_UNIVERSE.get(_sel_cat, next(iter(CATEGORY_UNIVERSE.values())))
 
