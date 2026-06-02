@@ -351,10 +351,6 @@ if "_prev_pick_tickers" not in st.session_state: st.session_state._prev_pick_tic
 if "_cur_slot_tickers"  not in st.session_state: st.session_state._cur_slot_tickers  = set()
 if "_prev_slot_scores"  not in st.session_state: st.session_state._prev_slot_scores  = {}
 if "_cur_slot_scores"   not in st.session_state: st.session_state._cur_slot_scores   = {}
-# Daily goal calculator
-if "goal_capital"       not in st.session_state: st.session_state.goal_capital       = 0
-if "goal_target"        not in st.session_state: st.session_state.goal_target        = 3000
-if "goal_per_stock"     not in st.session_state: st.session_state.goal_per_stock     = 10000
 
 # ── localStorage persistence (watchlist + holdings survive redeployments) ─────
 #
@@ -442,14 +438,13 @@ with st.sidebar:
 
     st.divider()
 
-    # Nav: 5 buttons across two rows (2+3) to avoid cramping
+    # Nav: 4 buttons across two rows (2+2)
     _n_mon   = len(st.session_state.rsi_thresholds)
     _mon_lbl = f"📡{_n_mon}" if _n_mon else "📡"
     vm       = st.session_state.view_mode
-    # Row 1: main views
-    _nr1, _nr2 = st.columns(2)
-    for _col, (_vk, _vl) in zip([_nr1, _nr2], [
-        ("picks", "精選推薦"), ("goal", "💰 每日目標"),
+    _nc1, _nc2 = st.columns(2)
+    for _col, (_vk, _vl) in zip([_nc1, _nc2], [
+        ("picks", "精選推薦"), ("holdings", "持股"),
     ]):
         _active = vm == _vk
         if _col.button(_vl + (" ✓" if _active else ""), key=f"nav_{_vk}",
@@ -457,10 +452,9 @@ with st.sidebar:
             st.session_state.view_mode = _vk
             st.session_state._close_sidebar = True
             st.rerun()
-    # Row 2: secondary views
-    _ns1, _ns2, _ns3 = st.columns(3)
-    for _col, (_vk, _vl) in zip([_ns1, _ns2, _ns3], [
-        ("holdings", "持股"), ("watchlist", "追蹤"), ("monitor", _mon_lbl),
+    _nc3, _nc4 = st.columns(2)
+    for _col, (_vk, _vl) in zip([_nc3, _nc4], [
+        ("watchlist", "追蹤"), ("monitor", _mon_lbl),
     ]):
         _active = vm == _vk
         if _col.button(_vl + (" ✓" if _active else ""), key=f"nav_{_vk}",
@@ -476,31 +470,6 @@ with st.sidebar:
     min_score = st.slider("最低評分門檻", 30, 75, 40)
     show_chart = st.checkbox("顯示K線圖", value=False)
     st.divider()
-
-    # ── Daily goal settings ───────────────────────────────────────────────────
-    with st.expander("💰 每日目標設定", expanded=(st.session_state.view_mode == "goal")):
-        st.caption("系統依此計算每日精選獲利潛力")
-        st.session_state.goal_capital = st.number_input(
-            "我的總資金 (NT$)", min_value=0, max_value=10_000_000,
-            value=st.session_state.goal_capital,
-            step=10_000, format="%d",
-            key="sb_goal_capital",
-            help="您準備投入股市的總金額"
-        )
-        st.session_state.goal_target = st.number_input(
-            "每日獲利目標 (NT$)", min_value=0, max_value=100_000,
-            value=st.session_state.goal_target,
-            step=500, format="%d",
-            key="sb_goal_target",
-            help="您希望每天賺到的金額"
-        )
-        st.session_state.goal_per_stock = st.number_input(
-            "每檔投入金額 (NT$)", min_value=1_000, max_value=500_000,
-            value=st.session_state.goal_per_stock,
-            step=1_000, format="%d",
-            key="sb_goal_per_stock",
-            help="每支推薦股票投入多少錢（建議 NT$10,000）"
-        )
 
     st.divider()
     st.caption("資料來源：鉅亨網・TWSE・Yahoo Finance")
@@ -1742,301 +1711,6 @@ if st.session_state.view_mode == "watchlist":
         for _wt in st.session_state.watchlist:
             if _wt in _watch_results:
                 render_query_card(_wt, _watch_results[_wt], _query_live.get(_wt), f"wv_{_wt}")
-    st.divider()
-    with st.expander("📰 今日早盤新聞", expanded=False):
-        for h in data["headlines"][:8]:
-            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
-    st.stop()
-
-# ── Main view: Daily Goal Calculator ─────────────────────────────────────────
-if st.session_state.view_mode == "goal":
-    _gc  = st.session_state.goal_capital
-    _gt  = st.session_state.goal_target
-    _gps = st.session_state.goal_per_stock
-
-    st.markdown(
-        "## 💰 每日獲利目標　"
-        "<span style='font-size:12px;background:#1a3a1a;color:#00c853;"
-        "border-radius:5px;padding:2px 8px;vertical-align:middle'>"
-        "基於今日精選股計算</span>",
-        unsafe_allow_html=True
-    )
-
-    # ── Capital assessment ────────────────────────────────────────────────────
-    if _gc > 0:
-        _req_pct = _gt / _gc * 100 if _gc > 0 else 0
-        _cap_for_1pct  = _gt / 0.01   if _gt > 0 else 0  # capital to hit goal at 1%/day
-        _cap_for_05pct = _gt / 0.005  if _gt > 0 else 0  # at 0.5%/day (more realistic)
-
-        if _req_pct >= 5:
-            _feasibility = "🔴 非常高風險"
-            _feasibility_col = "#c0392b"
-            _feasibility_note = (
-                f"每日需要 {_req_pct:.1f}%——接近漲停幅度，這不是投資，是賭博。"
-                f" 即使偶爾成功，長期一定虧損。"
-            )
-        elif _req_pct >= 2:
-            _feasibility = "🟠 高風險"
-            _feasibility_col = "#e67e22"
-            _feasibility_note = (
-                f"每日需要 {_req_pct:.1f}%——偶爾行情好時可達成，但無法每天持續。"
-                f" 建議降低每日目標，或增加資金。"
-            )
-        elif _req_pct >= 1:
-            _feasibility = "🟡 挑戰性"
-            _feasibility_col = "#f39c12"
-            _feasibility_note = (
-                f"每日需要 {_req_pct:.1f}%——好行情日可能達成，但平均每週只有 2-3 天能做到。"
-                f" 設定月目標（NT${_gt*20:,.0f}）更實際。"
-            )
-        elif _req_pct >= 0.5:
-            _feasibility = "🟢 合理可達"
-            _feasibility_col = "#27ae60"
-            _feasibility_note = (
-                f"每日需要 {_req_pct:.1f}%——精選推薦股的典型目標漲幅通常涵蓋這個範圍。"
-                f" 在選股正確、止損紀律嚴格的前提下，長期可期。"
-            )
-        else:
-            _feasibility = "🟢 穩健可行"
-            _feasibility_col = "#00c853"
-            _feasibility_note = (
-                f"每日只需 {_req_pct:.2f}%——即使盤整日也容易達成。"
-                f" 這是穩健投資的理想節奏。"
-            )
-
-        # Hero assessment card
-        st.markdown(
-            f'<div style="background:#0d1117;border:1px solid #1e3a5c;border-radius:12px;'
-            f'padding:18px 22px;margin-bottom:16px">'
-
-            # Row 1: capital vs target
-            f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">'
-            f'<div style="text-align:center;padding:10px;background:#0a0f1a;border-radius:8px">'
-            f'<div style="font-size:10px;color:#555;margin-bottom:4px">我的總資金</div>'
-            f'<div style="font-size:20px;font-weight:800;color:#e0e0e0">NT${_gc:,.0f}</div>'
-            f'</div>'
-            f'<div style="text-align:center;padding:10px;background:#0a0f1a;border-radius:8px">'
-            f'<div style="font-size:10px;color:#555;margin-bottom:4px">每日目標</div>'
-            f'<div style="font-size:20px;font-weight:800;color:#ffd54f">NT${_gt:,.0f}</div>'
-            f'</div>'
-            f'<div style="text-align:center;padding:10px;background:#0a0f1a;border-radius:8px">'
-            f'<div style="font-size:10px;color:#555;margin-bottom:4px">需要日報酬</div>'
-            f'<div style="font-size:20px;font-weight:800;color:{_feasibility_col}">'
-            f'{_req_pct:.2f}%</div>'
-            f'</div>'
-            f'</div>'
-
-            # Feasibility badge + note
-            f'<div style="background:#050a10;border-left:4px solid {_feasibility_col};'
-            f'border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:16px">'
-            f'<div style="font-size:14px;font-weight:700;color:{_feasibility_col};margin-bottom:4px">'
-            f'{_feasibility}</div>'
-            f'<div style="font-size:13px;color:#bbb;line-height:1.6">{_feasibility_note}</div>'
-            f'</div>'
-
-            # Capital needed lines
-            f'<div style="font-size:12px;color:#555;margin-bottom:6px">達到 NT${_gt:,.0f}/天 需要的資金：</div>'
-            f'<div style="display:flex;gap:12px;flex-wrap:wrap">'
-            f'<div style="background:#0f1a2a;border-radius:6px;padding:6px 12px">'
-            f'<span style="font-size:11px;color:#555">日均 1% 獲利　</span>'
-            f'<span style="font-size:14px;font-weight:700;color:#7eb3ff">NT${_cap_for_1pct:,.0f}</span>'
-            f'</div>'
-            f'<div style="background:#0f1a2a;border-radius:6px;padding:6px 12px">'
-            f'<span style="font-size:11px;color:#555">日均 0.5% 獲利　</span>'
-            f'<span style="font-size:14px;font-weight:700;color:#7eb3ff">NT${_cap_for_05pct:,.0f}</span>'
-            f'</div>'
-            f'</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-
-    else:
-        st.info(
-            "👈 在左側「每日目標設定」輸入您的**總資金**和**每日目標金額**，"
-            " 系統會計算今日精選股可帶來多少獲利潛力。"
-        )
-
-    # ── Today's picks with NT$ gain estimates ─────────────────────────────────
-    if today_picks:
-        _total_budget = _gps * len(today_picks)
-        _total_potential_gain = 0
-        _total_potential_loss = 0
-
-        st.markdown(
-            f'<div style="font-size:14px;font-weight:700;color:#e0e0e0;margin:16px 0 8px">'
-            f'📊 今日精選股 — 每檔投入 NT${_gps:,.0f} 的獲利潛力</div>',
-            unsafe_allow_html=True
-        )
-
-        for _rank, _p in enumerate(today_picks, 1):
-            _price  = _p.get("last_price", 0)
-            if _price <= 0:
-                continue
-            _shares       = int(_gps / _price)
-            _actual_invest = _shares * _price
-            _tgt_pct      = _p.get("target_pct", 5)
-            _stp_pct      = abs(_p.get("stop_pct", 3))
-            _pot_gain     = round(_shares * _price * _tgt_pct / 100)
-            _pot_loss     = round(_shares * _price * _stp_pct / 100)
-            _total_potential_gain += _pot_gain
-            _total_potential_loss += _pot_loss
-
-            _rsi = _p.get("rsi", 50)
-            _sc  = _p["score"]
-            _bar_g = min(100, int(_tgt_pct * 8))   # visual bar for gain
-            _bar_l = min(100, int(_stp_pct * 15))  # visual bar for loss
-
-            # Signal color
-            if _sc >= 65: _sig, _sig_col = "強烈推薦", "#ef5350"
-            elif _sc >= 52: _sig, _sig_col = "建議進場", "#ffd54f"
-            else: _sig, _sig_col = "觀察中", "#555"
-
-            # RR ratio
-            _rr = round(_pot_gain / _pot_loss, 1) if _pot_loss > 0 else 0
-
-            st.markdown(
-                f'<div style="background:#0d1424;border:1px solid #1a2d45;'
-                f'border-radius:12px;padding:16px 18px;margin-bottom:10px">'
-
-                # Header: rank + name + signal
-                f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
-                f'<div style="background:#1a56db;color:white;border-radius:7px;'
-                f'width:28px;height:28px;display:flex;align-items:center;justify-content:center;'
-                f'font-weight:700;font-size:14px;flex-shrink:0">#{_rank}</div>'
-                f'<div style="flex:1">'
-                f'<span style="font-size:16px;font-weight:700;color:#e0e0e0">'
-                f'{_p["ticker"].replace(".TW","")} {_p["name"]}</span>'
-                f'<span style="font-size:12px;color:#555;margin-left:8px">{_p["en"]}</span>'
-                f'</div>'
-                f'<span style="font-size:12px;font-weight:700;color:{_sig_col};'
-                f'background:{_sig_col}22;border-radius:5px;padding:3px 8px">{_sig}</span>'
-                f'</div>'
-
-                # Investment row
-                f'<div style="display:grid;grid-template-columns:repeat(4,1fr);'
-                f'gap:8px;margin-bottom:12px">'
-
-                f'<div style="background:#080e18;border-radius:7px;padding:8px;text-align:center">'
-                f'<div style="font-size:10px;color:#444">投入金額</div>'
-                f'<div style="font-size:14px;font-weight:700;color:#e0e0e0">'
-                f'NT${_actual_invest:,.0f}</div>'
-                f'<div style="font-size:10px;color:#555">{_shares}股 @{_price:.1f}</div>'
-                f'</div>'
-
-                f'<div style="background:#071507;border-radius:7px;padding:8px;text-align:center">'
-                f'<div style="font-size:10px;color:#444">目標獲利</div>'
-                f'<div style="font-size:16px;font-weight:800;color:#ef5350">'
-                f'+NT${_pot_gain:,}</div>'
-                f'<div style="font-size:10px;color:#555">+{_tgt_pct:.1f}%</div>'
-                f'</div>'
-
-                f'<div style="background:#180505;border-radius:7px;padding:8px;text-align:center">'
-                f'<div style="font-size:10px;color:#444">最大止損</div>'
-                f'<div style="font-size:16px;font-weight:800;color:#00c853">'
-                f'-NT${_pot_loss:,}</div>'
-                f'<div style="font-size:10px;color:#555">-{_stp_pct:.1f}%</div>'
-                f'</div>'
-
-                f'<div style="background:#080e18;border-radius:7px;padding:8px;text-align:center">'
-                f'<div style="font-size:10px;color:#444">風報比</div>'
-                f'<div style="font-size:16px;font-weight:800;'
-                f'color:{"#ef5350" if _rr >= 2 else "#ffd54f" if _rr >= 1.5 else "#555"}">'
-                f'{_rr:.1f}x</div>'
-                f'<div style="font-size:10px;color:#555">獲利/風險</div>'
-                f'</div>'
-                f'</div>'
-
-                # Gain/loss visual bar
-                f'<div style="font-size:11px;color:#444;margin-bottom:3px">潛在報酬</div>'
-                f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-                f'<div style="flex:1;background:#1a1a2e;border-radius:3px;height:6px">'
-                f'<div style="width:{_bar_g}%;height:6px;background:#ef5350;border-radius:3px"></div></div>'
-                f'<div style="font-size:11px;color:#ef5350;white-space:nowrap">+{_tgt_pct:.1f}%</div>'
-                f'</div>'
-                f'<div style="font-size:11px;color:#444;margin-bottom:3px">最大風險</div>'
-                f'<div style="display:flex;align-items:center;gap:8px">'
-                f'<div style="flex:1;background:#1a1a2e;border-radius:3px;height:6px">'
-                f'<div style="width:{_bar_l}%;height:6px;background:#00c853;border-radius:3px"></div></div>'
-                f'<div style="font-size:11px;color:#00c853;white-space:nowrap">-{_stp_pct:.1f}%</div>'
-                f'</div>'
-
-                # Key stats row
-                f'<div style="display:flex;gap:16px;font-size:12px;color:#555;'
-                f'margin-top:10px;border-top:1px solid #1a1a2e;padding-top:8px">'
-                f'<span>RSI <b style="color:#e0e0e0">{_rsi:.0f}</b></span>'
-                f'<span>信心 <b style="color:#e0e0e0">{_sc}/100</b></span>'
-                f'<span>今日 <b style="color:{"#ef5350" if _p["mom1d"]>=0 else "#00c853"}">'
-                f'{_p["mom1d"]:+.1f}%</b></span>'
-                f'<span>5日 <b style="color:{"#ef5350" if _p["mom5d"]>=0 else "#00c853"}">'
-                f'{_p["mom5d"]:+.1f}%</b></span>'
-                f'</div>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-
-        # ── Portfolio total row ───────────────────────────────────────────────
-        _today_pct_scenario = _total_potential_gain / (_total_budget or 1) * 100
-        _vs_target = "達標 ✅" if _total_potential_gain >= _gt else f"差 NT${_gt - _total_potential_gain:,.0f}"
-        _vs_target_col = "#00c853" if _total_potential_gain >= _gt else "#ffd54f"
-
-        st.markdown(
-            f'<div style="background:#0a1628;border:1px solid #1e3a5c;'
-            f'border-radius:12px;padding:16px 20px;margin:4px 0 16px">'
-
-            f'<div style="font-size:12px;color:#555;margin-bottom:12px">'
-            f'以下為「所有精選股均達目標」的理想情境，實際結果會有差異</div>'
-
-            f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">'
-
-            f'<div style="text-align:center">'
-            f'<div style="font-size:11px;color:#555">合計投入</div>'
-            f'<div style="font-size:18px;font-weight:700;color:#e0e0e0">'
-            f'NT${_total_budget:,.0f}</div>'
-            f'</div>'
-
-            f'<div style="text-align:center">'
-            f'<div style="font-size:11px;color:#555">目標合計獲利</div>'
-            f'<div style="font-size:22px;font-weight:900;color:#ef5350">'
-            f'+NT${_total_potential_gain:,.0f}</div>'
-            f'<div style="font-size:12px;color:#ef5350">+{_today_pct_scenario:.1f}%</div>'
-            f'</div>'
-
-            f'<div style="text-align:center">'
-            f'<div style="font-size:11px;color:#555">對比每日目標</div>'
-            f'<div style="font-size:16px;font-weight:700;color:{_vs_target_col}">'
-            f'{_vs_target}</div>'
-            f'<div style="font-size:11px;color:#555">目標 NT${_gt:,.0f}</div>'
-            f'</div>'
-            f'</div>'
-
-            # Max loss warning
-            f'<div style="margin-top:12px;padding-top:10px;border-top:1px solid #1a1a2e;'
-            f'font-size:12px;color:#555">'
-            f'⚠️ 若所有止損觸發（最壞情況）：最大損失 -NT${_total_potential_loss:,.0f}'
-            f'　｜　風報比 {(_total_potential_gain / _total_potential_loss):.1f}x'
-            if _total_potential_loss > 0 else ""
-            f'</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-
-    else:
-        st.info("目前沒有符合條件的推薦股票，可降低左側「最低評分門檻」試試。")
-
-    # ── Honest disclaimer ─────────────────────────────────────────────────────
-    st.markdown(
-        '<div style="background:#0c0c0c;border:1px solid #1a1a1a;border-radius:8px;'
-        'padding:14px 18px;margin-top:8px">'
-        '<div style="font-size:12px;color:#555;line-height:1.8">'
-        '📋 <b style="color:#444">重要說明</b><br>'
-        '• 以上計算基於「目標價已在歷史技術分析中設定」的假設，非預測股價。<br>'
-        '• 實際市場隨時可能反向。止損是保護資金的唯一可靠工具。<br>'
-        '• 每日穩定獲利 NT$3,000 需要大量資金（見上方試算）或接受高風險。<br>'
-        '• 本工具不提供投資建議，所有決策由您自行負責。'
-        '</div></div>',
-        unsafe_allow_html=True
-    )
-
     st.divider()
     with st.expander("📰 今日早盤新聞", expanded=False):
         for h in data["headlines"][:8]:
