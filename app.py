@@ -573,18 +573,19 @@ with st.sidebar:
     # ── Category selector (visible only in 分類 view) ─────────────────────────
     if vm == "categories":
         st.divider()
-        st.caption("選擇產業類別")
-        _ca_cols = st.columns(2)
-        for _ci, (_ck, _cv) in enumerate(CATEGORY_UNIVERSE.items()):
-            _is_sel = st.session_state.selected_category == _ck
-            _btn_lbl = f"{_cv['emoji']} {_cv['name']}"
-            if _ca_cols[_ci % 2].button(
-                _btn_lbl, key=f"cat_{_ck}",
-                type="primary" if _is_sel else "secondary",
-                use_container_width=True,
-            ):
-                st.session_state.selected_category = _ck
-                st.rerun()
+        _cat_keys = list(CATEGORY_UNIVERSE.keys())
+        _cur_idx  = _cat_keys.index(st.session_state.selected_category) if st.session_state.selected_category in _cat_keys else 0
+        _sb_sel   = st.selectbox(
+            "選擇產業",
+            options=_cat_keys,
+            index=_cur_idx,
+            format_func=lambda k: f"{CATEGORY_UNIVERSE[k]['emoji']} {CATEGORY_UNIVERSE[k]['name']}",
+            key="sidebar_cat_select",
+            label_visibility="collapsed",
+        )
+        if _sb_sel != st.session_state.selected_category:
+            st.session_state.selected_category = _sb_sel
+            st.rerun()
 
     sidebar_content = st.container()
 
@@ -1840,6 +1841,202 @@ if st.session_state.view_mode == "watchlist":
             st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
     st.stop()
 
+# ── Category cards fragment (must be defined BEFORE the category view block) ──
+# Separate function from render_stock_cards to avoid Streamlit fragment-identity
+# conflicts when both picks-view and category-view could call the same fragment.
+@st.fragment(run_every="10s")
+def render_category_cards(picks, prices, show_chart):
+    """Live-refreshing stock cards for the category picks view."""
+    tickers  = [p["ticker"] for p in picks]
+    live     = fetch_live_prices(tickers)
+    is_open  = _is_market_open()
+    refresh  = "每10秒更新 ●" if is_open else "非交易時段"
+    st.caption(f"📡 即時股價　{refresh}　　更新：{_now_tw().strftime('%H:%M:%S')}　｜　零股盤中 09:00–13:30 ／ 盤後 14:00–14:30")
+
+    for rank, p in enumerate(picks, 1):
+        sc         = p["score"]
+        bar_color  = conf_color(sc)
+        vr         = p["vol_ratio"]
+        fi         = p["foreign_net"]
+        cats       = p.get("catalysts") or ["技術面分析"]
+        cat_str    = "　".join(cats)
+        rsi        = p.get("rsi", 50)
+
+        if rsi <= 72 and sc >= 65:
+            acq = "✅ 今日可進場：分批零股買入"
+        elif rsi <= 72 and sc >= 45:
+            acq = "🟡 今日可小量試探：先買三成"
+        elif rsi > 72:
+            acq = f"⏳ RSI {rsi:.0f} 偏熱，等回落至 68 以下再進場"
+        else:
+            acq = "👀 觀察中：等量能與趨勢確認"
+
+        if   fi > 100:  fi_str = f"外資買超 {fi:.0f}千張 📥"
+        elif fi < -100: fi_str = f"外資賣超 {abs(fi):.0f}千張 📤"
+        else:           fi_str = ""
+
+        info_parts = [
+            f'量比 <span class="info-val {"up" if vr>=1.5 else ""}">{vr:.1f}x</span>',
+            f'RSI <span class="info-val">{rsi:.0f}</span>',
+            f'5日 <span class="info-val {"up" if p["mom5d"]>=0 else "down"}">{p["mom5d"]:+.1f}%</span>',
+        ]
+        if fi_str:
+            info_parts.append(f'<span class="{"up" if fi>0 else "down"}">{fi_str}</span>')
+
+        # Live price block
+        d = live.get(p["ticker"])
+        if d and d["price"] > 0:
+            lp      = d["price"]
+            chg     = d["chg"]
+            chg_pct = d["chg_pct"]
+            lu      = d["limit_up"]
+            vol     = d["volume"]
+            upd     = d["time"] or "--:--"
+            up      = chg >= 0
+            lc      = "#ef5350" if up else "#00c853"
+            arrow   = "▲" if up else "▼"
+            is_limit   = lu > 0 and abs(lp - lu) < 0.02
+            near_limit = lu > 0 and chg_pct >= 8 and not is_limit
+            status_tag = ""
+            if is_limit:     status_tag = '<span class="limit-up">漲停🔥</span>'
+            elif near_limit: status_tag = '<span class="limit-near">近漲停⚡</span>'
+            live_badge = ('<span class="live-badge">● LIVE</span>' if is_open and d["live"]
+                          else '<span class="closed-badge">收盤價</span>')
+            live_block = (
+                f'<div class="live-in-card">'
+                f'<span class="live-big" style="color:{lc}">{lp:.1f}</span>'
+                f'<span class="live-chg-in" style="color:{lc}">{arrow} {abs(chg):.1f} ({abs(chg_pct):.2f}%)</span>'
+                f'{status_tag}{live_badge}'
+                f'<span class="live-vol">{vol:,}千股　{upd}</span>'
+                f'</div>'
+            )
+        else:
+            lp = p["last_price"]
+            chg_pct = 0
+            live_block = '<div class="live-in-card"><span style="color:#555">等待開盤資料…</span></div>'
+
+        # Near-limit-up safety override
+        _live_chg_now = chg_pct
+        if _live_chg_now >= 9.0:
+            acq = (f"🚫 今日已漲 {_live_chg_now:.1f}%，接近漲停——"
+                   f"現在進場是散戶常見陷阱，等明日 RSI 冷卻後再評估")
+        elif _live_chg_now >= 7.0:
+            acq = (f"⚠️ 今日已大漲 {_live_chg_now:.1f}%——追高風險極高。"
+                   f"建議等股價回落、RSI 冷卻至 65 以下再考慮進場")
+
+        ref_price  = (d["price"] if d and d["price"] > 0 else p["last_price"])
+        shares_10k = int(10000 / ref_price) if ref_price > 0 else 0
+        bar_w      = int(sc)
+        info_html  = '　'.join(f'<span>{x}</span>' for x in info_parts)
+
+        # Watchlist star button
+        _in_w = p["ticker"] in st.session_state.watchlist
+        _star = "★" if _in_w else "☆"
+        _scol = "#ffd54f" if _in_w else "#888"
+        _, _sc2 = st.columns([10, 1])
+        with _sc2:
+            st.markdown('<span class="star-sentinel"></span>', unsafe_allow_html=True)
+            _star_clicked = st.button(_star, key=f"star_cat_{p['ticker']}", use_container_width=True, help="追蹤")
+
+        # Score label
+        _score_html = f'<div style="font-size:11px;color:#555;margin-top:3px">類別評分 {sc}/100</div>'
+
+        st.markdown(
+            f'<div style="margin-top:-3rem;pointer-events:none">'
+            f'<div class="card">'
+            f'<div class="card-top">'
+            f'<div class="rank">{rank}</div>'
+            f'<span class="stock-name">{p["ticker"].replace(".TW","")} {p["name"]}</span>'
+            f'<span class="stock-sub">{p["en"]}</span>'
+            f'<span style="margin-left:auto;font-size:20px;color:{_scol};line-height:1">{_star}</span>'
+            f'</div>'
+            f'{live_block}'
+            f'<div class="price-row">'
+            f'<span class="arrow">目標</span>'
+            f'<span class="price-target">NT${p["target_price"]:.1f}</span>'
+            f'<span class="pct-badge">+{p["target_pct"]:.0f}%</span>'
+            f'</div>'
+            f'<div class="stop-row">💰 參考買點 NT${p["last_price"]:.1f}　　🛡 止損 NT${p["stop_loss"]:.1f}　({p["stop_pct"]:.1f}%)</div>'
+            f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
+            f'<div class="info-row">{info_html}</div>'
+            f'<div class="catalyst">📌 {cat_str}</div>'
+            f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
+            f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
+            f'{_score_html}'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Watchlist update
+        if _star_clicked:
+            if _in_w:
+                st.session_state.watchlist = [t for t in st.session_state.watchlist if t != p["ticker"]]
+            else:
+                if p["ticker"] not in st.session_state.watchlist:
+                    st.session_state.watchlist.append(p["ticker"])
+            st.session_state._needs_save = True
+            st.rerun()
+
+        # Beginner advice
+        _ref  = d["price"] if d and d["price"] > 0 else p["last_price"]
+        _adv  = get_beginner_advice(prices.get(p["ticker"]), _ref)
+        if _adv:
+            _rsi_pct = min(100, max(0, _adv["rsi"]))
+            _rsi_col = _adv["rsi_col"]
+            with st.expander(f"💡 {p['ticker'].replace('.TW','')} 新手建議（點擊展開）", expanded=False):
+                st.markdown(
+                    f'<div class="advice-box">'
+                    f'<div class="advice-title">💡 新手操作建議</div>'
+                    f'<div class="advice-row">'
+                    f'  <span class="advice-label">📊 RSI</span>'
+                    f'  <div style="flex:1">'
+                    f'    <span class="rsi-big" style="color:{_rsi_col}">{_adv["rsi"]}</span>'
+                    f'    <span style="font-size:13px;color:{_rsi_col};margin-left:8px;font-weight:700">{_adv["rsi_signal"]}</span>'
+                    f'    <div class="rsi-bar-wrap">'
+                    f'      <div class="rsi-bar-fill" style="width:{_rsi_pct}%;background:linear-gradient(90deg,#00c853 30%,#ffd54f 60%,#ef5350 85%)"></div>'
+                    f'    </div>'
+                    f'    <div class="rsi-zones"><span>0</span><span>30 超賣</span><span>50</span><span>70 超買</span><span>100</span></div>'
+                    f'    <div class="advice-note" style="color:{_rsi_col};margin-top:5px">{_adv["rsi_action"]}</div>'
+                    f'  </div>'
+                    f'</div>'
+                    f'<div class="advice-row" style="margin-top:10px">'
+                    f'  <span class="advice-label">📈 趨勢</span>'
+                    f'  <span style="color:{_adv["trend_col"]};font-weight:700">{_adv["trend_signal"]}</span>'
+                    f'</div>'
+                    f'<div class="advice-row" style="margin-top:8px">'
+                    f'  <span class="advice-label">💡 建議</span>'
+                    f'  <span style="font-size:13px;color:#c0d4ff">{_adv["action"]}</span>'
+                    f'</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+        if show_chart:
+            _df_c = prices.get(p["ticker"])
+            if _df_c is not None and len(_df_c) >= 10:
+                import plotly.graph_objects as go
+                from plotly.subplots import make_subplots
+                _fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
+                                     row_heights=[0.7, 0.3], vertical_spacing=0.03)
+                _fig.add_trace(go.Candlestick(
+                    x=_df_c.index, open=_df_c["Open"], high=_df_c["High"],
+                    low=_df_c["Low"], close=_df_c["Close"],
+                    increasing_line_color="#ef5350", decreasing_line_color="#00c853",
+                    name="K線"), row=1, col=1)
+                _fig.add_trace(go.Bar(
+                    x=_df_c.index, y=_df_c["Volume"],
+                    marker_color="#1a56db44", name="成交量"), row=2, col=1)
+                _fig.update_layout(
+                    height=320, margin=dict(l=0, r=0, t=8, b=0),
+                    paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
+                    xaxis_rangeslider_visible=False, showlegend=False,
+                    font=dict(color="#888", size=10),
+                )
+                _fig.update_xaxes(gridcolor="#1a1a2e", showgrid=True)
+                _fig.update_yaxes(gridcolor="#1a1a2e", showgrid=True)
+                st.plotly_chart(_fig, use_container_width=True, config={"displayModeBar": False})
+
 # ── Main view: Category Picks ─────────────────────────────────────────────────
 if st.session_state.view_mode == "categories":
     _sel_cat = st.session_state.selected_category
@@ -2001,7 +2198,7 @@ if st.session_state.view_mode == "categories":
 
     # ── Render picks or empty state ───────────────────────────────────────────
     if _cat_picks:
-        render_stock_cards(_cat_picks, _cat_prices, show_chart)
+        render_category_cards(_cat_picks, _cat_prices, show_chart)
     else:
         st.warning(
             f"目前 **{_cinfo['name']}** 沒有符合條件的推薦。\n\n"
