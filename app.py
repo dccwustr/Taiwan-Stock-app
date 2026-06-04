@@ -738,11 +738,14 @@ if _sticker:
                         us_macro_stock_bonus(_sticker, us_data))
     if _sres:
         _sf = calc_fundamental_bonus(_sticker, fund_map, meeting_map)
-        _sres["score"]      = max(0, min(100, _sres["score"] + _sf["bonus"]))
-        _sres["rev_yoy"]    = _sf["rev_yoy"]
-        _sres["earn_yoy"]    = _sf["earn_yoy"]
-        _sres["fund_labels"] = _sf["labels"]
-        _sres["catalysts"]  = (_sf["labels"] + get_catalyst_labels(_sticker, all_news))[:4]
+        _sres["score"]        = max(0, min(100, _sres["score"] + _sf["bonus"]))
+        _sres["rev_yoy"]      = _sf["rev_yoy"]
+        _sres["earn_yoy"]     = _sf["earn_yoy"]
+        _sres["fund_labels"]  = _sf["labels"]
+        _sres["trailing_eps"] = _sf.get("trailing_eps")
+        _sres["forward_eps"]  = _sf.get("forward_eps")
+        _sres["forward_pe"]   = _sf.get("forward_pe")
+        _sres["catalysts"]    = (_sf["labels"] + get_catalyst_labels(_sticker, all_news))[:4]
 
 # Score watchlist tickers
 _watch_results = {}
@@ -751,11 +754,14 @@ for _wt in st.session_state.watchlist:
                       us_macro_stock_bonus(_wt, us_data))
     if _wr:
         _wf = calc_fundamental_bonus(_wt, fund_map, meeting_map)
-        _wr["score"]       = max(0, min(100, _wr["score"] + _wf["bonus"]))
-        _wr["rev_yoy"]     = _wf["rev_yoy"]
+        _wr["score"]        = max(0, min(100, _wr["score"] + _wf["bonus"]))
+        _wr["rev_yoy"]      = _wf["rev_yoy"]
         _wr["earn_yoy"]     = _wf["earn_yoy"]
-        _wr["fund_labels"] = _wf["labels"]
-        _wr["catalysts"]   = (_wf["labels"] + get_catalyst_labels(_wt, all_news))[:4]
+        _wr["fund_labels"]  = _wf["labels"]
+        _wr["trailing_eps"] = _wf.get("trailing_eps")
+        _wr["forward_eps"]  = _wf.get("forward_eps")
+        _wr["forward_pe"]   = _wf.get("forward_pe")
+        _wr["catalysts"]    = (_wf["labels"] + get_catalyst_labels(_wt, all_news))[:4]
         _watch_results[_wt] = _wr
 
 # Score recent search tickers
@@ -765,11 +771,14 @@ for _rt in _recent:
                       us_macro_stock_bonus(_rt, us_data))
     if _rr:
         _rf = calc_fundamental_bonus(_rt, fund_map, meeting_map)
-        _rr["score"]       = max(0, min(100, _rr["score"] + _rf["bonus"]))
-        _rr["rev_yoy"]     = _rf["rev_yoy"]
+        _rr["score"]        = max(0, min(100, _rr["score"] + _rf["bonus"]))
+        _rr["rev_yoy"]      = _rf["rev_yoy"]
         _rr["earn_yoy"]     = _rf["earn_yoy"]
-        _rr["fund_labels"] = _rf["labels"]
-        _rr["catalysts"]   = (_rf["labels"] + get_catalyst_labels(_rt, all_news))[:4]
+        _rr["fund_labels"]  = _rf["labels"]
+        _rr["trailing_eps"] = _rf.get("trailing_eps")
+        _rr["forward_eps"]  = _rf.get("forward_eps")
+        _rr["forward_pe"]   = _rf.get("forward_pe")
+        _rr["catalysts"]    = (_rf["labels"] + get_catalyst_labels(_rt, all_news))[:4]
         _recent_results[_rt] = _rr
 
 # ── Fill holdings in sidebar ──────────────────────────────────────────────────
@@ -922,10 +931,13 @@ for ticker in TECH_UNIVERSE:
         res["_rsi_adj"] = _adj   # stored so live-RSI update can undo and reapply
         # ── 基本面加權 (月營收 / 股東會) ──────────────────────────────────────
         _fund = calc_fundamental_bonus(ticker, fund_map, meeting_map)
-        res["score"]    = max(0, min(100, res["score"] + _fund["bonus"]))
-        res["rev_yoy"]  = _fund["rev_yoy"]
-        res["earn_yoy"]  = _fund["earn_yoy"]
-        res["fund_labels"] = _fund["labels"]
+        res["score"]        = max(0, min(100, res["score"] + _fund["bonus"]))
+        res["rev_yoy"]      = _fund["rev_yoy"]
+        res["earn_yoy"]     = _fund["earn_yoy"]
+        res["fund_labels"]  = _fund["labels"]
+        res["trailing_eps"] = _fund.get("trailing_eps")
+        res["forward_eps"]  = _fund.get("forward_eps")
+        res["forward_pe"]   = _fund.get("forward_pe")
         if res["score"] >= min_score:
             _tech_labels = get_catalyst_labels(ticker, all_news)
             res["catalysts"] = (_fund["labels"] + _tech_labels)[:4]
@@ -1091,8 +1103,11 @@ def conf_color(s):
 def _build_fund_row(p: dict) -> str:
     """Build fundamental tags HTML row for a stock card. Returns '' if no data."""
     tags = []
-    rev_yoy  = p.get("rev_yoy",  0.0)   # revenue YoY % (e.g. 35.1)
-    earn_yoy = p.get("earn_yoy", 0.0)   # earnings YoY % (e.g. 58.4)
+    rev_yoy      = p.get("rev_yoy",  0.0)   # revenue YoY %
+    earn_yoy     = p.get("earn_yoy", 0.0)   # earnings YoY %
+    t_eps        = p.get("trailing_eps")     # trailing 12m EPS (NT$)
+    f_eps        = p.get("forward_eps")      # forward 12m EPS estimate
+    f_pe         = p.get("forward_pe")       # forward P/E ratio
 
     # Revenue growth chip
     if rev_yoy >= 5:
@@ -1100,11 +1115,34 @@ def _build_fund_row(p: dict) -> str:
     elif rev_yoy <= -10:
         tags.append(f'<span class="fund-tag-warn">📊 營收年減 {rev_yoy:.0f}%</span>')
 
-    # Earnings growth chip (only shown if significantly different from revenue)
+    # Earnings growth chip
     if earn_yoy >= 20:
         tags.append(f'<span class="fund-tag">💰 盈利年增 +{earn_yoy:.0f}%</span>')
     elif earn_yoy <= -20:
         tags.append(f'<span class="fund-tag-warn">💰 盈利年減 {earn_yoy:.0f}%</span>')
+
+    # EPS upgrade/downgrade chip
+    if t_eps is not None and f_eps is not None and t_eps > 0:
+        eps_chg = (f_eps - t_eps) / abs(t_eps) * 100
+        if eps_chg >= 20:
+            tags.append(
+                f'<span class="fund-tag">📈 EPS NT${t_eps:.1f}→NT${f_eps:.1f}'
+                f' (+{eps_chg:.0f}%)</span>'
+            )
+        elif eps_chg <= -20:
+            tags.append(
+                f'<span class="fund-tag-warn">📉 EPS NT${t_eps:.1f}→NT${f_eps:.1f}'
+                f' ({eps_chg:.0f}%)</span>'
+            )
+    elif t_eps is not None and t_eps < 0:
+        tags.append(f'<span class="fund-tag-warn">⚠️ EPS 虧損 NT${t_eps:.1f}</span>')
+
+    # Forward P/E chip
+    if f_pe is not None:
+        if f_pe < 12:
+            tags.append(f'<span class="fund-tag">💎 預估本益比 {f_pe:.0f}x（低估）</span>')
+        elif f_pe > 60:
+            tags.append(f'<span class="fund-tag-warn">⚡ 預估本益比 {f_pe:.0f}x（偏高）</span>')
 
     # Shareholder meeting (from fund_labels list)
     for lbl in p.get("fund_labels", []):
@@ -1127,6 +1165,9 @@ def _build_why_buy(p: dict) -> str:
 
     rev_yoy  = p.get("rev_yoy",  0.0)
     earn_yoy = p.get("earn_yoy", 0.0)
+    t_eps    = p.get("trailing_eps")      # trailing 12m EPS (NT$)
+    f_eps    = p.get("forward_eps")       # forward 12m EPS estimate
+    f_pe     = p.get("forward_pe")        # forward P/E ratio
     rsi      = p.get("rsi", 50.0)
     mom5d    = p.get("mom5d", 0.0)
     fi       = p.get("foreign_net", 0.0)
@@ -1149,6 +1190,45 @@ def _build_why_buy(p: dict) -> str:
         reasons.append(f"💰 <b>盈利大幅成長</b>：每股獲利（EPS）年增 <b>+{earn_yoy:.0f}%</b>，公司賺錢能力顯著提升")
     elif earn_yoy >= 20:
         reasons.append(f"💰 <b>盈利改善</b>：EPS 年增 +{earn_yoy:.0f}%，獲利逐步提升")
+
+    # ── EPS 估值分析 ───────────────────────────────────────────────────────────
+    if t_eps is not None and f_eps is not None and t_eps > 0:
+        eps_chg = (f_eps - t_eps) / abs(t_eps) * 100
+        if eps_chg >= 50:
+            reasons.append(
+                f"💎 <b>EPS 大幅升級</b>：今年預估每股盈利 NT${f_eps:.1f}（去年 NT${t_eps:.1f}），"
+                f"分析師預測獲利 <b>+{eps_chg:.0f}%</b>，公司進入高速成長期"
+            )
+        elif eps_chg >= 20:
+            reasons.append(
+                f"💎 <b>EPS 成長預期</b>：預估今年每股盈利 NT${f_eps:.1f}（去年 NT${t_eps:.1f}），"
+                f"獲利成長 +{eps_chg:.0f}%，持續向上"
+            )
+        elif eps_chg <= -20:
+            reasons.append(
+                f"⚠️ <b>EPS 預估下修</b>：今年 EPS 預估 NT${f_eps:.1f}（去年 NT${t_eps:.1f}），"
+                f"獲利衰退 {eps_chg:.0f}%，需留意業績壓力"
+            )
+    elif t_eps is not None and t_eps < 0:
+        reasons.append(f"⚠️ <b>目前虧損</b>：去年每股虧損 NT${t_eps:.1f}，需觀察轉盈進度")
+
+    # ── 本益比估值 ─────────────────────────────────────────────────────────────
+    if f_pe is not None and f_pe > 0:
+        if f_pe < 12:
+            reasons.append(
+                f"💡 <b>股價被低估</b>：預估本益比僅 {f_pe:.0f}x，遠低於科技股均值 25x，"
+                f"代表股價相對公司獲利非常便宜，存在補漲空間"
+            )
+        elif f_pe < 18:
+            reasons.append(
+                f"💡 <b>合理估值</b>：預估本益比 {f_pe:.0f}x，位於合理區間，"
+                f"股價未過度高估，適合長期持有"
+            )
+        elif f_pe > 60:
+            reasons.append(
+                f"⚡ <b>高本益比注意</b>：預估本益比 {f_pe:.0f}x，反映市場對高成長的樂觀預期，"
+                f"若業績不如預期可能大幅修正，零股買入分批降低風險"
+            )
 
     for lbl in fund_lbl:
         if "高毛利" in lbl:
@@ -2269,11 +2349,14 @@ if st.session_state.view_mode == "categories":
         _cres["_rsi_adj"]    = _cadj
         # ── 基本面加權 ────────────────────────────────────────────────────────
         _cfd = calc_fundamental_bonus(_ct, fund_map, meeting_map)
-        _cres["score"]       = max(0, min(100, _cres["score"] + _cfd["bonus"]))
-        _cres["rev_yoy"]     = _cfd["rev_yoy"]
+        _cres["score"]        = max(0, min(100, _cres["score"] + _cfd["bonus"]))
+        _cres["rev_yoy"]      = _cfd["rev_yoy"]
         _cres["earn_yoy"]     = _cfd["earn_yoy"]
-        _cres["fund_labels"] = _cfd["labels"]
-        _cres["catalysts"]   = (_cfd["labels"] + get_catalyst_labels(_ct, all_news))[:4]
+        _cres["fund_labels"]  = _cfd["labels"]
+        _cres["trailing_eps"] = _cfd.get("trailing_eps")
+        _cres["forward_eps"]  = _cfd.get("forward_eps")
+        _cres["forward_pe"]   = _cfd.get("forward_pe")
+        _cres["catalysts"]    = (_cfd["labels"] + get_catalyst_labels(_ct, all_news))[:4]
         _cres["is_new"]      = False
         _cres["score_delta"] = None
         _cat_scored.append(_cres)

@@ -1489,13 +1489,23 @@ def fetch_yf_fundamentals_batch(tickers: List[str], max_workers: int = 6) -> Dic
             eg = info.get("earningsGrowth")
             pm = info.get("profitMargins")
             roe = info.get("returnOnEquity")
-            if rg is None and eg is None and pm is None:
+            t_eps = info.get("trailingEps")
+            f_eps = info.get("forwardEps")
+            t_pe  = info.get("trailingPE")
+            f_pe  = info.get("forwardPE")
+            peg   = info.get("pegRatio")
+            if rg is None and eg is None and t_eps is None:
                 return sym, {}
             return sym, {
                 "rev_growth":    rg,
                 "earn_growth":   eg,
                 "profit_margin": pm,
                 "roe":           roe,
+                "trailing_eps":  t_eps,
+                "forward_eps":   f_eps,
+                "trailing_pe":   t_pe,
+                "forward_pe":    f_pe,
+                "peg_ratio":     peg,
             }
         except Exception:
             return sym, {}
@@ -1537,75 +1547,108 @@ def fetch_twse_shareholder_meetings() -> Dict:
 
 def calc_fundamental_bonus(ticker: str, fund_map: Dict, meeting_map: Dict) -> Dict:
     """
-    基本面加權評分 (-10 ~ +25 分)。來源：yfinance 季報 YoY 數據。
+    基本面加權評分 (-15 ~ +30 分)。來源：yfinance 季報數據。
 
-    ① 營收年增率 (revenueGrowth):
-       ≥ 80%  +15   ≥ 50%  +12   ≥ 30%  +9    ≥ 15%  +6
-       ≥  5%  + 3   ≥  0%  + 1   ≥-10%  - 3   ≥-20%  - 6   <-20%  - 9
+    ① 營收年增率 (revenueGrowth):     >=80% +15 ... <-20% -9
+    ② 盈利年增率 (earningsGrowth):    >=80%  +8 ... <-20% -5
+    ③ 高毛利    (profitMargins >=25%): +3
+    ④ EPS 每股盈餘:
+       - 虧損 (trailingEps < 0): -8
+       - 前瞻 EPS 升級 >=50%: +6   >=20%: +3
+       - 前瞻 EPS 下調 <-20%: -4
+    ⑤ 估值 (forwardPE):
+       <12 -> +4   <18 -> +2   >50 -> -3   >70 -> -6
+    ⑥ PEG 比率: <0.8 -> +3   >3 -> -2
 
-    ② 盈利年增率 (earningsGrowth):
-       ≥ 80%  + 8   ≥ 40%  + 6   ≥ 20%  + 4   ≥  0%  + 2
-       ≥-20%  - 2   <-20%  - 5
-
-    ③ 高毛利 (profitMargins ≥ 25%):  +3 pts
-
-    ④ 股東會議（近期 → 市場關注）: ±5/4/2 pts（目前 API 不可用，預留）
-
-    回傳 {"bonus": int, "labels": list[str], "rev_yoy": float, "earn_yoy": float}
+    Returns {"bonus", "labels", "rev_yoy", "earn_yoy",
+             "trailing_eps", "forward_eps", "forward_pe", "peg_ratio"}
     """
     bonus = 0
     labels: List[str] = []
     rev_yoy  = 0.0
     earn_yoy = 0.0
-
     fund = fund_map.get(ticker, {})
-    if fund:
-        rg = fund.get("rev_growth")    # e.g. 0.351 = +35.1%
-        eg = fund.get("earn_growth")   # e.g. 0.584 = +58.4%
-        pm = fund.get("profit_margin") # e.g. 0.465 = 46.5%
 
-        # ── ① 營收年增率 ──────────────────────────────────────────────────────
+    if fund:
+        rg    = fund.get("rev_growth")
+        eg    = fund.get("earn_growth")
+        pm    = fund.get("profit_margin")
+        t_eps = fund.get("trailing_eps")
+        f_eps = fund.get("forward_eps")
+        f_pe  = fund.get("forward_pe")
+        peg   = fund.get("peg_ratio")
+
+        # -- Revenue YoY --
         if rg is not None:
             rev_yoy = rg * 100
-            if   rg >= 0.80: bonus += 15; labels.append(f"營收年增 +{rev_yoy:.0f}% 🚀")
-            elif rg >= 0.50: bonus += 12; labels.append(f"營收年增 +{rev_yoy:.0f}% 📈")
-            elif rg >= 0.30: bonus +=  9; labels.append(f"營收年增 +{rev_yoy:.0f}%")
-            elif rg >= 0.15: bonus +=  6; labels.append(f"營收年增 +{rev_yoy:.0f}%")
-            elif rg >= 0.05: bonus +=  3; labels.append(f"營收年增 +{rev_yoy:.0f}%")
+            if   rg >= 0.80: bonus += 15; labels.append(f"\u71df\u6536\u5e74\u589e +{rev_yoy:.0f}% \U0001f680")
+            elif rg >= 0.50: bonus += 12; labels.append(f"\u71df\u6536\u5e74\u589e +{rev_yoy:.0f}% \U0001f4c8")
+            elif rg >= 0.30: bonus +=  9; labels.append(f"\u71df\u6536\u5e74\u589e +{rev_yoy:.0f}%")
+            elif rg >= 0.15: bonus +=  6; labels.append(f"\u71df\u6536\u5e74\u589e +{rev_yoy:.0f}%")
+            elif rg >= 0.05: bonus +=  3; labels.append(f"\u71df\u6536\u5e74\u589e +{rev_yoy:.0f}%")
             elif rg >= 0.00: bonus +=  1
             elif rg >= -0.10: bonus -= 3
             elif rg >= -0.20: bonus -= 6
-            else:             bonus -= 9; labels.append(f"營收年減 {rev_yoy:.0f}% ⚠️")
+            else:             bonus -= 9; labels.append(f"\u71df\u6536\u5e74\u6e1b {rev_yoy:.0f}% \u26a0\ufe0f")
 
-        # ── ② 盈利年增率 ──────────────────────────────────────────────────────
+        # -- Earnings YoY --
         if eg is not None:
             earn_yoy = eg * 100
-            if   eg >= 0.80: bonus +=  8; labels.append(f"盈利年增 +{earn_yoy:.0f}% 💰")
-            elif eg >= 0.40: bonus +=  6; labels.append(f"盈利年增 +{earn_yoy:.0f}%")
-            elif eg >= 0.20: bonus +=  4; labels.append(f"盈利年增 +{earn_yoy:.0f}%")
+            if   eg >= 0.80: bonus +=  8; labels.append(f"\u76c8\u5229\u5e74\u589e +{earn_yoy:.0f}% \U0001f4b0")
+            elif eg >= 0.40: bonus +=  6; labels.append(f"\u76c8\u5229\u5e74\u589e +{earn_yoy:.0f}%")
+            elif eg >= 0.20: bonus +=  4; labels.append(f"\u76c8\u5229\u5e74\u589e +{earn_yoy:.0f}%")
             elif eg >= 0.00: bonus +=  2
             elif eg >= -0.20: bonus -= 2
-            else:             bonus -= 5; labels.append(f"盈利年減 {earn_yoy:.0f}% ⚠️")
+            else:             bonus -= 5; labels.append(f"\u76c8\u5229\u5e74\u6e1b {earn_yoy:.0f}% \u26a0\ufe0f")
 
-        # ── ③ 高毛利加分 ──────────────────────────────────────────────────────
+        # -- Profit margin --
         if pm is not None and pm >= 0.25:
             bonus += 3
-            labels.append(f"高毛利 {pm*100:.0f}%")
+            labels.append(f"\u9ad8\u6bdb\u5229 {pm*100:.0f}%")
 
-    # ── ④ 股東會 (API currently unavailable — kept as placeholder) ─────────────
+        # -- EPS --
+        if t_eps is not None:
+            if t_eps < 0:
+                bonus -= 8
+                labels.append(f"\u865f\u640d EPS {t_eps:.1f} \u26a0\ufe0f")
+            elif f_eps is not None and t_eps > 0:
+                eps_chg = (f_eps - t_eps) / abs(t_eps)
+                if   eps_chg >= 0.50: bonus += 6; labels.append(f"EPS\u9810\u4f30\u5347 +{eps_chg*100:.0f}% \U0001f4b9")
+                elif eps_chg >= 0.20: bonus += 3; labels.append(f"EPS\u9810\u4f30\u5347 +{eps_chg*100:.0f}%")
+                elif eps_chg >= 0.00: bonus += 1
+                elif eps_chg <= -0.20: bonus -= 4; labels.append(f"EPS\u9810\u4f30\u964d {eps_chg*100:.0f}%")
+
+        # -- Forward PE --
+        if f_pe is not None and f_pe > 0:
+            if   f_pe < 12: bonus += 4; labels.append(f"\u4f4e\u672c\u76ca\u6bd4 {f_pe:.0f}x \U0001f48e")
+            elif f_pe < 18: bonus += 2
+            elif f_pe > 70: bonus -= 6
+            elif f_pe > 50: bonus -= 3
+
+        # -- PEG --
+        if peg is not None and peg > 0:
+            if   peg < 0.8: bonus += 3; labels.append(f"PEG {peg:.1f} \u4f4e\u4f30")
+            elif peg > 3.0: bonus -= 2
+
+    # -- Shareholder meetings (API unavailable) --
     code = ticker.replace(".TW", "").replace(".TWO", "")
     days = meeting_map.get(code)
     if days is not None:
-        if   days <= 14: bonus += 5; labels.append(f"股東會 {max(0,days)}日後 🗓")
-        elif days <= 30: bonus += 4; labels.append(f"股東會 {days}日後")
-        elif days <= 60: bonus += 2; labels.append(f"股東會 {days}日後")
+        if   days <= 14: bonus += 5; labels.append(f"\u80a1\u6771\u6703 {max(0,days)}\u65e5\u5f8c \U0001f5d3")
+        elif days <= 30: bonus += 4; labels.append(f"\u80a1\u6771\u6703 {days}\u65e5\u5f8c")
+        elif days <= 60: bonus += 2; labels.append(f"\u80a1\u6771\u6703 {days}\u65e5\u5f8c")
 
     return {
-        "bonus":    max(-10, min(25, bonus)),
-        "labels":   labels[:3],   # cap at 3 tags per card
-        "rev_yoy":  rev_yoy,
-        "earn_yoy": earn_yoy,
+        "bonus":        max(-15, min(30, bonus)),
+        "labels":       labels[:4],
+        "rev_yoy":      rev_yoy,
+        "earn_yoy":     earn_yoy,
+        "trailing_eps": fund.get("trailing_eps") if fund else None,
+        "forward_eps":  fund.get("forward_eps")  if fund else None,
+        "forward_pe":   fund.get("forward_pe")   if fund else None,
+        "peg_ratio":    fund.get("peg_ratio")     if fund else None,
     }
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  持股分析
