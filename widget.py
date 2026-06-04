@@ -1457,6 +1457,163 @@ def fetch_prices_batch(tickers: List[str], period: str = "3mo") -> Dict[str, pd.
     return data
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  基本面資料：月營收 / 股東會 / 盈利評分
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def fetch_twse_monthly_revenue() -> Dict:
+    """
+    TWSE Open API：最新月營收（上市公司）。
+    資料每月10日前更新，含年增率、月增率。
+    回傳 {stock_code: {"yoy_pct": float, "mom_pct": float, "revenue": str}}
+    """
+    try:
+        url = "https://openapi.twse.com.tw/v1/opendata/t51sb01"
+        resp = requests.get(url, headers=HEADERS, timeout=15)
+        resp.raise_for_status()
+        rows = resp.json()
+        result: Dict = {}
+        for row in rows:
+            code = (row.get("公司代號") or "").strip()
+            if not code:
+                continue
+            try:
+                yoy = float(row.get("去年同月增減(%)", 0) or 0)
+                mom = float(row.get("上月比較增減(%)", 0) or 0)
+                result[code] = {
+                    "yoy_pct": yoy,
+                    "mom_pct": mom,
+                    "revenue": row.get("當月營收", ""),
+                }
+            except (ValueError, TypeError):
+                pass
+        return result
+    except Exception:
+        return {}
+
+
+def fetch_tpex_monthly_revenue() -> Dict:
+    """
+    TPEx Open API：最新月營收（上櫃公司）。
+    回傳格式同 fetch_twse_monthly_revenue。
+    """
+    try:
+        url = "https://openapi.twse.com.tw/v1/opendata/t51sb02"
+        resp = requests.get(url, headers=HEADERS, timeout=15)
+        resp.raise_for_status()
+        rows = resp.json()
+        result: Dict = {}
+        for row in rows:
+            code = (row.get("公司代號") or "").strip()
+            if not code:
+                continue
+            try:
+                yoy = float(row.get("去年同月增減(%)", 0) or 0)
+                mom = float(row.get("上月比較增減(%)", 0) or 0)
+                result[code] = {
+                    "yoy_pct": yoy,
+                    "mom_pct": mom,
+                    "revenue": row.get("當月營收", ""),
+                }
+            except (ValueError, TypeError):
+                pass
+        return result
+    except Exception:
+        return {}
+
+
+def fetch_twse_shareholder_meetings() -> Dict:
+    """
+    TWSE Open API：股東常會日期（上市公司）。
+    ROC date format YYYMMDD → Gregorian。
+    回傳 {stock_code: days_until_meeting}，只含未來 90 天（含昨日 -1）。
+    """
+    try:
+        url = "https://openapi.twse.com.tw/v1/opendata/t174sb01"
+        resp = requests.get(url, headers=HEADERS, timeout=15)
+        resp.raise_for_status()
+        rows = resp.json()
+        result: Dict = {}
+        today = datetime.now(timezone(timedelta(hours=8))).date()
+        for row in rows:
+            code     = (row.get("公司代號") or "").strip()
+            date_str = (row.get("股東會日期") or "").strip()
+            if not code or len(date_str) < 7:
+                continue
+            try:
+                roc_year = int(date_str[:3])
+                month    = int(date_str[3:5])
+                day      = int(date_str[5:7])
+                meeting  = datetime(roc_year + 1911, month, day).date()
+                days     = (meeting - today).days
+                if -1 <= days <= 90:
+                    result[code] = days
+            except (ValueError, IndexError):
+                pass
+        return result
+    except Exception:
+        return {}
+
+
+def calc_fundamental_bonus(ticker: str, revenue_map: Dict, meeting_map: Dict) -> Dict:
+    """
+    基本面加權評分 (-10 ~ +25 分)，補充技術面評分：
+
+    ① 月營收年增率 (YoY)：
+       ≥100%  +15   ≥50%  +13   ≥30%  +10   ≥15%  +7
+       ≥5%   + 4   ≥0%   + 1   <-5%  - 3   <-15% - 8
+
+    ② 月營收月增率 (MoM，加速度）：
+       ≥20%  +5    ≥10%  +3    ≥5%   +1
+
+    ③ 股東會議（近期召開 → 市場關注度上升）：
+       0-14日  +5   15-30日  +4   31-60日  +2
+
+    回傳 {"bonus": int, "labels": list[str], "rev_yoy": float, "rev_mom": float}
+    """
+    code  = ticker.replace(".TW", "").replace(".TWO", "")
+    bonus = 0
+    labels: List[str] = []
+    rev_yoy = 0.0
+    rev_mom = 0.0
+
+    # ── ① 月營收年增率 ─────────────────────────────────────────────────────────
+    rev = revenue_map.get(code, {})
+    if rev:
+        yoy     = rev.get("yoy_pct", 0.0)
+        mom     = rev.get("mom_pct", 0.0)
+        rev_yoy = yoy
+        rev_mom = mom
+
+        if   yoy >= 100: bonus += 15; labels.append(f"營收年增 +{yoy:.0f}% 🚀")
+        elif yoy >=  50: bonus += 13; labels.append(f"營收年增 +{yoy:.0f}% 📈")
+        elif yoy >=  30: bonus += 10; labels.append(f"營收年增 +{yoy:.0f}%")
+        elif yoy >=  15: bonus +=  7; labels.append(f"營收年增 +{yoy:.0f}%")
+        elif yoy >=   5: bonus +=  4; labels.append(f"營收年增 +{yoy:.0f}%")
+        elif yoy >=   0: bonus +=  1
+        elif yoy >=  -5: bonus -=  3
+        elif yoy >= -15: bonus -=  5
+        else:            bonus -=  8; labels.append(f"營收年減 {yoy:.0f}% ⚠️")
+
+        # ── ② MoM 加速度 ──────────────────────────────────────────────────────
+        if   mom >= 20: bonus += 5; labels.append(f"月增 +{mom:.0f}% ⚡")
+        elif mom >= 10: bonus += 3; labels.append(f"月增 +{mom:.0f}%")
+        elif mom >=  5: bonus += 1
+
+    # ── ③ 股東會 ───────────────────────────────────────────────────────────────
+    days = meeting_map.get(code)
+    if days is not None:
+        if   days <= 14: bonus += 5; labels.append(f"股東會 {max(0,days)}日後 🗓")
+        elif days <= 30: bonus += 4; labels.append(f"股東會 {days}日後")
+        elif days <= 60: bonus += 2; labels.append(f"股東會 {days}日後")
+
+    return {
+        "bonus":   max(-10, min(25, bonus)),
+        "labels":  labels,
+        "rev_yoy": rev_yoy,
+        "rev_mom": rev_mom,
+    }
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  持股分析
 # ═══════════════════════════════════════════════════════════════════════════════
 

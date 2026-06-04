@@ -98,6 +98,8 @@ from widget import (
     calc_rsi, calc_live_rsi, _TW_STOCK_NAMES,
     fetch_us_overnight, us_macro_stock_bonus, fetch_global_news,
     fetch_market_alerts,
+    fetch_twse_monthly_revenue, fetch_tpex_monthly_revenue,
+    fetch_twse_shareholder_meetings, calc_fundamental_bonus,
 )
 
 warnings.filterwarnings("ignore")
@@ -174,6 +176,22 @@ st.markdown("""
     font-size: 13px; color: #c0d4ff; margin: 8px 0;
   }
   .sell-note { font-size: 13px; color: #ffd54f; margin-top: 4px; }
+  .fund-row {
+    display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 2px;
+    font-size: 12px;
+  }
+  .fund-tag {
+    background: #0a1e12; border: 1px solid #1a5c2a;
+    border-radius: 12px; padding: 2px 8px; color: #4caf7d;
+  }
+  .fund-tag-warn {
+    background: #1e0a0a; border: 1px solid #5c1a1a;
+    border-radius: 12px; padding: 2px 8px; color: #e57373;
+  }
+  .meeting-tag {
+    background: #0a1229; border: 1px solid #1a3a6e;
+    border-radius: 12px; padding: 2px 8px; color: #7eb3ff;
+  }
   .near-limit-warn {
     font-size: 13px; font-weight: 700; color: #ff5252;
     background: #1a0505; border-left: 3px solid #c0392b;
@@ -434,6 +452,20 @@ def load_category_prices(category_key: str, epoch: str) -> dict:
     with contextlib.redirect_stdout(_buf), contextlib.redirect_stderr(_buf):
         return fetch_prices_batch(tickers, period="3mo")
 
+@st.cache_data(ttl=3600*4, show_spinner=False)
+def load_fundamentals(epoch_day: str) -> dict:
+    """
+    月營收 + 股東會日曆，每日快取一次。
+    epoch_day = YYYY-MM-DD（每天首次載入後快取4小時）。
+    合併上市(TWSE)與上櫃(TPEx)月營收。
+    """
+    twse_rev  = fetch_twse_monthly_revenue()
+    tpex_rev  = fetch_tpex_monthly_revenue()
+    meetings  = fetch_twse_shareholder_meetings()
+    # Merge: TPEx fills in gaps not covered by TWSE endpoint
+    revenue   = {**tpex_rev, **twse_rev}   # TWSE takes precedence
+    return {"revenue": revenue, "meetings": meetings}
+
 # ── Session state init ────────────────────────────────────────────────────────
 if "view_mode"        not in st.session_state: st.session_state.view_mode        = "picks"
 # valid modes: "picks" | "categories" | "holdings" | "watchlist" | "search" | "monitor"
@@ -673,6 +705,12 @@ mkt         = data.get("market", {})
 us_data     = data.get("us_data", {})
 global_news = data.get("global_news", [])
 
+# ── Fundamental data (monthly revenue + shareholder meetings) ─────────────────
+_epoch_day   = _now_tw().strftime("%Y-%m-%d")
+_fund_cache  = load_fundamentals(_epoch_day)
+revenue_map  = _fund_cache.get("revenue", {})
+meeting_map  = _fund_cache.get("meetings", {})
+
 # ── Prepare search + watchlist + recent-search data ──────────────────────────
 _sticker       = st.session_state.get("search_ticker")
 _recent        = st.session_state.recent_searches        # list[ticker], max 10
@@ -697,7 +735,12 @@ if _sticker:
     _sres = score_stock(_sticker, prices.get(_sticker), cat_sc.get(_sticker, 0), foreign.get(_sticker, 0),
                         us_macro_stock_bonus(_sticker, us_data))
     if _sres:
-        _sres["catalysts"] = get_catalyst_labels(_sticker, all_news)
+        _sf = calc_fundamental_bonus(_sticker, revenue_map, meeting_map)
+        _sres["score"]      = max(0, min(100, _sres["score"] + _sf["bonus"]))
+        _sres["rev_yoy"]    = _sf["rev_yoy"]
+        _sres["rev_mom"]    = _sf["rev_mom"]
+        _sres["fund_labels"] = _sf["labels"]
+        _sres["catalysts"]  = (_sf["labels"] + get_catalyst_labels(_sticker, all_news))[:4]
 
 # Score watchlist tickers
 _watch_results = {}
@@ -705,7 +748,12 @@ for _wt in st.session_state.watchlist:
     _wr = score_stock(_wt, prices.get(_wt), cat_sc.get(_wt, 0), foreign.get(_wt, 0),
                       us_macro_stock_bonus(_wt, us_data))
     if _wr:
-        _wr["catalysts"] = get_catalyst_labels(_wt, all_news)
+        _wf = calc_fundamental_bonus(_wt, revenue_map, meeting_map)
+        _wr["score"]       = max(0, min(100, _wr["score"] + _wf["bonus"]))
+        _wr["rev_yoy"]     = _wf["rev_yoy"]
+        _wr["rev_mom"]     = _wf["rev_mom"]
+        _wr["fund_labels"] = _wf["labels"]
+        _wr["catalysts"]   = (_wf["labels"] + get_catalyst_labels(_wt, all_news))[:4]
         _watch_results[_wt] = _wr
 
 # Score recent search tickers
@@ -714,7 +762,12 @@ for _rt in _recent:
     _rr = score_stock(_rt, prices.get(_rt), cat_sc.get(_rt, 0), foreign.get(_rt, 0),
                       us_macro_stock_bonus(_rt, us_data))
     if _rr:
-        _rr["catalysts"] = get_catalyst_labels(_rt, all_news)
+        _rf = calc_fundamental_bonus(_rt, revenue_map, meeting_map)
+        _rr["score"]       = max(0, min(100, _rr["score"] + _rf["bonus"]))
+        _rr["rev_yoy"]     = _rf["rev_yoy"]
+        _rr["rev_mom"]     = _rf["rev_mom"]
+        _rr["fund_labels"] = _rf["labels"]
+        _rr["catalysts"]   = (_rf["labels"] + get_catalyst_labels(_rt, all_news))[:4]
         _recent_results[_rt] = _rr
 
 # ── Fill holdings in sidebar ──────────────────────────────────────────────────
@@ -865,8 +918,15 @@ for ticker in TECH_UNIVERSE:
         if res.get("last_price", 0) > 500: _adj -= 8  # expensive per share
         res["score"]    = max(0, min(100, res["score"] + _adj))
         res["_rsi_adj"] = _adj   # stored so live-RSI update can undo and reapply
+        # ── 基本面加權 (月營收 / 股東會) ──────────────────────────────────────
+        _fund = calc_fundamental_bonus(ticker, revenue_map, meeting_map)
+        res["score"]    = max(0, min(100, res["score"] + _fund["bonus"]))
+        res["rev_yoy"]  = _fund["rev_yoy"]
+        res["rev_mom"]  = _fund["rev_mom"]
+        res["fund_labels"] = _fund["labels"]
         if res["score"] >= min_score:
-            res["catalysts"] = get_catalyst_labels(ticker, all_news)
+            _tech_labels = get_catalyst_labels(ticker, all_news)
+            res["catalysts"] = (_fund["labels"] + _tech_labels)[:4]
             scored.append(res)
 scored.sort(key=lambda x: x["score"], reverse=True)
 
@@ -1025,6 +1085,31 @@ with sidebar_content:
 # ── Query card renderer (search result + watchlist) ──────────────────────────
 def conf_color(s):
     return "#00c853" if s >= 80 else ("#ffd54f" if s >= 60 else "#ef5350")
+
+def _build_fund_row(p: dict) -> str:
+    """Build fundamental tags HTML row for a stock card. Returns '' if no data."""
+    tags = []
+    rev_yoy = p.get("rev_yoy", 0.0)
+    rev_mom = p.get("rev_mom", 0.0)
+
+    if rev_yoy >= 5:
+        sign = "+" if rev_yoy >= 0 else ""
+        css  = "fund-tag"
+        tags.append(f'<span class="{css}">📊 月營收年增 {sign}{rev_yoy:.0f}%</span>')
+    elif rev_yoy <= -5:
+        tags.append(f'<span class="fund-tag-warn">📊 月營收年減 {rev_yoy:.0f}%</span>')
+
+    if rev_mom >= 10:
+        tags.append(f'<span class="fund-tag">📈 月增 +{rev_mom:.0f}%</span>')
+
+    for lbl in p.get("fund_labels", []):
+        if "股東會" in lbl:
+            tags.append(f'<span class="meeting-tag">🗓 {lbl}</span>')
+
+    if not tags:
+        return ""
+    inner = "".join(tags)
+    return f'<div class="fund-row">{inner}</div>'
 
 def _get_score_reasons(sres: dict) -> str:
     """
@@ -1942,7 +2027,8 @@ def render_category_cards(picks, prices, show_chart):
             f'<div class="stop-row">💰 參考買點 NT${p["last_price"]:.1f}　　🛡 止損 NT${p["stop_loss"]:.1f}　({p["stop_pct"]:.1f}%)</div>'
             f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
             f'<div class="info-row">{info_html}</div>'
-            f'<div class="catalyst">📌 {cat_str}</div>'
+            + _build_fund_row(p)
+            + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
             f'{_score_html}'
@@ -2089,7 +2175,13 @@ if st.session_state.view_mode == "categories":
         if _cres.get("last_price", 0) > 500: _cadj -= 8
         _cres["score"]       = max(0, min(100, _cres["score"] + _cadj))
         _cres["_rsi_adj"]    = _cadj
-        _cres["catalysts"]   = get_catalyst_labels(_ct, all_news)
+        # ── 基本面加權 ────────────────────────────────────────────────────────
+        _cfd = calc_fundamental_bonus(_ct, revenue_map, meeting_map)
+        _cres["score"]       = max(0, min(100, _cres["score"] + _cfd["bonus"]))
+        _cres["rev_yoy"]     = _cfd["rev_yoy"]
+        _cres["rev_mom"]     = _cfd["rev_mom"]
+        _cres["fund_labels"] = _cfd["labels"]
+        _cres["catalysts"]   = (_cfd["labels"] + get_catalyst_labels(_ct, all_news))[:4]
         _cres["is_new"]      = False
         _cres["score_delta"] = None
         _cat_scored.append(_cres)
@@ -2572,7 +2664,8 @@ def render_stock_cards(picks, prices, show_chart):
             f'<div class="stop-row">💰 參考買點 NT${p["last_price"]:.1f}　　🛡 止損 NT${p["stop_loss"]:.1f}　({p["stop_pct"]:.1f}%)</div>'
             f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
             f'<div class="info-row">{info_html}</div>'
-            f'<div class="catalyst">📌 {cat_str}</div>'
+            + _build_fund_row(p)
+            + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
             f'{_score_delta_html}'
