@@ -1116,6 +1116,91 @@ def _build_fund_row(p: dict) -> str:
     inner = "".join(tags)
     return f'<div class="fund-row">{inner}</div>'
 
+
+def _build_why_buy(p: dict) -> str:
+    """
+    Generate a '為什麼值得關注' bulleted explanation for the beginner advice box.
+    Draws from fundamentals, supply chain, technicals, foreign buying, and catalysts.
+    Returns an HTML string (empty string if nothing meaningful to say).
+    """
+    reasons: list = []
+
+    rev_yoy  = p.get("rev_yoy",  0.0)
+    earn_yoy = p.get("earn_yoy", 0.0)
+    rsi      = p.get("rsi", 50.0)
+    mom5d    = p.get("mom5d", 0.0)
+    fi       = p.get("foreign_net", 0.0)
+    vr       = p.get("vol_ratio", 1.0)
+    supply   = p.get("supply", [])
+    cats     = p.get("catalysts", [])
+    fund_lbl = p.get("fund_labels", [])
+
+    # ── 基本面 ─────────────────────────────────────────────────────────────────
+    if rev_yoy >= 50:
+        reasons.append(f"📈 <b>營收爆發</b>：近期年增 <b>+{rev_yoy:.0f}%</b>，業績大幅超越去年，成長動能極強")
+    elif rev_yoy >= 20:
+        reasons.append(f"📈 <b>營收成長</b>：近期年增 <b>+{rev_yoy:.0f}%</b>，公司業績持續擴張")
+    elif rev_yoy >= 5:
+        reasons.append(f"📈 <b>營收溫和成長</b>：年增 +{rev_yoy:.0f}%，業績穩定")
+    elif rev_yoy <= -20:
+        reasons.append(f"⚠️ <b>注意</b>：近期營收年減 {rev_yoy:.0f}%，需確認是暫時調整還是趨勢反轉")
+
+    if earn_yoy >= 50:
+        reasons.append(f"💰 <b>盈利大幅成長</b>：每股獲利（EPS）年增 <b>+{earn_yoy:.0f}%</b>，公司賺錢能力顯著提升")
+    elif earn_yoy >= 20:
+        reasons.append(f"💰 <b>盈利改善</b>：EPS 年增 +{earn_yoy:.0f}%，獲利逐步提升")
+
+    for lbl in fund_lbl:
+        if "高毛利" in lbl:
+            reasons.append(f"🏭 <b>高毛利</b>：{lbl.replace('高毛利 ', '')} 毛利率，代表產品競爭力強、定價權高，不易被競爭對手搶走客戶")
+            break
+
+    # ── 供應鏈與行業地位 ───────────────────────────────────────────────────────
+    if "NVIDIA" in supply:
+        reasons.append("🤖 <b>NVIDIA 核心供應鏈</b>：直接供貨給全球最大 AI 晶片公司，AI 資料中心建設持續多年")
+    elif "Apple" in supply:
+        reasons.append("🍎 <b>蘋果認證供應商</b>：進入蘋果供應鏈門檻極高，一旦進入代表技術與品質達到世界頂尖標準")
+    elif "AI" in supply and "NVIDIA" not in supply:
+        reasons.append("⚡ <b>AI 供應鏈受益者</b>：直接受惠於全球 AI 基礎建設投資浪潮，需求能見度高")
+
+    # ── 法人動向 ────────────────────────────────────────────────────────────────
+    if fi >= 500:
+        reasons.append(f"🌐 <b>外資大買超</b>：近期外資淨買入 {fi:.0f}千張，代表國際法人對這支股票高度信心")
+    elif fi >= 150:
+        reasons.append(f"🌐 <b>外資持續買入</b>：外資淨買入 {fi:.0f}千張，法人籌碼持續累積")
+
+    # ── 技術面甜蜜區 ────────────────────────────────────────────────────────────
+    if 45 <= rsi <= 62:
+        reasons.append(f"📊 <b>技術面最佳進場位</b>：RSI {rsi:.0f} 在 45–62 甜蜜區間，股價有動能但尚未過熱，是零股分批買入的好時機")
+    elif rsi < 40:
+        reasons.append(f"📊 <b>超賣反彈機會</b>：RSI {rsi:.0f} 偏低，短期可能已過度下跌，有反彈空間（仍需確認趨勢）")
+
+    if mom5d >= 8 and rsi < 70:
+        reasons.append(f"🚀 <b>短線強勢</b>：近5日上漲 {mom5d:+.1f}%，且 RSI 未進入超買，趨勢向上但仍有追漲空間")
+
+    if vr >= 2.0:
+        reasons.append(f"📦 <b>量能爆發</b>：今日成交量是20日均量的 {vr:.1f}倍，市場高度關注，大戶可能正在建倉")
+
+    # ── 催化劑 ──────────────────────────────────────────────────────────────────
+    # Extract meaningful news-based catalysts (skip generic ones)
+    _skip = {"技術面分析", "技術面突破", "AI鏈"}
+    _meaningful = [c for c in cats if c not in _skip and "年增" not in c and "盈利" not in c and "月增" not in c and "毛利" not in c]
+    if _meaningful:
+        reasons.append(f"📰 <b>近期催化劑</b>：{' / '.join(_meaningful[:2])}")
+
+    if not reasons:
+        return ""
+
+    bullets = "".join(f'<li style="margin-bottom:6px">{r}</li>' for r in reasons[:5])
+    return (
+        f'<div style="background:#050d1a;border:1px solid #1a3a6e;border-radius:8px;'
+        f'padding:10px 14px;margin-bottom:12px">'
+        f'<div style="font-size:12px;color:#7eb3ff;font-weight:700;margin-bottom:8px">'
+        f'🔍 為什麼值得關注這支股票？</div>'
+        f'<ul style="margin:0;padding-left:16px;color:#c0d4ff;font-size:12.5px;line-height:1.7">'
+        f'{bullets}</ul></div>'
+    )
+
 def _get_score_reasons(sres: dict) -> str:
     """
     回傳最誠實的一句話解釋為什麼不建議買進。
@@ -2062,6 +2147,8 @@ def render_category_cards(picks, prices, show_chart):
                 st.markdown(
                     f'<div class="advice-box">'
                     f'<div class="advice-title">💡 新手操作建議</div>'
+                    + _build_why_buy(p)
+                    +
                     f'<div class="advice-row">'
                     f'  <span class="advice-label">📊 RSI</span>'
                     f'  <div style="flex:1">'
@@ -2690,6 +2777,8 @@ def render_stock_cards(picks, prices, show_chart):
                 st.markdown(
                     f'<div class="advice-box">'
                     f'<div class="advice-title">💡 新手操作建議（即時更新）</div>'
+                    + _build_why_buy(p)
+                    +
 
                     # RSI 即時
                     f'<div class="advice-row">'
