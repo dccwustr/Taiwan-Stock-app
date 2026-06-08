@@ -100,6 +100,7 @@ from widget import (
     fetch_market_alerts,
     fetch_yf_fundamentals_batch, fetch_twse_shareholder_meetings,
     calc_fundamental_bonus,
+    fetch_intraday_flow,
 )
 
 warnings.filterwarnings("ignore")
@@ -1281,6 +1282,234 @@ def _build_why_buy(p: dict) -> str:
         f'{bullets}</ul></div>'
     )
 
+@st.cache_data(ttl=60, show_spinner=False)
+def _fetch_flow_batch(tickers_tuple: tuple) -> dict:
+    """
+    Batch-fetch intraday order flow for up to 5 tickers in parallel.
+    Cached 60 s so the 10-s fragment refresh hits yfinance at most once/min per set.
+    """
+    from concurrent.futures import ThreadPoolExecutor, wait as _wait
+    result: dict = {}
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        pending = {ex.submit(fetch_intraday_flow, t): t for t in tickers_tuple}
+        done, _ = _wait(pending, timeout=45)
+        for fut in done:
+            try:
+                t = pending[fut]
+                d = fut.result()
+                if d:
+                    result[t] = d
+            except Exception:
+                pass
+    return result
+
+
+def _build_flow_compact(flow: dict, is_open: bool) -> str:
+    """
+    One-line order-flow summary for inside the stock card body.
+    Only shown when market is open AND flow data is available.
+    Returns '' otherwise so the card layout is unaffected.
+    """
+    if not flow or not is_open:
+        return ""
+    sig     = flow.get("signal", "")
+    sig_col = flow.get("signal_color", "#888")
+    buy_pct = flow.get("buy_pct", 50.0)
+    above   = flow.get("above_vwap", True)
+    vwap_ic = "▲" if above else "▼"
+    vwap_cl = "#4caf7d" if above else "#ef5350"
+    return (
+        f'<div style="font-size:11.5px;color:#666;margin:5px 0 3px;'
+        f'display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+        f'<span style="color:#555">📊 即時多空</span>'
+        f'<span style="color:{sig_col};font-weight:700">{sig}</span>'
+        f'<span style="background:#0a2a14;border:1px solid #1a5c2a44;'
+        f'border-radius:8px;padding:1px 7px;color:#4caf7d;font-size:10.5px">'
+        f'買 {buy_pct:.0f}%</span>'
+        f'<span style="background:#2a0a0a;border:1px solid #5c1a1a44;'
+        f'border-radius:8px;padding:1px 7px;color:#ef5350;font-size:10.5px">'
+        f'賣 {100-buy_pct:.0f}%</span>'
+        f'<span style="color:{vwap_cl};font-size:10.5px">'
+        f'{vwap_ic} VWAP</span>'
+        f'</div>'
+    )
+
+
+def _build_flow_panel(flow: dict, is_open: bool) -> str:
+    """
+    Full Wall-Street order-flow panel rendered inside the beginner-advice expander.
+    Shows VWAP, buy/sell pressure bar, 12-bar sequence, cumulative delta,
+    volume pace, and a composite signal with plain-Chinese explanation.
+    Labeled "今日" when market is open, "上一交易日" when closed.
+    Returns '' if flow dict is empty.
+    """
+    if not flow:
+        return ""
+
+    vwap       = flow.get("vwap", 0.0)
+    lp         = flow.get("last_price", 0.0)
+    above      = flow.get("above_vwap", True)
+    buy_pct    = flow.get("buy_pct", 50.0)
+    sell_pct   = flow.get("sell_pct", 50.0)
+    cum_delta  = flow.get("cum_delta", 0)
+    delta_tr   = flow.get("delta_trend", "flat")
+    bar_seq    = flow.get("bar_seq", [])
+    consec_b   = flow.get("consec_buy", 0)
+    consec_s   = flow.get("consec_sell", 0)
+    vol_pace   = flow.get("vol_pace_pct", 100)
+    signal     = flow.get("signal", "—")
+    sig_col    = flow.get("signal_color", "#888")
+    reasons    = flow.get("signal_reasons", [])
+
+    # Session label
+    session_label = "今日即時" if is_open else "上一交易日收盤"
+
+    # VWAP badge
+    vwap_diff = abs(lp - vwap) / vwap * 100 if vwap > 0 else 0
+    if above:
+        vwap_badge = (
+            f'<span style="background:#0a2a14;border:1px solid #1a5c2a;'
+            f'border-radius:10px;padding:2px 8px;color:#4caf7d;font-size:11px">'
+            f'▲ 站上 +{vwap_diff:.1f}%</span>'
+        )
+        vwap_desc = "多方掌控節奏"
+    else:
+        vwap_badge = (
+            f'<span style="background:#2a0a0a;border:1px solid #5c1a1a;'
+            f'border-radius:10px;padding:2px 8px;color:#ef5350;font-size:11px">'
+            f'▼ 跌破 -{vwap_diff:.1f}%</span>'
+        )
+        vwap_desc = "空方壓制反彈"
+
+    # K-bar sequence as colored blocks
+    bar_html = ""
+    for b in bar_seq[-12:]:
+        if b == "B":
+            bar_html += '<span style="color:#4caf7d;font-size:16px;line-height:1">█</span>'
+        else:
+            bar_html += '<span style="color:#ef5350;font-size:16px;line-height:1">█</span>'
+
+    # Consecutive streak note
+    streak_html = ""
+    if consec_b >= 3:
+        streak_html = (
+            f'<div style="font-size:11px;color:#4caf7d;margin-top:3px">'
+            f'▶ 連續 {consec_b} 根陽線，上升動能持續</div>'
+        )
+    elif consec_s >= 3:
+        streak_html = (
+            f'<div style="font-size:11px;color:#ef5350;margin-top:3px">'
+            f'▶ 連續 {consec_s} 根陰線，賣壓尚未釋放</div>'
+        )
+
+    # Cumulative delta
+    if cum_delta >= 0:
+        delta_col   = "#4caf7d"
+        delta_arrow = "▲"
+        delta_label = f"淨買超 +{cum_delta:,}"
+    else:
+        delta_col   = "#ef5350"
+        delta_arrow = "▼"
+        delta_label = f"淨賣超 {cum_delta:,}"
+    delta_trend_str = {"up": "（持續擴大）", "down": "（逐步縮小）", "flat": "（平穩）"}.get(delta_tr, "")
+
+    # Volume pace
+    if vol_pace >= 140:
+        pace_label = f"🔥 {vol_pace}% — 成交量爆發"
+        pace_col   = "#ff9800"
+    elif vol_pace >= 115:
+        pace_label = f"📶 {vol_pace}% — 成交量活躍"
+        pace_col   = "#ffd54f"
+    elif vol_pace >= 70:
+        pace_label = f"📊 {vol_pace}% — 正常節奏"
+        pace_col   = "#90a4ae"
+    else:
+        pace_label = f"😴 {vol_pace}% — 量能不足，謹慎"
+        pace_col   = "#607d8b"
+
+    # Reasons list
+    reasons_html = ""
+    if reasons:
+        items = "".join(
+            f'<li style="margin-bottom:4px;color:#b0c4de">{r}</li>'
+            for r in reasons[:4]
+        )
+        reasons_html = (
+            f'<ul style="margin:6px 0 0;padding-left:16px;'
+            f'font-size:11.5px;line-height:1.65">{items}</ul>'
+        )
+
+    buy_w  = int(max(0, min(100, buy_pct)))
+    sell_w = 100 - buy_w
+
+    return (
+        f'<div style="background:#060e1a;border:1px solid #1a3560;'
+        f'border-radius:10px;padding:12px 14px;margin-bottom:12px">'
+
+        # ── Header ──
+        f'<div style="font-size:12px;color:#7eb3ff;font-weight:700;'
+        f'margin-bottom:10px;letter-spacing:0.3px">'
+        f'🏦 即時多空力道分析（{session_label}）</div>'
+
+        # ── VWAP row ──
+        f'<div style="display:flex;align-items:center;gap:10px;'
+        f'margin-bottom:9px;font-size:12px;flex-wrap:wrap">'
+        f'<span style="color:#555;min-width:68px">VWAP 均量線</span>'
+        f'<span style="color:#c0d4ff;font-weight:700">NT${vwap:.1f}</span>'
+        f'{vwap_badge}'
+        f'<span style="color:#666;font-size:11px">{vwap_desc}</span>'
+        f'</div>'
+
+        # ── Buy / sell pressure bar ──
+        f'<div style="margin-bottom:9px">'
+        f'<div style="display:flex;justify-content:space-between;'
+        f'font-size:11px;margin-bottom:3px">'
+        f'<span style="color:#4caf7d">🟢 買盤壓力 {buy_pct:.0f}%</span>'
+        f'<span style="color:#ef5350">🔴 賣盤壓力 {sell_pct:.0f}%</span>'
+        f'</div>'
+        f'<div style="display:flex;border-radius:4px;overflow:hidden;height:10px">'
+        f'<div style="width:{buy_w}%;background:linear-gradient(90deg,#1a5c2a,#4caf7d)"></div>'
+        f'<div style="width:{sell_w}%;background:linear-gradient(90deg,#ef5350,#7a1a1a)"></div>'
+        f'</div>'
+        f'</div>'
+
+        # ── K-bar sequence ──
+        f'<div style="margin-bottom:9px">'
+        f'<div style="font-size:11px;color:#555;margin-bottom:3px">'
+        f'近 {len(bar_seq)} 根K棒方向（左舊右新）'
+        f'<span style="color:#4caf7d">█</span>陽線&nbsp;'
+        f'<span style="color:#ef5350">█</span>陰線</div>'
+        f'<div style="letter-spacing:3px;line-height:1.2">{bar_html}</div>'
+        f'{streak_html}'
+        f'</div>'
+
+        # ── Cumulative delta + volume pace ──
+        f'<div style="display:flex;gap:20px;flex-wrap:wrap;'
+        f'font-size:12px;margin-bottom:11px">'
+        f'<div>'
+        f'<span style="color:#555">累積淨買量　</span>'
+        f'<span style="color:{delta_col};font-weight:700">'
+        f'{delta_arrow} {delta_label}</span>'
+        f'<span style="color:#444;font-size:11px"> {delta_trend_str}</span>'
+        f'</div>'
+        f'<div>'
+        f'<span style="color:#555">今日量能速度　</span>'
+        f'<span style="color:{pace_col}">{pace_label}</span>'
+        f'</div>'
+        f'</div>'
+
+        # ── Wall Street signal box ──
+        f'<div style="background:{sig_col}14;border:1px solid {sig_col}44;'
+        f'border-left:4px solid {sig_col};border-radius:0 8px 8px 0;padding:9px 12px">'
+        f'<div style="font-size:13px;font-weight:700;color:{sig_col}">'
+        f'🏦 多空信號：{signal}</div>'
+        f'{reasons_html}'
+        f'</div>'
+
+        f'</div>'
+    )
+
+
 def _get_score_reasons(sres: dict) -> str:
     """
     回傳最誠實的一句話解釋為什麼不建議買進。
@@ -2090,6 +2319,8 @@ def render_category_cards(picks, prices, show_chart):
     is_open  = _is_market_open()
     refresh  = "每10秒更新 ●" if is_open else "非交易時段"
     st.caption(f"📡 即時股價　{refresh}　　更新：{_now_tw().strftime('%H:%M:%S')}　｜　零股盤中 09:00–13:30 ／ 盤後 14:00–14:30")
+    # ── Order flow batch fetch (cached 60 s) ──────────────────────────────────
+    _flow_map = _fetch_flow_batch(tuple(tickers))
 
     for rank, p in enumerate(picks, 1):
         sc         = p["score"]
@@ -2179,6 +2410,7 @@ def render_category_cards(picks, prices, show_chart):
         # Score label
         _score_html = f'<div style="font-size:11px;color:#555;margin-top:3px">類別評分 {sc}/100</div>'
 
+        _cat_flow = _flow_map.get(p["ticker"], {})
         st.markdown(
             f'<div style="margin-top:-3rem;pointer-events:none">'
             f'<div class="card">'
@@ -2198,6 +2430,7 @@ def render_category_cards(picks, prices, show_chart):
             f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)
+            + _build_flow_compact(_cat_flow, is_open)
             + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
@@ -2228,6 +2461,7 @@ def render_category_cards(picks, prices, show_chart):
                     f'<div class="advice-box">'
                     f'<div class="advice-title">💡 新手操作建議</div>'
                     + _build_why_buy(p)
+                    + _build_flow_panel(_cat_flow, is_open)
                     +
                     f'<div class="advice-row">'
                     f'  <span class="advice-label">📊 RSI</span>'
@@ -2704,6 +2938,8 @@ def render_stock_cards(picks, prices, show_chart):
     is_open  = _is_market_open()
     refresh  = "每10秒更新 ●" if is_open else "非交易時段"
     st.caption(f"📡 即時股價　{refresh}　　更新：{_now_tw().strftime('%H:%M:%S')}　｜　零股盤中 09:00–13:30 ／ 盤後 14:00–14:30")
+    # ── Order flow batch fetch (cached 60 s; runs parallel via ThreadPoolExecutor) ──
+    _flow_map = _fetch_flow_batch(tuple(tickers))
 
     for rank, p in enumerate(picks, 1):
         sc      = p["score"]
@@ -2820,6 +3056,7 @@ def render_stock_cards(picks, prices, show_chart):
             'padding:2px 6px;margin-left:6px">🆕 新進榜</span>'
             if _is_new_pick else ""
         )
+        _pick_flow = _flow_map.get(p["ticker"], {})
         st.markdown(
             f'<div style="margin-top:-3rem;pointer-events:none">'
             f'<div class="card">'
@@ -2840,6 +3077,7 @@ def render_stock_cards(picks, prices, show_chart):
             f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)
+            + _build_flow_compact(_pick_flow, is_open)
             + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
@@ -2861,6 +3099,7 @@ def render_stock_cards(picks, prices, show_chart):
                     f'<div class="advice-box">'
                     f'<div class="advice-title">💡 新手操作建議（即時更新）</div>'
                     + _build_why_buy(p)
+                    + _build_flow_panel(_pick_flow, is_open)
                     +
 
                     # RSI 即時

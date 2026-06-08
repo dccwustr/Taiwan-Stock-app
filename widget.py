@@ -1545,6 +1545,194 @@ def fetch_twse_shareholder_meetings() -> Dict:
     return {}
 
 
+def fetch_intraday_flow(ticker: str) -> Dict:
+    """
+    Wall-Street-style intraday order flow analysis for a single Taiwan stock.
+
+    Method — candle-body delta (standard retail order-flow technique):
+      buy_vol_per_bar  = volume × (close − low) / (high − low)
+      sell_vol_per_bar = volume − buy_vol_per_bar
+    This estimates what fraction of each bar's volume was buyer-initiated
+    (aggressive market orders hitting the ask) vs seller-initiated (hitting bid).
+
+    Key outputs:
+      vwap          – Volume-Weighted Average Price; institutional benchmark
+      buy_pct       – session buy vol as % of total estimated vol
+      cum_delta     – running net (buy_vol − sell_vol) across session
+      delta_trend   – "up" / "down" / "flat" for last 6 bars of delta
+      bar_seq       – last 12 bars each "B" (bullish close) or "S" (bearish)
+      signal        – composite directional label (6 tiers from 強力看多 to 空方壓制)
+      signal_score  – raw int score driving the signal
+      signal_reasons– list of human-readable Chinese explanations
+
+    Returns {} on any error or if fewer than 3 bars available.
+    Data source: yfinance period="1d" interval="5m"
+    """
+    try:
+        tk = yf.Ticker(ticker)
+        df = tk.history(period="1d", interval="5m")
+        if df is None or len(df) < 3:
+            return {}
+
+        df = df.copy()
+
+        # ── VWAP (typical-price × volume weighted) ────────────────────────
+        df["tp"]     = (df["High"] + df["Low"] + df["Close"]) / 3.0
+        df["tp_vol"] = df["tp"] * df["Volume"]
+        total_vol    = float(df["Volume"].sum())
+        vwap         = float(df["tp_vol"].sum() / total_vol) if total_vol > 0 else 0.0
+        last_close   = float(df["Close"].iloc[-1])
+        above_vwap   = last_close > vwap
+
+        # ── Candle-body buy/sell estimation ──────────────────────────────
+        def _buy_ratio(row: pd.Series) -> float:
+            rng = float(row["High"]) - float(row["Low"])
+            if rng <= 0:
+                return 0.5
+            return max(0.0, min(1.0, (float(row["Close"]) - float(row["Low"])) / rng))
+
+        df["br"]       = df.apply(_buy_ratio, axis=1)
+        df["buy_vol"]  = df["Volume"] * df["br"]
+        df["sell_vol"] = df["Volume"] * (1.0 - df["br"])
+
+        total_buy  = float(df["buy_vol"].sum())
+        total_sell = float(df["sell_vol"].sum())
+        total_est  = total_buy + total_sell
+        buy_pct    = (total_buy / total_est * 100.0) if total_est > 0 else 50.0
+
+        # ── Cumulative delta (running net buying pressure) ────────────────
+        df["delta"]   = df["buy_vol"] - df["sell_vol"]
+        df["cum_del"] = df["delta"].cumsum()
+        cum_delta     = float(df["cum_del"].iloc[-1])
+        delta_trend   = "flat"
+        if len(df) >= 6:
+            prev6 = float(df["cum_del"].iloc[-6])
+            cur   = float(df["cum_del"].iloc[-1])
+            if   abs(prev6) < 1:           delta_trend = "up" if cur > 0 else "down"
+            elif cur > prev6 * 1.05:       delta_trend = "up"
+            elif cur < prev6 * 0.95:       delta_trend = "down"
+
+        # ── Last-12 bar classification ────────────────────────────────────
+        recent  = df.tail(12)
+        bar_seq = [
+            "B" if float(r["Close"]) >= float(r["Open"]) else "S"
+            for _, r in recent.iterrows()
+        ]
+        consec_buy = consec_sell = 0
+        for b in reversed(bar_seq):
+            if b == "B":
+                if consec_sell > 0: break
+                consec_buy += 1
+            else:
+                if consec_buy > 0: break
+                consec_sell += 1
+
+        # ── Volume pace vs 3-month daily average ─────────────────────────
+        vol_pace_pct = 100
+        try:
+            avg_vol = tk.fast_info.three_month_average_volume or 0
+            bars_in_session = 78        # TWSE 09:00–13:30 = 78 × 5 min
+            bars_now = max(len(df), 1)
+            if avg_vol > 0:
+                projected    = total_vol * (bars_in_session / bars_now)
+                vol_pace_pct = int(projected / avg_vol * 100)
+        except Exception:
+            pass
+
+        # ── Multi-factor Wall Street directional signal ───────────────────
+        sig = 0
+        # 1. Buy-pressure weight
+        if   buy_pct >= 65: sig += 3
+        elif buy_pct >= 58: sig += 2
+        elif buy_pct >= 52: sig += 1
+        elif buy_pct <= 35: sig -= 3
+        elif buy_pct <= 42: sig -= 2
+        elif buy_pct <= 48: sig -= 1
+        # 2. VWAP — single most important institutional benchmark
+        if above_vwap: sig += 2
+        else:          sig -= 2
+        # 3. Bar-sequence momentum
+        if   consec_buy  >= 4: sig += 1
+        elif consec_sell >= 4: sig -= 1
+        # 4. Cumulative delta direction
+        if   delta_trend == "up":   sig += 1
+        elif delta_trend == "down": sig -= 1
+        # 5. Volume surge with directional confirmation
+        if vol_pace_pct >= 130 and buy_pct >= 55:  sig += 1
+        elif vol_pace_pct >= 130 and buy_pct <= 45: sig -= 1
+
+        # Signal label + color (6 tiers)
+        if   sig >= 5:  signal, sig_col = "強力看多 \U0001f680", "#00e676"
+        elif sig >= 3:  signal, sig_col = "多方主導 \U0001f4c8", "#4caf7d"
+        elif sig >= 1:  signal, sig_col = "偏多觀察 \U0001f7e1", "#ffd54f"
+        elif sig >= -1: signal, sig_col = "多空均衡 ⚖️",  "#90a4ae"
+        elif sig >= -3: signal, sig_col = "偏空謹慎 \U0001f536", "#ff9800"
+        else:           signal, sig_col = "空方壓制 \U0001f4c9", "#ef5350"
+
+        # ── Human-readable reasons ────────────────────────────────────────
+        reasons: List[str] = []
+        if   buy_pct >= 62:
+            reasons.append(f"主動買單佔 {buy_pct:.0f}%，買方積極進場")
+        elif buy_pct <= 38:
+            reasons.append(f"主動賣單佔 {100-buy_pct:.0f}%，賣方出貨明顯")
+        else:
+            reasons.append(f"買賣盤接近均衡（買 {buy_pct:.0f}% / 賣 {100-buy_pct:.0f}%）")
+
+        vd = abs(last_close - vwap) / vwap * 100 if vwap > 0 else 0
+        if above_vwap:
+            reasons.append(
+                f"現價 NT${last_close:.1f} 站上 VWAP NT${vwap:.1f}"
+                f"（+{vd:.1f}%），多方掌控節奏"
+            )
+        else:
+            reasons.append(
+                f"現價 NT${last_close:.1f} 跌破 VWAP NT${vwap:.1f}"
+                f"（-{vd:.1f}%），空方主導"
+            )
+
+        if   consec_buy  >= 4:
+            reasons.append(f"連續 {consec_buy} 根陽線，上升動能強勁")
+        elif consec_buy  >= 2:
+            reasons.append(f"連續 {consec_buy} 根陽線，短線偏多")
+        elif consec_sell >= 4:
+            reasons.append(f"連續 {consec_sell} 根陰線，下跌壓力持續")
+        elif consec_sell >= 2:
+            reasons.append(f"連續 {consec_sell} 根陰線，短線偏弱")
+
+        if   vol_pace_pct >= 140:
+            reasons.append(f"今日成交量節奏 {vol_pace_pct}%，資金大量湧入")
+        elif vol_pace_pct >= 115:
+            reasons.append(f"成交量活躍（{vol_pace_pct}% 正常節奏）")
+        elif vol_pace_pct < 70:
+            reasons.append(f"成交量清淡（{vol_pace_pct}%），市場觀望")
+
+        if delta_trend == "up" and sig >= 2:
+            reasons.append("累積買超持續擴大，機構資金逐步建倉")
+        elif delta_trend == "down" and sig <= -2:
+            reasons.append("累積賣超持續加大，法人可能逢高出清")
+
+        return {
+            "vwap":           round(vwap, 1),
+            "last_price":     round(last_close, 1),
+            "above_vwap":     above_vwap,
+            "buy_pct":        round(buy_pct, 1),
+            "sell_pct":       round(100.0 - buy_pct, 1),
+            "cum_delta":      int(cum_delta),
+            "delta_trend":    delta_trend,
+            "bar_seq":        bar_seq,
+            "consec_buy":     consec_buy,
+            "consec_sell":    consec_sell,
+            "vol_pace_pct":   vol_pace_pct,
+            "signal":         signal,
+            "signal_color":   sig_col,
+            "signal_score":   sig,
+            "signal_reasons": reasons,
+            "bars":           len(df),
+        }
+    except Exception:
+        return {}
+
+
 def calc_fundamental_bonus(ticker: str, fund_map: Dict, meeting_map: Dict) -> Dict:
     """
     基本面加權評分 (-15 ~ +30 分)。來源：yfinance 季報數據。
