@@ -2452,6 +2452,13 @@ def render_category_cards(picks, prices, show_chart):
 
         # Beginner advice
         _ref  = d["price"] if d and d["price"] > 0 else p["last_price"]
+        # ── 多空力道分析（獨立區塊）────────────────────────────────────────────
+        _fp_html = _build_flow_panel(_cat_flow, is_open)
+        if _fp_html:
+            _code_short = p["ticker"].replace(".TW", "")
+            with st.expander(f"🏦 {_code_short} 多空力道分析（點擊展開）", expanded=False):
+                st.markdown(_fp_html, unsafe_allow_html=True)
+
         _adv  = get_beginner_advice(prices.get(p["ticker"]), _ref)
         if _adv:
             _rsi_pct = min(100, max(0, _adv["rsi"]))
@@ -2461,7 +2468,6 @@ def render_category_cards(picks, prices, show_chart):
                     f'<div class="advice-box">'
                     f'<div class="advice-title">💡 新手操作建議</div>'
                     + _build_why_buy(p)
-                    + _build_flow_panel(_cat_flow, is_open)
                     +
                     f'<div class="advice-row">'
                     f'  <span class="advice-label">📊 RSI</span>'
@@ -3087,6 +3093,13 @@ def render_stock_cards(picks, prices, show_chart):
             unsafe_allow_html=True
         )
 
+        # ── 多空力道分析（獨立區塊，與新手建議分開）─────────────────────────
+        _fp_html = _build_flow_panel(_pick_flow, is_open)
+        if _fp_html:
+            _code_short = p["ticker"].replace(".TW", "")
+            with st.expander(f"🏦 {_code_short} 多空力道分析（點擊展開）", expanded=False):
+                st.markdown(_fp_html, unsafe_allow_html=True)
+
         # ── 新手操作建議（即時更新，每10秒隨股價重算）────────────────────────
         _ref = d["price"] if d and d["price"] > 0 else p["last_price"]
         _adv = get_beginner_advice(prices.get(p["ticker"]), _ref)
@@ -3099,7 +3112,6 @@ def render_stock_cards(picks, prices, show_chart):
                     f'<div class="advice-box">'
                     f'<div class="advice-title">💡 新手操作建議（即時更新）</div>'
                     + _build_why_buy(p)
-                    + _build_flow_panel(_pick_flow, is_open)
                     +
 
                     # RSI 即時
