@@ -1304,40 +1304,9 @@ def _fetch_flow_batch(tickers_tuple: tuple) -> dict:
     return result
 
 
-def _build_flow_compact(flow: dict, is_open: bool) -> str:
-    """
-    One-line order-flow summary for inside the stock card body.
-    Only shown when market is open AND flow data is available.
-    Returns '' otherwise so the card layout is unaffected.
-    """
-    if not flow or not is_open:
-        return ""
-    sig     = flow.get("signal", "")
-    sig_col = flow.get("signal_color", "#888")
-    buy_pct = flow.get("buy_pct", 50.0)
-    above   = flow.get("above_vwap", True)
-    vwap_ic = "▲" if above else "▼"
-    vwap_cl = "#4caf7d" if above else "#ef5350"
-    return (
-        f'<div style="font-size:11.5px;color:#666;margin:5px 0 3px;'
-        f'display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-        f'<span style="color:#555">📊 即時多空</span>'
-        f'<span style="color:{sig_col};font-weight:700">{sig}</span>'
-        f'<span style="background:#0a2a14;border:1px solid #1a5c2a44;'
-        f'border-radius:8px;padding:1px 7px;color:#4caf7d;font-size:10.5px">'
-        f'買 {buy_pct:.0f}%</span>'
-        f'<span style="background:#2a0a0a;border:1px solid #5c1a1a44;'
-        f'border-radius:8px;padding:1px 7px;color:#ef5350;font-size:10.5px">'
-        f'賣 {100-buy_pct:.0f}%</span>'
-        f'<span style="color:{vwap_cl};font-size:10.5px">'
-        f'{vwap_ic} VWAP</span>'
-        f'</div>'
-    )
-
-
 def _build_flow_panel(flow: dict, is_open: bool) -> str:
     """
-    Full Wall-Street order-flow panel rendered inside the beginner-advice expander.
+    Wall-Street order-flow panel embedded directly in the stock suggestion card.
     Shows VWAP, buy/sell pressure bar, 12-bar sequence, cumulative delta,
     volume pace, and a composite signal with plain-Chinese explanation.
     Labeled "今日" when market is open, "上一交易日" when closed.
@@ -2430,7 +2399,7 @@ def render_category_cards(picks, prices, show_chart):
             f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)
-            + _build_flow_compact(_cat_flow, is_open)
+            + _build_flow_panel(_cat_flow, is_open)
             + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
@@ -2450,15 +2419,7 @@ def render_category_cards(picks, prices, show_chart):
             st.session_state._needs_save = True
             st.rerun()
 
-        # Beginner advice
         _ref  = d["price"] if d and d["price"] > 0 else p["last_price"]
-        # ── 多空力道分析（獨立區塊）────────────────────────────────────────────
-        _fp_html = _build_flow_panel(_cat_flow, is_open)
-        if _fp_html:
-            _code_short = p["ticker"].replace(".TW", "")
-            with st.expander(f"🏦 {_code_short} 多空力道分析（點擊展開）", expanded=False):
-                st.markdown(_fp_html, unsafe_allow_html=True)
-
         _adv  = get_beginner_advice(prices.get(p["ticker"]), _ref)
         if _adv:
             _rsi_pct = min(100, max(0, _adv["rsi"]))
@@ -3083,7 +3044,7 @@ def render_stock_cards(picks, prices, show_chart):
             f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)
-            + _build_flow_compact(_pick_flow, is_open)
+            + _build_flow_panel(_pick_flow, is_open)
             + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
@@ -3092,13 +3053,6 @@ def render_stock_cards(picks, prices, show_chart):
             f'</div>',
             unsafe_allow_html=True
         )
-
-        # ── 多空力道分析（獨立區塊，與新手建議分開）─────────────────────────
-        _fp_html = _build_flow_panel(_pick_flow, is_open)
-        if _fp_html:
-            _code_short = p["ticker"].replace(".TW", "")
-            with st.expander(f"🏦 {_code_short} 多空力道分析（點擊展開）", expanded=False):
-                st.markdown(_fp_html, unsafe_allow_html=True)
 
         # ── 新手操作建議（即時更新，每10秒隨股價重算）────────────────────────
         _ref = d["price"] if d and d["price"] > 0 else p["last_price"]
