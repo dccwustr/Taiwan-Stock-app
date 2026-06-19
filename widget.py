@@ -221,6 +221,7 @@ TECH_UNIVERSE: Dict[str, Dict] = {
     "2912.TW": {"name":"統一超",    "en":"President Chain",   "sector":"零售",      "supply":[]},
     "5903.TW": {"name":"全家",      "en":"FamilyMart TW",     "sector":"零售",      "supply":[]},
     "5904.TW": {"name":"寶雅",      "en":"Poya",              "sector":"零售",      "supply":[]},
+    "2758.TW": {"name":"路易莎",    "en":"Louisa Coffee",     "sector":"餐飲",      "supply":[]},
     "2207.TW": {"name":"和泰車",    "en":"Hotai Motor",       "sector":"汽車",      "supply":[]},
 
     # ════════════════════════════════════════════════════════════════════════

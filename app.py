@@ -426,7 +426,8 @@ CATEGORY_UNIVERSE = {
 
 # ── Future Giants Universe — 十年潛力股資料庫 ────────────────────────────────
 # These are NOT short-term picks. Each entry represents a company with
-# Nvidia-like potential to become a dominant player in 5-10 years.
+# the potential to become a dominant, large-cap player in 5-10 years.
+# Any sector qualifies — tech, consumer, biotech, finance, or anything else.
 # Stage legend:  🌱 Seed (still losing money)
 #                🌿 Sprout (newly profitable, trajectory confirmed)
 #                🌳 Growing (profitable, compounding, still underdiscovered)
@@ -439,7 +440,7 @@ FUTURE_GIANTS_UNIVERSE = {
             "創意電子是TSMC 3nm製程唯一台灣ASIC設計全端服務商，涵蓋規格→流片→先進封裝→HBM界面IP。"
             "TSMC持股35%是最強信心保證。4月營收年增156%，Q1 EPS NT$12.28——這不是預期，是已發生的事實。"
         ),
-        "nvidia_analog": "如同Nvidia 2006年推出CUDA建立開發者護城河，創意透過TSMC製程優先綁定，正在鎖定下一代ASIC設計主導地位",
+        "growth_analog":"如同Nvidia 2006年推出CUDA建立開發者護城河，創意透過TSMC製程優先綁定，正在鎖定下一代ASIC設計主導地位",
         "tam": "AI自製ASIC 2026年佔AI伺服器市場27.8%，年增44.6%；ASIC設計服務市場快速擴張",
         "key_catalyst": "Google/Meta 2026-2027自製AI晶片訂單規模化確認、3nm ASIC首批量產",
         "time_horizon": "3–5年",
@@ -457,7 +458,7 @@ FUTURE_GIANTS_UNIVERSE = {
             "CoWoS先進封裝需求暴增，直接帶動ABF載板訂單。外資已將目標價從NT$970調升至NT$1,115。"
             "南電AI相關載板佔收入比重預估2026年突破50%，EPS從NT$2.49暴增至NT$11.24——5倍獲利躍升。"
         ),
-        "nvidia_analog": "如同台積電因先進製程成為AI基礎建設的守門人，南電正成為AI晶片封裝不可或缺的基板壟斷供應商",
+        "growth_analog":"如同台積電因先進製程成為AI基礎建設的守門人，南電正成為AI晶片封裝不可或缺的基板壟斷供應商",
         "tam": "AI伺服器ABF載板需求2027年較2025年翻倍，定價上升週期剛啟動（類2020-2022）",
         "key_catalyst": "Q2 2026營收+42%季增兌現、FY2026 EPS達NT$11.24確認、外資持續調升評等",
         "time_horizon": "3–5年",
@@ -476,7 +477,7 @@ FUTURE_GIANTS_UNIVERSE = {
             "上詮是TSMC COUPE平台前兩代FAU（光纖陣列）唯一獨家供應商，地位不可取代。"
             "2026年2月完成NT$31.6億現金增資＋NT$15.8億資本支出——管理層用真金白銀下注。"
         ),
-        "nvidia_analog": "如同Nvidia獨家掌握AI GPU運算加速，上詮獨家掌握TSMC COUPE光互連的最關鍵零件FAU",
+        "growth_analog":"如同Nvidia獨家掌握AI GPU運算加速，上詮獨家掌握TSMC COUPE光互連的最關鍵零件FAU",
         "tam": "CPO市場$1.64億→$910億（Goldman Sachs 2028），556倍成長潛力",
         "key_catalyst": "Q3 2026 COUPE量產啟動、CPO相關收入首次出現在財報、摩根士丹利目標價進一步調升",
         "time_horizon": "5–10年",
@@ -495,7 +496,7 @@ FUTURE_GIANTS_UNIVERSE = {
             "38.4%毛利率，正在與客戶談0-15%漲價，PEG比率0.45。"
             "巴菲特會看一眼就買的標的：高毛利、資產輕、定價權正在形成。"
         ),
-        "nvidia_analog": "如同美國Monolithic Power Systems(MPWR)成為AI伺服器電源IC的複利機器，茂達是台灣版本——相同商業模式，只有美國同業一半的估值",
+        "growth_analog":"如同美國Monolithic Power Systems(MPWR)成為AI伺服器電源IC的複利機器，茂達是台灣版本——相同商業模式，只有美國同業一半的估值",
         "tam": "AI伺服器電源管理IC 2025-2028 CAGR 25%+；DDR5+AI PC 增量需求",
         "key_catalyst": "客戶漲價0-15%談判成功確認、毛利率突破40%、外資目標價調升",
         "time_horizon": "3–5年",
@@ -514,7 +515,7 @@ FUTURE_GIANTS_UNIVERSE = {
             "Q1 2026 EPS +1,462% YoY，5月營收+178%——這是業務性質根本改變，而非週期回升。"
             "OTC掛牌、法人覆蓋幾乎為零——這正是進場最佳時機。"
         ),
-        "nvidia_analog": "如同Nvidia從遊戲GPU轉向資料中心，宜鼎正從工業SSD升級為Edge AI全棧解決方案提供商",
+        "growth_analog":"如同Nvidia從遊戲GPU轉向資料中心，宜鼎正從工業SSD升級為Edge AI全棧解決方案提供商",
         "tam": "邊緣AI硬體市場2025-2030 CAGR 30%+；工業IoT市場規模NT$15兆+",
         "key_catalyst": "連續兩季EPS維持高水準、第一份法人研究報告覆蓋、邊緣AI主題基金買入訊號",
         "time_horizon": "3–7年",
@@ -531,9 +532,9 @@ FUTURE_GIANTS_UNIVERSE = {
             "SiC（碳化矽）功率半導體是EV和AI資料中心電力架構的關鍵材料，效能遠超傳統矽元件。"
             "漢磊是台灣唯一具備8吋SiC平台研發能力的廠商，正與世界先進合作建立台灣SiC代工生態系。"
             "Q1 2026毛利剛轉正（5.06%），這是製造業進入規模效益的關鍵里程碑。"
-            "虧損快速收窄——這正是Nvidia 2012年前的業績特徵。"
+            "虧損快速收窄——技術投入期最深、護城河最難複製。"
         ),
-        "nvidia_analog": "如同Nvidia在GPU大爆發前虧損多年卻持續布局CUDA，漢磊正在SiC製程建立未來10年無法複製的技術壁壘",
+        "growth_analog":"如同早期台積電虧損多年卻持續投入製程研發，漢磊正在SiC製程建立未來10年無法複製的技術壁壘",
         "tam": "SiC功率元件市場$35億(2025)→$90億+(2030)，CAGR 20%；EV+AI電力雙引擎驅動",
         "key_catalyst": "8吋SiC製程H2 2026驗證完成、首批客戶量產訂單確認、FY2027毛利超過15%",
         "time_horizon": "5–10年",
@@ -542,6 +543,64 @@ FUTURE_GIANTS_UNIVERSE = {
         "rev_growth": "+31%（4月 YoY）",
         "gross_margin": "5.06%（剛轉正，關鍵技術里程碑）",
         "target_price": None,
+    },
+    # ── 消費 / 品牌護城河 Consumer / Brand Moat ──────────────────────────────────
+    "1707.TW": {
+        "name": "葡萄王", "en": "Grape King Bio", "sector": "保健食品",
+        "stage": "🌳", "stage_label": "穩健複利",
+        "thesis": (
+            "台灣保健食品龍頭，擁有69.67%毛利率——遠超多數科技製造業。"
+            "台灣高齡化趨勢每年加速，預防保健需求剛性增長。"
+            "品牌護城河深厚：消費者黏性極高，產品定價權強，幾乎不受景氣影響。"
+            "P/E僅15倍，EPS穩定成長，股息殖利率約4%——兼顧成長與股利的複利組合。"
+        ),
+        "growth_analog": "如同美國巨頭Church & Dwight（CHD）靠品牌消費品複利30年從小公司成長為S&P 500成分股，葡萄王是台灣的版本",
+        "tam": "台灣保健食品市場年規模逾NT$1,500億，並持續以5-8% CAGR成長；高齡化紅利至少再走20年",
+        "key_catalyst": "高齡化政策利多持續、海外保健食品市場拓展確認、毛利率維持70%護城河",
+        "time_horizon": "5–10年",
+        "risk": "低",
+        "eps_2026e": "NT$7.4E（FY2026，穩定成長）",
+        "rev_growth": "+8%（年均穩定複利）",
+        "gross_margin": "69.67%（品牌消費品護城河水準）",
+        "target_price": 130,
+    },
+    "2758.TW": {
+        "name": "路易莎", "en": "Louisa Coffee", "sector": "餐飲連鎖",
+        "stage": "🌿", "stage_label": "快速展店中",
+        "thesis": (
+            "台灣成長最快速的咖啡連鎖品牌——7年從1店擴張至700+門市，仍在持續展店中。"
+            "定位精準：比星巴克便宜、比超商咖啡有質感，鎖定台灣中產階級的日常消費。"
+            "門市數量每年穩定增加15-20%，複利展店模式可持續10年。"
+            "台灣連鎖咖啡滲透率仍遠低於日本韓國，長期成長空間巨大。"
+        ),
+        "growth_analog": "如同台灣的星巴克早年快速展店複利——只是路易莎的定價更符合台灣市場，護城河更難被外資複製",
+        "tam": "台灣咖啡市場年規模NT$800億+，連鎖率仍低；東南亞品牌輸出潛力未開發",
+        "key_catalyst": "門市數量突破1,000家里程碑、首次品牌授權海外市場確認、毛利率持續改善",
+        "time_horizon": "5–10年",
+        "risk": "中",
+        "eps_2026e": "NT$6-9E（展店期，毛利改善中）",
+        "rev_growth": "+18%（年均展店驅動）",
+        "gross_margin": "持續改善中（規模效益發揮）",
+        "target_price": 120,
+    },
+    "5904.TW": {
+        "name": "寶雅", "en": "Poya Int'l", "sector": "美妝零售",
+        "stage": "🌳", "stage_label": "穩定複利",
+        "thesis": (
+            "台灣最強美妝零售連鎖，400+門市，45.9%毛利率——零售業中的異常存在。"
+            "目標客群明確：18-45歲女性，提供彩妝、保養、生活雜貨一站購足。"
+            "同店銷售持續正成長，選址策略優異（社區型而非百貨型），租金風險低。"
+            "女性消費升級趨勢是長期結構性利多，景氣不佳時美妝需求反而有口紅效應。"
+        ),
+        "growth_analog": "如同美國Ulta Beauty從區域連鎖複利成長為美股零售龍頭，寶雅是台灣版的Ulta——相同商業模式，坐擁本土品牌認知度護城河",
+        "tam": "台灣美妝零售市場NT$500億+，連鎖滲透率持續提升；未來可拓展東南亞台商聚集地",
+        "key_catalyst": "門市突破500家確認、電商+實體O2O整合完成、第一份全覆蓋外資研究報告",
+        "time_horizon": "5–8年",
+        "risk": "低中",
+        "eps_2026e": "NT$18-22E（穩定複利成長）",
+        "rev_growth": "+12%（年均穩健）",
+        "gross_margin": "45.9%（零售業頂級水準）",
+        "target_price": 450,
     },
 }
 
@@ -1611,7 +1670,7 @@ def _build_future_card(ticker: str, meta: dict, price: float, chg_pct: float) ->
     stage       = meta.get("stage", "🌿")
     stage_lbl   = meta.get("stage_label", "成長中")
     thesis      = meta.get("thesis", "")
-    nv_analog   = meta.get("nvidia_analog", "")
+    nv_analog   = meta.get("growth_analog", meta.get("nvidia_analog", ""))
     tam         = meta.get("tam", "")
     catalyst    = meta.get("key_catalyst", "")
     horizon     = meta.get("time_horizon", "")
@@ -1667,13 +1726,13 @@ def _build_future_card(ticker: str, meta: dict, price: float, chg_pct: float) ->
         f'<div style="background:#050d1a;border-left:3px solid #1a56db;border-radius:0 6px 6px 0;'
         f'padding:10px 14px;margin-bottom:10px">'
         f'<div style="font-size:10.5px;color:#7eb3ff;font-weight:700;margin-bottom:5px;letter-spacing:.3px">'
-        f'📖 為什麼可能是下一個 Nvidia？</div>'
+        f'📖 長線成長論點</div>'
         f'<div style="font-size:12.5px;color:#c0d4ff;line-height:1.7">{thesis}</div>'
         f'</div>'
 
         # ── Nvidia analog ──
         f'<div style="font-size:11px;color:#555;font-style:italic;margin-bottom:12px;'
-        f'padding-left:10px;border-left:2px solid #1e1e2e">💡 {nv_analog}</div>'
+        f'padding-left:10px;border-left:2px solid #1e1e2e">💡 成長類比：{nv_analog}</div>'
 
         # ── TAM + Catalyst ──
         f'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'
@@ -3042,12 +3101,12 @@ if st.session_state.view_mode == "future":
     st.markdown(
         '<div style="background:#070f1c;border:1px solid #1a3560;border-radius:8px;'
         'padding:12px 16px;margin-bottom:16px;font-size:12.5px;color:#c0d4ff;line-height:1.7">'
-        '📌 <b>這些不是短線交易標的。</b> 每支股票都代表一個<b>正在形成的巨大市場</b>，'
-        '就像 2013 年的 Nvidia——那時沒有人知道 GPU 會成為 AI 的引擎。'
+        '📌 <b>這些不是短線交易標的。</b> 每支股票都代表一個<b>正在形成的長期優勢</b>——'
+        '科技、消費、品牌、製造皆可，只要有潛力成為未來 5-10 年的大型股。'
         '建議策略：<b>零股分批買入 + 持有 5-10 年</b>，讓複利做工作。<br><br>'
         '&nbsp;&nbsp;🌱 <b>播種期</b> = 仍在虧損，最早期佈局，最高風險&nbsp;&nbsp;'
         '🌿 <b>起飛中</b> = 開始獲利，趨勢確立&nbsp;&nbsp;'
-        '🌳 <b>快速成長</b> = 盈利加速，估值仍有空間'
+        '🌳 <b>穩健複利</b> = 盈利加速，估值仍有空間'
         '</div>',
         unsafe_allow_html=True
     )
