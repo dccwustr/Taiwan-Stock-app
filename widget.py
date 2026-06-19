@@ -114,6 +114,15 @@ TECH_UNIVERSE: Dict[str, Dict] = {
     "5274.TW": {"name":"信驊科技",  "en":"ASPEED Technology",  "sector":"伺服器IC",  "supply":["AI"]},
     "4966.TW": {"name":"譜瑞-KY",   "en":"Parade Technologies","sector":"顯示IC",    "supply":["Apple","AI"]},
     "4919.TW": {"name":"新唐科技",  "en":"Nuvoton Technology", "sector":"MCU/嵌入式","supply":[]},
+    # ── 未來潛力股 Future Giants ──────────────────────────────────────────────
+    "6138.TW": {"name":"茂達",      "en":"Mosfet Electronics",  "sector":"電源IC",    "supply":["AI"]},
+    "8046.TW": {"name":"南電",      "en":"Nan Ya PCB",           "sector":"IC載板",    "supply":["AI","CoWoS"]},
+    "3707.TW": {"name":"漢磊",      "en":"Han Lei Tech",         "sector":"化合物半導體","supply":["EV","AI"]},
+    "3363.TW": {"name":"上詮",      "en":"Applied Optoelec",     "sector":"矽光子/CPO","supply":["AI","TSMC"]},
+    "5289.TW": {"name":"宜鼎",      "en":"InnoDisk",             "sector":"邊緣AI儲存","supply":["AI"]},
+    "4931.TW": {"name":"新盛力",    "en":"Shinergy Tech",        "sector":"BBU儲能",   "supply":["AI"]},
+    "6282.TW": {"name":"康舒",      "en":"Acbel Polytech",       "sector":"伺服器電源","supply":["AI"]},
+    "6230.TW": {"name":"尼得科超眾","en":"Nidec Surpass",        "sector":"液冷散熱",  "supply":["AI"]},
     # ── 伺服器ODM 補充 ───────────────────────────────────────────────────────
     "2356.TW": {"name":"英業達",    "en":"Inventec",           "sector":"伺服器ODM", "supply":["NVIDIA","AI"]},
     "2301.TW": {"name":"光寶科技",  "en":"Lite-On Technology", "sector":"電源/伺服器","supply":["AI"]},

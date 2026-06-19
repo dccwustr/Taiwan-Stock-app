@@ -342,7 +342,8 @@ CATEGORY_UNIVERSE = {
         "desc": "SoC・驅動IC・電源管理・特殊應用晶片",
         "why": "台灣IC設計全球第二，聚焦AI邊緣、車用、伺服器三大成長引擎",
         "tickers": ["2454.TW","3034.TW","2379.TW","6415.TW","3661.TW",
-                    "4966.TW","5274.TW","8299.TW","3443.TW","4919.TW","2344.TW"],
+                    "4966.TW","5274.TW","8299.TW","3443.TW","4919.TW","2344.TW",
+                    "6138.TW"],   # 茂達 — Power IC for AI servers
     },
     "foundry": {
         "emoji": "🏭", "name": "半導體製造", "en": "Semiconductor Foundry",
@@ -355,8 +356,8 @@ CATEGORY_UNIVERSE = {
         "emoji": "📦", "name": "封裝測試", "en": "IC Packaging & Testing",
         "desc": "先進封裝・CoWoS・SoIC・晶片測試・基板",
         "why": "AI GPU需要CoWoS先進封裝，日月光訂單滿載；封測是AI供應鏈現在的瓶頸",
-        # 2408=Nanya Tech(DRAM,not OSAT) removed; 2449=KYEC(IC testing) added
-        "tickers": ["3711.TW","8150.TW","6271.TW","2449.TW"],
+        # 2408=Nanya Tech(DRAM,not OSAT) removed; 2449=KYEC(IC testing) added; 8046=南電 ABF substrate
+        "tickers": ["3711.TW","8150.TW","6271.TW","2449.TW","8046.TW"],
     },
     "ai_server": {
         "emoji": "🖥️", "name": "AI伺服器", "en": "AI Servers / Cloud",
@@ -423,6 +424,127 @@ CATEGORY_UNIVERSE = {
     },
 }
 
+# ── Future Giants Universe — 十年潛力股資料庫 ────────────────────────────────
+# These are NOT short-term picks. Each entry represents a company with
+# Nvidia-like potential to become a dominant player in 5-10 years.
+# Stage legend:  🌱 Seed (still losing money)
+#                🌿 Sprout (newly profitable, trajectory confirmed)
+#                🌳 Growing (profitable, compounding, still underdiscovered)
+FUTURE_GIANTS_UNIVERSE = {
+    "3443.TW": {
+        "name": "創意電子", "en": "Global Unichip", "sector": "ASIC設計",
+        "stage": "🌳", "stage_label": "快速成長",
+        "thesis": (
+            "超大規模雲端巨頭（Meta/Google/Amazon）大幅轉向自製AI加速器ASIC。"
+            "創意電子是TSMC 3nm製程唯一台灣ASIC設計全端服務商，涵蓋規格→流片→先進封裝→HBM界面IP。"
+            "TSMC持股35%是最強信心保證。4月營收年增156%，Q1 EPS NT$12.28——這不是預期，是已發生的事實。"
+        ),
+        "nvidia_analog": "如同Nvidia 2006年推出CUDA建立開發者護城河，創意透過TSMC製程優先綁定，正在鎖定下一代ASIC設計主導地位",
+        "tam": "AI自製ASIC 2026年佔AI伺服器市場27.8%，年增44.6%；ASIC設計服務市場快速擴張",
+        "key_catalyst": "Google/Meta 2026-2027自製AI晶片訂單規模化確認、3nm ASIC首批量產",
+        "time_horizon": "3–5年",
+        "risk": "中",
+        "eps_2026e": "NT$43.52（FactSet共識）",
+        "rev_growth": "+156%（4月 YoY）",
+        "gross_margin": "高（設計服務+晶片出貨混合）",
+        "target_price": 3100,
+    },
+    "8046.TW": {
+        "name": "南電", "en": "Nan Ya PCB", "sector": "ABF載板",
+        "stage": "🌿", "stage_label": "起飛中",
+        "thesis": (
+            "ABF載板是所有AI GPU/CPU的必要基板，技術門檻極高，全球量產廠商屈指可數。"
+            "CoWoS先進封裝需求暴增，直接帶動ABF載板訂單。外資已將目標價從NT$970調升至NT$1,115。"
+            "南電AI相關載板佔收入比重預估2026年突破50%，EPS從NT$2.49暴增至NT$11.24——5倍獲利躍升。"
+        ),
+        "nvidia_analog": "如同台積電因先進製程成為AI基礎建設的守門人，南電正成為AI晶片封裝不可或缺的基板壟斷供應商",
+        "tam": "AI伺服器ABF載板需求2027年較2025年翻倍，定價上升週期剛啟動（類2020-2022）",
+        "key_catalyst": "Q2 2026營收+42%季增兌現、FY2026 EPS達NT$11.24確認、外資持續調升評等",
+        "time_horizon": "3–5年",
+        "risk": "中低",
+        "eps_2026e": "NT$11.24E（EPS 5倍躍升）",
+        "rev_growth": "+42%（Q2 2026預估）",
+        "gross_margin": "15.8%→持續改善（高毛利AI載板佔比增加）",
+        "target_price": 1115,
+    },
+    "3363.TW": {
+        "name": "上詮", "en": "Applied Optoelec.", "sector": "矽光子/CPO",
+        "stage": "🌿", "stage_label": "臨界起飛",
+        "thesis": (
+            "AI叢集突破10萬GPU後，電子互連即將成為系統擴展瓶頸。"
+            "CPO（共封裝光學）是解方，市場規模Goldman Sachs預估從$1.64億爆增至$910億（2028）。"
+            "上詮是TSMC COUPE平台前兩代FAU（光纖陣列）唯一獨家供應商，地位不可取代。"
+            "2026年2月完成NT$31.6億現金增資＋NT$15.8億資本支出——管理層用真金白銀下注。"
+        ),
+        "nvidia_analog": "如同Nvidia獨家掌握AI GPU運算加速，上詮獨家掌握TSMC COUPE光互連的最關鍵零件FAU",
+        "tam": "CPO市場$1.64億→$910億（Goldman Sachs 2028），556倍成長潛力",
+        "key_catalyst": "Q3 2026 COUPE量產啟動、CPO相關收入首次出現在財報、摩根士丹利目標價進一步調升",
+        "time_horizon": "5–10年",
+        "risk": "中高",
+        "eps_2026e": "NT$3-5（建立期，2027-2028爆發）",
+        "rev_growth": "+27.67%（2月 YoY）",
+        "gross_margin": "傳統光纖業務支撐，CPO毛利更高",
+        "target_price": 708,
+    },
+    "6138.TW": {
+        "name": "茂達", "en": "Mosfet Electronics", "sector": "電源管理IC",
+        "stage": "🌳", "stage_label": "穩健複利",
+        "thesis": (
+            "每台AI伺服器需要20-40顆PMIC和風扇驅動IC，功率密度從10kW升至80kW+代表每台用量幾何成長。"
+            "茂達是Fabless IC設計廠——不需要工廠，設計嵌入客戶產品後幾乎不可能更換。"
+            "38.4%毛利率，正在與客戶談0-15%漲價，PEG比率0.45。"
+            "巴菲特會看一眼就買的標的：高毛利、資產輕、定價權正在形成。"
+        ),
+        "nvidia_analog": "如同美國Monolithic Power Systems(MPWR)成為AI伺服器電源IC的複利機器，茂達是台灣版本——相同商業模式，只有美國同業一半的估值",
+        "tam": "AI伺服器電源管理IC 2025-2028 CAGR 25%+；DDR5+AI PC 增量需求",
+        "key_catalyst": "客戶漲價0-15%談判成功確認、毛利率突破40%、外資目標價調升",
+        "time_horizon": "3–5年",
+        "risk": "低中",
+        "eps_2026e": "NT$15.4E（FY2026全年）",
+        "rev_growth": "+42%（Q1 2026 YoY）",
+        "gross_margin": "38.4%（IC設計品質，非製造商水準）",
+        "target_price": 370,
+    },
+    "5289.TW": {
+        "name": "宜鼎", "en": "InnoDisk", "sector": "邊緣AI儲存",
+        "stage": "🌿", "stage_label": "爆發成長",
+        "thesis": (
+            "Cloud AI已成熟，下一波是Edge AI——工廠機器人、AIoT設備、自駕系統的on-device智慧。"
+            "宜鼎提供工業級邊緣AI儲存與運算模組，客戶跨越航太、醫療、工業自動化、軍事。"
+            "Q1 2026 EPS +1,462% YoY，5月營收+178%——這是業務性質根本改變，而非週期回升。"
+            "OTC掛牌、法人覆蓋幾乎為零——這正是進場最佳時機。"
+        ),
+        "nvidia_analog": "如同Nvidia從遊戲GPU轉向資料中心，宜鼎正從工業SSD升級為Edge AI全棧解決方案提供商",
+        "tam": "邊緣AI硬體市場2025-2030 CAGR 30%+；工業IoT市場規模NT$15兆+",
+        "key_catalyst": "連續兩季EPS維持高水準、第一份法人研究報告覆蓋、邊緣AI主題基金買入訊號",
+        "time_horizon": "3–7年",
+        "risk": "中",
+        "eps_2026e": "NT$20-30E（快速上修中）",
+        "rev_growth": "+178%（5月 YoY）",
+        "gross_margin": "高（工業級premium定價，非商用競爭）",
+        "target_price": 1250,
+    },
+    "3707.TW": {
+        "name": "漢磊", "en": "Han Lei Tech", "sector": "SiC功率半導體",
+        "stage": "🌱", "stage_label": "播種期（最高風險）",
+        "thesis": (
+            "SiC（碳化矽）功率半導體是EV和AI資料中心電力架構的關鍵材料，效能遠超傳統矽元件。"
+            "漢磊是台灣唯一具備8吋SiC平台研發能力的廠商，正與世界先進合作建立台灣SiC代工生態系。"
+            "Q1 2026毛利剛轉正（5.06%），這是製造業進入規模效益的關鍵里程碑。"
+            "虧損快速收窄——這正是Nvidia 2012年前的業績特徵。"
+        ),
+        "nvidia_analog": "如同Nvidia在GPU大爆發前虧損多年卻持續布局CUDA，漢磊正在SiC製程建立未來10年無法複製的技術壁壘",
+        "tam": "SiC功率元件市場$35億(2025)→$90億+(2030)，CAGR 20%；EV+AI電力雙引擎驅動",
+        "key_catalyst": "8吋SiC製程H2 2026驗證完成、首批客戶量產訂單確認、FY2027毛利超過15%",
+        "time_horizon": "5–10年",
+        "risk": "高",
+        "eps_2026e": "虧損收窄中→FY2027轉盈預期",
+        "rev_growth": "+31%（4月 YoY）",
+        "gross_margin": "5.06%（剛轉正，關鍵技術里程碑）",
+        "target_price": None,
+    },
+}
+
 # ── Data loading ──────────────────────────────────────────────────────────────
 @st.cache_data(ttl=3600, show_spinner=False)     # 1-hour TTL; epoch param busts cache at each slot boundary
 def load_data(epoch: str):                       # epoch = "YYYY-MM-DD-SLOT", changes 4× per trading day
@@ -471,7 +593,7 @@ def load_fundamentals(epoch_day: str) -> dict:
 
 # ── Session state init ────────────────────────────────────────────────────────
 if "view_mode"        not in st.session_state: st.session_state.view_mode        = "picks"
-# valid modes: "picks" | "categories" | "holdings" | "watchlist" | "search" | "monitor"
+# valid modes: "picks" | "categories" | "holdings" | "watchlist" | "search" | "monitor" | "future"
 if "custom_holdings"  not in st.session_state: st.session_state.custom_holdings  = {}
 if "hidden_holdings"  not in st.session_state: st.session_state.hidden_holdings  = set()
 if "search_ticker"    not in st.session_state: st.session_state.search_ticker    = None
@@ -584,9 +706,9 @@ with st.sidebar:
     _n_mon   = len(st.session_state.rsi_thresholds)
     _mon_lbl = f"📡{_n_mon}" if _n_mon else "📡"
     vm       = st.session_state.view_mode
-    _nr1, _nr2 = st.columns(2)
-    for _col, (_vk, _vl) in zip([_nr1, _nr2], [
-        ("picks", "精選推薦"), ("categories", "🏷️ 分類"),
+    _nr1, _nr2, _nr3 = st.columns(3)
+    for _col, (_vk, _vl) in zip([_nr1, _nr2, _nr3], [
+        ("picks", "精選推薦"), ("categories", "🏷️ 分類"), ("future", "🚀 潛力十年"),
     ]):
         _active = vm == _vk
         if _col.button(_vl + (" ✓" if _active else ""), key=f"nav_{_vk}",
@@ -1475,6 +1597,110 @@ def _build_flow_panel(flow: dict, is_open: bool) -> str:
         f'<div style="font-size:13px;font-weight:700;color:{sig_col}">'
         f'🏦 多空信號：{signal}</div>'
         f'{reasons_html}'
+        f'</div>'
+
+        f'</div>'
+    )
+
+
+# ── Future Giants card builder ────────────────────────────────────────────────
+def _build_future_card(ticker: str, meta: dict, price: float, chg_pct: float) -> str:
+    """Build a long-horizon research card for the 🚀 潛力十年 section."""
+    name        = meta.get("name", ticker.replace(".TW",""))
+    en          = meta.get("en", "")
+    stage       = meta.get("stage", "🌿")
+    stage_lbl   = meta.get("stage_label", "成長中")
+    thesis      = meta.get("thesis", "")
+    nv_analog   = meta.get("nvidia_analog", "")
+    tam         = meta.get("tam", "")
+    catalyst    = meta.get("key_catalyst", "")
+    horizon     = meta.get("time_horizon", "")
+    risk        = meta.get("risk", "中")
+    eps_e       = meta.get("eps_2026e", "—")
+    rev_gr      = meta.get("rev_growth", "—")
+    gm          = meta.get("gross_margin", "—")
+    tgt         = meta.get("target_price")
+
+    t_clean  = ticker.replace(".TW","").replace(".TWO","")
+    price_s  = f"NT${price:,.0f}" if price > 0 else "—"
+    chg_col  = "#ef5350" if chg_pct >= 0 else "#4caf7d"
+    chg_s    = f"+{chg_pct:.1f}%" if chg_pct >= 0 else f"{chg_pct:.1f}%"
+
+    tgt_s = "觀察中"
+    if tgt and price > 0:
+        up = (tgt - price) / price * 100
+        tgt_s = f"NT${tgt:,}（{'↑' if up >= 0 else '↓'}{abs(up):.0f}%）"
+    elif tgt:
+        tgt_s = f"NT${tgt:,}"
+
+    risk_col = {"低":"#4caf7d","低中":"#76b900","中":"#ffd54f",
+                "中高":"#ff9800","高":"#ef5350"}.get(risk,"#ffd54f")
+    stage_border = {"🌱":"#ff9800","🌿":"#00c853","🌳":"#1a56db"}.get(stage,"#7eb3ff")
+
+    return (
+        f'<div style="background:#07101e;border:1px solid {stage_border}44;'
+        f'border-left:4px solid {stage_border};border-radius:12px;'
+        f'padding:16px 18px;margin-bottom:14px">'
+
+        # ── Header ──
+        f'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'
+        f'<div>'
+        f'<span style="font-size:19px;font-weight:800;color:#f0f0f0">{name}</span>'
+        f'<span style="font-size:12px;color:#3a3a4a;margin-left:8px">{t_clean} · {en}</span>'
+        f'</div>'
+        f'<div style="text-align:right">'
+        f'<div style="font-size:17px;font-weight:700;color:#e0e0e0">{price_s}</div>'
+        f'<div style="font-size:12px;color:{chg_col}">{chg_s}</div>'
+        f'</div></div>'
+
+        # ── Badges ──
+        f'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'
+        f'<span style="background:{stage_border}18;color:{stage_border};border:1px solid {stage_border}55;'
+        f'border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700">{stage} {stage_lbl}</span>'
+        f'<span style="background:#0a1628;color:#7eb3ff;border:1px solid #1a56db33;'
+        f'border-radius:20px;padding:2px 10px;font-size:11px">⏱ {horizon}</span>'
+        f'<span style="background:{risk_col}15;color:{risk_col};border:1px solid {risk_col}44;'
+        f'border-radius:20px;padding:2px 10px;font-size:11px">⚠️ 風險 {risk}</span>'
+        f'</div>'
+
+        # ── Thesis ──
+        f'<div style="background:#050d1a;border-left:3px solid #1a56db;border-radius:0 6px 6px 0;'
+        f'padding:10px 14px;margin-bottom:10px">'
+        f'<div style="font-size:10.5px;color:#7eb3ff;font-weight:700;margin-bottom:5px;letter-spacing:.3px">'
+        f'📖 為什麼可能是下一個 Nvidia？</div>'
+        f'<div style="font-size:12.5px;color:#c0d4ff;line-height:1.7">{thesis}</div>'
+        f'</div>'
+
+        # ── Nvidia analog ──
+        f'<div style="font-size:11px;color:#555;font-style:italic;margin-bottom:12px;'
+        f'padding-left:10px;border-left:2px solid #1e1e2e">💡 {nv_analog}</div>'
+
+        # ── TAM + Catalyst ──
+        f'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'
+        f'<div style="flex:1;min-width:160px;background:#080f1a;border:1px solid #1a2a40;'
+        f'border-radius:6px;padding:8px 12px">'
+        f'<div style="font-size:10px;color:#3a3a4a;margin-bottom:4px;font-weight:600">🌐 市場規模（TAM）</div>'
+        f'<div style="font-size:12px;color:#a0b8d4;line-height:1.5">{tam}</div></div>'
+        f'<div style="flex:1;min-width:160px;background:#080f1a;border:1px solid #1a2a40;'
+        f'border-radius:6px;padding:8px 12px">'
+        f'<div style="font-size:10px;color:#3a3a4a;margin-bottom:4px;font-weight:600">🔑 關鍵催化劑</div>'
+        f'<div style="font-size:12px;color:#a0b8d4;line-height:1.5">{catalyst}</div></div>'
+        f'</div>'
+
+        # ── Metrics grid ──
+        f'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">'
+        f'<div style="background:#080f1a;border:1px solid #1a2a40;border-radius:6px;padding:8px;text-align:center">'
+        f'<div style="font-size:9.5px;color:#3a3a4a;margin-bottom:3px">FY2026E EPS</div>'
+        f'<div style="font-size:11.5px;font-weight:700;color:#ef5350">{eps_e}</div></div>'
+        f'<div style="background:#080f1a;border:1px solid #1a2a40;border-radius:6px;padding:8px;text-align:center">'
+        f'<div style="font-size:9.5px;color:#3a3a4a;margin-bottom:3px">近期營收成長</div>'
+        f'<div style="font-size:11.5px;font-weight:700;color:#ef5350">{rev_gr}</div></div>'
+        f'<div style="background:#080f1a;border:1px solid #1a2a40;border-radius:6px;padding:8px;text-align:center">'
+        f'<div style="font-size:9.5px;color:#3a3a4a;margin-bottom:3px">毛利率</div>'
+        f'<div style="font-size:11.5px;font-weight:700;color:#7eb3ff">{gm}</div></div>'
+        f'<div style="background:#080f1a;border:1px solid #1a2a40;border-radius:6px;padding:8px;text-align:center">'
+        f'<div style="font-size:9.5px;color:#3a3a4a;margin-bottom:3px">分析師目標價</div>'
+        f'<div style="font-size:11.5px;font-weight:700;color:#ffd54f">{tgt_s}</div></div>'
         f'</div>'
 
         f'</div>'
@@ -2483,6 +2709,22 @@ def render_category_cards(picks, prices, show_chart):
                 _fig.update_yaxes(gridcolor="#1a1a2e", showgrid=True)
                 st.plotly_chart(_fig, use_container_width=True, config={"displayModeBar": False})
 
+# ── Future Giants fragment (defined before routing so it's always callable) ───
+@st.fragment(run_every="300s")
+def render_future_giants(prices: dict):
+    """Auto-refreshes every 5 min to update live prices on the Future Giants view."""
+    all_html = ""
+    for _fg_ticker, _fg_meta in FUTURE_GIANTS_UNIVERSE.items():
+        _df = prices.get(_fg_ticker)
+        _fg_price = _fg_chg = 0.0
+        if _df is not None and len(_df) >= 2:
+            _fg_price = float(_df["Close"].iloc[-1])
+            _fg_prev  = float(_df["Close"].iloc[-2])
+            _fg_chg   = (_fg_price - _fg_prev) / _fg_prev * 100 if _fg_prev > 0 else 0.0
+        all_html += _build_future_card(_fg_ticker, _fg_meta, _fg_price, _fg_chg)
+    st.markdown(all_html, unsafe_allow_html=True)
+
+
 # ── Main view: Category Picks ─────────────────────────────────────────────────
 if st.session_state.view_mode == "categories":
 
@@ -2782,6 +3024,34 @@ if st.session_state.view_mode == "monitor":
     else:
         render_rsi_monitor(_mon_keys, prices)
 
+    st.divider()
+    with st.expander("📰 今日早盤新聞", expanded=False):
+        for h in data["headlines"][:8]:
+            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
+    st.stop()
+
+# ── Main view: Future Giants — 🚀 潛力十年 ───────────────────────────────────
+if st.session_state.view_mode == "future":
+    st.markdown(
+        "## 🚀 潛力十年股　"
+        "<span style='font-size:12px;background:#0d1f3c;color:#7eb3ff;"
+        "border-radius:5px;padding:2px 8px;vertical-align:middle'>"
+        "長線佈局・5-10年視野・零股分批建倉</span>",
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        '<div style="background:#070f1c;border:1px solid #1a3560;border-radius:8px;'
+        'padding:12px 16px;margin-bottom:16px;font-size:12.5px;color:#c0d4ff;line-height:1.7">'
+        '📌 <b>這些不是短線交易標的。</b> 每支股票都代表一個<b>正在形成的巨大市場</b>，'
+        '就像 2013 年的 Nvidia——那時沒有人知道 GPU 會成為 AI 的引擎。'
+        '建議策略：<b>零股分批買入 + 持有 5-10 年</b>，讓複利做工作。<br><br>'
+        '&nbsp;&nbsp;🌱 <b>播種期</b> = 仍在虧損，最早期佈局，最高風險&nbsp;&nbsp;'
+        '🌿 <b>起飛中</b> = 開始獲利，趨勢確立&nbsp;&nbsp;'
+        '🌳 <b>快速成長</b> = 盈利加速，估值仍有空間'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    render_future_giants(prices)
     st.divider()
     with st.expander("📰 今日早盤新聞", expanded=False):
         for h in data["headlines"][:8]:
