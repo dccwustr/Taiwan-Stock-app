@@ -1333,19 +1333,19 @@ def _build_flow_panel(flow: dict, is_open: bool) -> str:
     # Session label
     session_label = "今日即時" if is_open else "上一交易日收盤"
 
-    # VWAP badge
+    # VWAP badge — 台灣慣例：站上VWAP=多頭=紅色；跌破=空頭=綠色
     vwap_diff = abs(lp - vwap) / vwap * 100 if vwap > 0 else 0
     if above:
         vwap_badge = (
-            f'<span style="background:#0a2a14;border:1px solid #1a5c2a;'
-            f'border-radius:10px;padding:2px 8px;color:#4caf7d;font-size:11px">'
+            f'<span style="background:#2a0a0a;border:1px solid #7a2020;'
+            f'border-radius:10px;padding:2px 8px;color:#ef5350;font-size:11px">'
             f'▲ 站上 +{vwap_diff:.1f}%</span>'
         )
         vwap_desc = "多方掌控節奏"
     else:
         vwap_badge = (
-            f'<span style="background:#2a0a0a;border:1px solid #5c1a1a;'
-            f'border-radius:10px;padding:2px 8px;color:#ef5350;font-size:11px">'
+            f'<span style="background:#0a2a14;border:1px solid #1a5c2a;'
+            f'border-radius:10px;padding:2px 8px;color:#4caf7d;font-size:11px">'
             f'▼ 跌破 -{vwap_diff:.1f}%</span>'
         )
         vwap_desc = "空方壓制反彈"
@@ -1354,30 +1354,32 @@ def _build_flow_panel(flow: dict, is_open: bool) -> str:
     bar_html = ""
     for b in bar_seq[-12:]:
         if b == "B":
-            bar_html += '<span style="color:#4caf7d;font-size:16px;line-height:1">█</span>'
-        else:
+            # 陽線（收漲）= 台灣紅色
             bar_html += '<span style="color:#ef5350;font-size:16px;line-height:1">█</span>'
+        else:
+            # 陰線（收跌）= 台灣綠色
+            bar_html += '<span style="color:#4caf7d;font-size:16px;line-height:1">█</span>'
 
     # Consecutive streak note
     streak_html = ""
     if consec_b >= 3:
         streak_html = (
-            f'<div style="font-size:11px;color:#4caf7d;margin-top:3px">'
+            f'<div style="font-size:11px;color:#ef5350;margin-top:3px">'
             f'▶ 連續 {consec_b} 根陽線，上升動能持續</div>'
         )
     elif consec_s >= 3:
         streak_html = (
-            f'<div style="font-size:11px;color:#ef5350;margin-top:3px">'
+            f'<div style="font-size:11px;color:#4caf7d;margin-top:3px">'
             f'▶ 連續 {consec_s} 根陰線，賣壓尚未釋放</div>'
         )
 
-    # Cumulative delta
+    # 累積淨買量 — 台灣慣例：淨買超=多頭=紅色；淨賣超=空頭=綠色
     if cum_delta >= 0:
-        delta_col   = "#4caf7d"
+        delta_col   = "#ef5350"
         delta_arrow = "▲"
         delta_label = f"淨買超 +{cum_delta:,}"
     else:
-        delta_col   = "#ef5350"
+        delta_col   = "#4caf7d"
         delta_arrow = "▼"
         delta_label = f"淨賣超 {cum_delta:,}"
     delta_trend_str = {"up": "（持續擴大）", "down": "（逐步縮小）", "flat": "（平穩）"}.get(delta_tr, "")
@@ -1433,12 +1435,12 @@ def _build_flow_panel(flow: dict, is_open: bool) -> str:
         f'<div style="margin-bottom:9px">'
         f'<div style="display:flex;justify-content:space-between;'
         f'font-size:11px;margin-bottom:3px">'
-        f'<span style="color:#4caf7d">🟢 買盤壓力 {buy_pct:.0f}%</span>'
-        f'<span style="color:#ef5350">🔴 賣盤壓力 {sell_pct:.0f}%</span>'
+        f'<span style="color:#ef5350">🔴 買盤壓力 {buy_pct:.0f}%</span>'
+        f'<span style="color:#4caf7d">🟢 賣盤壓力 {sell_pct:.0f}%</span>'
         f'</div>'
         f'<div style="display:flex;border-radius:4px;overflow:hidden;height:10px">'
-        f'<div style="width:{buy_w}%;background:linear-gradient(90deg,#1a5c2a,#4caf7d)"></div>'
-        f'<div style="width:{sell_w}%;background:linear-gradient(90deg,#ef5350,#7a1a1a)"></div>'
+        f'<div style="width:{buy_w}%;background:linear-gradient(90deg,#7a2020,#ef5350)"></div>'
+        f'<div style="width:{sell_w}%;background:linear-gradient(90deg,#4caf7d,#1a5c2a)"></div>'
         f'</div>'
         f'</div>'
 
@@ -1446,8 +1448,8 @@ def _build_flow_panel(flow: dict, is_open: bool) -> str:
         f'<div style="margin-bottom:9px">'
         f'<div style="font-size:11px;color:#555;margin-bottom:3px">'
         f'近 {len(bar_seq)} 根K棒方向（左舊右新）'
-        f'<span style="color:#4caf7d">█</span>陽線&nbsp;'
-        f'<span style="color:#ef5350">█</span>陰線</div>'
+        f'<span style="color:#ef5350">█</span>陽線&nbsp;'
+        f'<span style="color:#4caf7d">█</span>陰線</div>'
         f'<div style="letter-spacing:3px;line-height:1.2">{bar_html}</div>'
         f'{streak_html}'
         f'</div>'
@@ -2797,8 +2799,8 @@ if us_data and (us_data.get("macro_score", 0) != 0 or us_data.get("sox", {}).get
     _ms   = us_data.get("macro_score", 0)
     _sent = us_data.get("sentiment", "neutral")
     _sent_html = (
-        '<span style="color:#ef5350;font-weight:700">🟢 偏多</span>' if _sent == "bullish" else
-        '<span style="color:#00c853;font-weight:700">🔴 偏空</span>' if _sent == "bearish" else
+        '<span style="color:#ef5350;font-weight:700">🔴 偏多</span>' if _sent == "bullish" else
+        '<span style="color:#4caf7d;font-weight:700">🟢 偏空</span>' if _sent == "bearish" else
         '<span style="color:#ffd54f;font-weight:700">🟡 中性</span>'
     )
     _sox   = us_data["sox"];   _nq = us_data["nasdaq"]; _sp = us_data["sp500"]
