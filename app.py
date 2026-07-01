@@ -422,6 +422,36 @@ CATEGORY_UNIVERSE = {
         "why": "iPhone供應鏈補庫存+Android高階機復甦；蘋果新品發布前台廠拉貨明顯",
         "tickers": ["3008.TW","2474.TW","2327.TW","6285.TW","5483.TW","2357.TW","4938.TW"],
     },
+    "pcb_material": {
+        "emoji": "🧪", "name": "PCB玻纖布材料", "en": "PCB / Glass Fiber / CCL",
+        "desc": "高階PCB・ABF載板・玻纖布・覆銅板",
+        "why": "AI伺服器PCB規格暴升，電子玻纖布用量增3-5倍，供應缺口延伸至2027；ABF載板漲價15-40%確認",
+        "tickers": ["3037.TW","8046.TW","3189.TW","4958.TW","6213.TW","1802.TW","1815.TW","5475.TW","3044.TW"],
+    },
+    "passive": {
+        "emoji": "🔌", "name": "被動元件", "en": "Passive Components (MLCC)",
+        "desc": "MLCC・電阻・電容・電感・AI伺服器高規被動元件",
+        "why": "AI伺服器機櫃需45萬顆MLCC，日系廠商轉向高階，台廠Q3開始雙位數漲價；國巨外資大買",
+        "tickers": ["2327.TW","2492.TW","3236.TW","2472.TW"],
+    },
+    "defense_drone": {
+        "emoji": "🛡️", "name": "國防無人機", "en": "Defense / UAV",
+        "desc": "無人機製造・航太國防・飛彈系統・軍艦",
+        "why": "政府2026-2031年逾2兆國防特別預算，台灣首度建立自產無人機國家隊；美DoD藍軍認證創造出口門檻",
+        "tickers": ["8033.TW","2634.TW","2630.TW","5371.TW","5222.TW","6753.TW"],
+    },
+    "petrochem": {
+        "emoji": "🏭", "name": "石化傳產", "en": "Petrochemicals / Value",
+        "desc": "台塑四寶・鋼鐵・基礎原物料・低估值反彈",
+        "why": "摩根大通升評台塑四寶至「增持」，預估2026-2028年進入3年盈利上升周期；台塑嚴重超跌低於淨值",
+        "tickers": ["1301.TW","1303.TW","1326.TW","2002.TW","2015.TW","2023.TW"],
+    },
+    "hbm_memory": {
+        "emoji": "💾", "name": "HBM記憶體", "en": "HBM / Advanced Memory",
+        "desc": "高頻寬記憶體・DRAM・NAND・AI儲存",
+        "why": "AI算力爆炸帶動HBM3E缺貨；南亞科Q1毛利率67.9%、營收年增582.9%；記憶體缺貨延伸至2028",
+        "tickers": ["2408.TW","2344.TW","8299.TW","6239.TW","6488.TW","5483.TW"],
+    },
 }
 
 # ── Future Giants Universe — 十年潛力股資料庫 ────────────────────────────────
@@ -543,6 +573,102 @@ FUTURE_GIANTS_UNIVERSE = {
         "rev_growth": "+31%（4月 YoY）",
         "gross_margin": "5.06%（剛轉正，關鍵技術里程碑）",
         "target_price": None,
+    },
+    # ── 傳產轉型 / 材料 Traditional → High Value ────────────────────────────────
+    "1802.TW": {
+        "name": "台灣玻璃", "en": "Taiwan Glass", "sector": "玻纖布",
+        "stage": "🌿", "stage_label": "起飛中",
+        "thesis": (
+            "AI伺服器PCB需要電子玻纖布的用量是傳統伺服器的3-5倍，且必須是低損耗（Low Dk）規格。"
+            "台玻已通過NVIDIA認證進入AI伺服器供應鏈，高階Low Dk玻纖布供應缺口預估延伸至2027年底。"
+            "斥資22億大幅擴產，目標市占從30%挑戰40%，外資近一個月買超8萬張。"
+            "傳產公司轉型AI供應鏈，估值剛開始重評，目前僅15-18倍PE。"
+        ),
+        "growth_analog": "如同玻纖布在5G基地台建設時從傳統材料變成關鍵高規材料——AI時代的升格故事正在重演",
+        "tam": "全球電子玻纖布市場2026-2028年CAGR 20%+；AI伺服器用量佔比從10%快速升至30%+",
+        "key_catalyst": "法人目標價上看NT$85-120、外資連買訊號確認、高階Low Dk玻纖布產能利用率突破95%",
+        "time_horizon": "3–5年",
+        "risk": "中低",
+        "eps_2026e": "NT$4.5-6.0E（大幅上修中）",
+        "rev_growth": "+50%（高階玻纖布出貨量2026年預估增加5成）",
+        "gross_margin": "持續提升（高階Low Dk產品組合增加）",
+        "target_price": 85,
+    },
+    "4958.TW": {
+        "name": "臻鼎-KY", "en": "Zhen Ding Tech", "sector": "高階PCB",
+        "stage": "🌿", "stage_label": "起飛中",
+        "thesis": (
+            "全球最大HDI PCB製造商，佔光模組PCB全球市占25%——每個AI叢集的光模組都需要這塊板子。"
+            "NVIDIA Rubin下一代GPU供應鏈認證完成，深圳廠Q1 2026首次轉盈。"
+            "中國AI晶片需求爆發（替代NVIDIA）讓臻鼎兩頭受益：美國AI + 中國AI。"
+            "外資目標價連續上調，AI相關PCB毛利率遠高於傳統消費電子業務。"
+        ),
+        "growth_analog": "如同日月光從傳統封測轉型CoWoS先進封裝，臻鼎正從消費電子PCB轉型AI光模組高毛利板",
+        "tam": "AI伺服器PCB市場2025-2028年CAGR 35%+；光模組PCB全球缺口持續擴大",
+        "key_catalyst": "NVIDIA Rubin量產出貨確認、中國AI晶片PCB訂單公告、深圳廠獲利持續改善",
+        "time_horizon": "3–5年",
+        "risk": "中",
+        "eps_2026e": "NT$12-16E（AI業務高速成長中）",
+        "rev_growth": "+35%（AI相關PCB佔收入比重快速提升）",
+        "gross_margin": "AI PCB毛利率超過傳統業務15%以上",
+        "target_price": 320,
+    },
+    "2408.TW": {
+        "name": "南亞科技", "en": "Nanya Technology", "sector": "HBM記憶體",
+        "stage": "🌿", "stage_label": "爆發成長",
+        "thesis": (
+            "AI訓練和推論的記憶體頻寬瓶頸正在催生HBM需求爆炸。"
+            "南亞科Q1 2026毛利率67.9%，營收年增582.9%——這不是週期回升，是產業結構性轉變。"
+            "台灣本地DRAM廠，受惠美中科技戰中立倉位，歐美客戶優先採購。"
+            "外資目標價已調至NT$318，估值僅AI記憶體同業的1/2，重評空間巨大。"
+        ),
+        "growth_analog": "如同三星在DRAM景氣底部複利30年成為全球記憶體霸主，南亞科在HBM時代獲得一次「重來的機會」",
+        "tam": "HBM市場2025年$70億→2028年$300億（330% CAGR），南亞科是台灣唯一本地DRAM廠",
+        "key_catalyst": "HBM3E量產客戶確認、毛利率持續維持60%+、外資調升目標價NT$318+",
+        "time_horizon": "3–5年",
+        "risk": "中",
+        "eps_2026e": "NT$15-18E（爆發成長，連續上修）",
+        "rev_growth": "+582.9%（Q1 2026 YoY，超乎預期）",
+        "gross_margin": "67.9%（Q1 2026，接近半導體設計水準）",
+        "target_price": 318,
+    },
+    "2630.TW": {
+        "name": "亞洲航空", "en": "Asia Air Survey", "sector": "國防航太",
+        "stage": "🌿", "stage_label": "起飛中",
+        "thesis": (
+            "台灣唯一90%收入來自國防的純正國防股——手持訂單逾2,000億新台幣，能見度延伸至2031年。"
+            "政府2026-2031國防特別預算逾2兆元，無人機、VTOL、光纖陣螺儀（FOG）全部自產。"
+            "具備中型複合材料機身生產能力，是第二波採購「戊式」VTOL的少數合格廠商之一。"
+            "預估2026年淨利潤年增56.5%，且訂單持續增加中。"
+        ),
+        "growth_analog": "如同美國Lockheed Martin在二戰後靠政府國防合約從小公司成長為全球最大國防承包商，亞航是台灣的縮影",
+        "tam": "台灣2026-2031國防特別預算逾2兆元；VTOL、無人機、複合材料機身市場台廠獨享",
+        "key_catalyst": "第二波無人機標案得標確認、政府預算執行率提升、美國軍事合作訂單啟動",
+        "time_horizon": "5–10年",
+        "risk": "中低",
+        "eps_2026e": "NT$8-12E（訂單能見度極佳，持續上修）",
+        "rev_growth": "+56.5%（FY2026預估 YoY）",
+        "gross_margin": "高（國防合約固定利潤率設計，抗景氣波動）",
+        "target_price": 280,
+    },
+    "3017.TW": {
+        "name": "奇鋐科技", "en": "Asia Vital Comp.", "sector": "液冷散熱",
+        "stage": "🌳", "stage_label": "快速成長",
+        "thesis": (
+            "NVIDIA GB300機架功耗逼近600千瓦，風冷從「選配」變成「不夠用」，液冷從「選配」變成「標配」。"
+            "奇鋐進入Google TPU v8水冷板供應鏈，2026年3月營收年增111.72%，創歷史新高。"
+            "法人目標價NT$1,950，近年從300元漲至今仍在加速中，訂單能見度延伸至2027年。"
+            "散熱是AI資本支出中增長最確定、技術壁壘最高的環節——不需要晶片設計能力，只需精密製造。"
+        ),
+        "growth_analog": "如同台達電從傳統電源廠轉型為AI基礎建設的電力核心，奇鋐正在完成從風冷到液冷的同等級升格",
+        "tam": "液冷散熱市場2025-2028年CAGR 65%+；AI機架液冷滲透率從10%升至50%的紅利剛啟動",
+        "key_catalyst": "GB300液冷訂單規模化確認、毛利率突破20%、第一份中資研究報告覆蓋",
+        "time_horizon": "3–5年",
+        "risk": "中低",
+        "eps_2026e": "NT$28-35E（持續上修）",
+        "rev_growth": "+111.72%（3月 YoY，仍在加速）",
+        "gross_margin": "持續改善（液冷毛利高於風冷）",
+        "target_price": 1950,
     },
     # ── 消費 / 品牌護城河 Consumer / Brand Moat ──────────────────────────────────
     "1707.TW": {
@@ -1832,6 +1958,52 @@ def _get_score_reasons(sres: dict) -> str:
         f" 在勝率本就不高的情況下，把資金留著等更明確的機會，比勉強進場更合理。"
     )
 
+def _build_kbar_fi_row(sres: dict) -> str:
+    """
+    Build the K-bar pattern + 外資 activity mini-row for stock cards.
+    Returns an HTML string to inject between info-row and catalyst.
+    """
+    pattern  = sres.get("kbar_pattern", "")
+    kbar_s   = sres.get("kbar_score", 0)
+    fi_net   = sres.get("foreign_net", 0.0)  # NT$K units from TWSE
+
+    # K棒形態顏色
+    if kbar_s >= 7:
+        k_col = "#ef5350"    # strong bullish → red
+    elif kbar_s >= 3:
+        k_col = "#ff9800"    # mild bullish → orange
+    elif kbar_s <= -4:
+        k_col = "#4caf7d"    # bearish → green
+    else:
+        k_col = "#607d8b"    # neutral
+
+    # 外資動向
+    if fi_net >= 2000:
+        fi_html = f'<span style="color:#ef5350;font-weight:600">外資大買 ▲{fi_net/1000:.0f}億</span>'
+    elif fi_net >= 500:
+        fi_html = f'<span style="color:#ef5350">外資買 +{fi_net:.0f}千張</span>'
+    elif fi_net <= -2000:
+        fi_html = f'<span style="color:#4caf7d;font-weight:600">外資大賣 ▼{abs(fi_net)/1000:.0f}億</span>'
+    elif fi_net <= -500:
+        fi_html = f'<span style="color:#4caf7d">外資賣 {fi_net:.0f}千張</span>'
+    elif fi_net > 0:
+        fi_html = f'<span style="color:#ff9800">外資小買</span>'
+    elif fi_net < 0:
+        fi_html = f'<span style="color:#607d8b">外資小賣</span>'
+    else:
+        fi_html = f'<span style="color:#444">外資中立</span>'
+
+    if not pattern:
+        return ""
+    return (
+        f'<div style="display:flex;justify-content:space-between;align-items:center;'
+        f'margin:5px 0;padding:5px 8px;background:#0a0f1c;border-radius:5px;font-size:11px">'
+        f'<span>🕯️ <span style="color:{k_col};font-weight:600">{pattern}</span></span>'
+        f'{fi_html}'
+        f'</div>'
+    )
+
+
 def render_query_card(ticker, sres, live_d, key_sfx):
     sc        = sres["score"]
     bar_color = conf_color(sc)
@@ -1888,6 +2060,7 @@ def render_query_card(ticker, sres, live_d, key_sfx):
         f'<span>量比 <span class="info-val">{sres["vol_ratio"]:.1f}x</span></span>'
         f'<span>5日 <span class="info-val {mom_cls}">{sres["mom5d"]:+.1f}%</span></span>'
         f'</div>'
+        + _build_kbar_fi_row(sres) +
         f'<div class="catalyst">📌 {cat_str}</div>'
         f'<div class="conf-wrap"><div class="conf-bar" style="width:{int(sc)}%;background:{bar_color}"></div></div>'
         f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
@@ -1904,9 +2077,11 @@ def render_query_card(ticker, sres, live_d, key_sfx):
         _label       = "⚠️ 為什麼現在不適合買？" if sc >= 45 else "❌ 為什麼強烈不建議現在買？"
         _mb = sres.get("macro_bonus", 0)
         _mb_str = f"　美股 {_mb:+d}" if _mb != 0 else ""
+        _kb_s  = sres.get("kbar_score", 0)
+        _kb_str = f"　K棒 {_kb_s:+d}" if _kb_s != 0 else ""
         _score_breakdown = (
-            f'量能 {sres["vol_score"]}/30　動能 {sres["mom_score"]}/25　'
-            f'技術 {sres["tech_score"]}/25　催化劑 {sres["cat_score"]}/30'
+            f'量能 {sres["vol_score"]}/30　動能 {sres["mom_score"]}/22　'
+            f'技術 {sres["tech_score"]}/23{_kb_str}　催化劑 {sres["cat_score"]}/30'
             f'{_mb_str}'
         )
         st.markdown(
@@ -2686,6 +2861,7 @@ def render_category_cards(picks, prices, show_chart):
             f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)
+            + _build_kbar_fi_row(p)
             + _build_flow_panel(_cat_flow, is_open)
             + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
@@ -3375,6 +3551,7 @@ def render_stock_cards(picks, prices, show_chart):
             f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)
+            + _build_kbar_fi_row(p)
             + _build_flow_panel(_pick_flow, is_open)
             + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'

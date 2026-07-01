@@ -80,12 +80,21 @@ TECH_UNIVERSE: Dict[str, Dict] = {
     # ── 矽晶圓 Silicon Wafer ─────────────────────────────────────────────────
     "6488.TW": {"name":"環球晶",    "en":"GlobalWafers",      "sector":"矽晶圓",    "supply":["AI","NVIDIA"]},
     "5483.TW": {"name":"中美晶",    "en":"Sino-American Si",  "sector":"矽晶圓",    "supply":["AI"]},
+    "3532.TW": {"name":"台勝科",    "en":"Sino-American TW",  "sector":"矽晶圓",    "supply":["AI"]},
     # ── 先進封裝 / 封測 Packaging ───────────────────────────────────────────
     "3711.TW": {"name":"日月光投控","en":"ASE Technology",    "sector":"封測",      "supply":["NVIDIA","AMD","Apple","CoWoS"]},
     "2449.TW": {"name":"京元電子",  "en":"KYEC",              "sector":"IC測試",    "supply":[]},
+    "6239.TW": {"name":"力成科技",  "en":"Powertech Tech",    "sector":"記憶體封測","supply":["AI","HBM"]},
     # ── IC載板 / PCB ────────────────────────────────────────────────────────
     "3037.TW": {"name":"欣興",      "en":"Unimicron",         "sector":"IC載板",    "supply":["NVIDIA","AMD","CoWoS"]},
     "3044.TW": {"name":"健鼎",      "en":"Tripod Tech",       "sector":"PCB",       "supply":["NVIDIA","AI"]},
+    "4958.TW": {"name":"臻鼎-KY",   "en":"Zhen Ding Tech",    "sector":"高階PCB",   "supply":["NVIDIA","AI"]},
+    "3189.TW": {"name":"景碩科技",  "en":"Chipbond",          "sector":"IC載板",    "supply":["AI","CoWoS"]},
+    "6213.TW": {"name":"聯茂電子",  "en":"Elite Material",    "sector":"PCB材料",   "supply":["AI","NVIDIA"]},
+    # ── 玻纖布 / PCB原材料 Glass Fiber / CCL ─────────────────────────────────
+    "1802.TW": {"name":"台灣玻璃",  "en":"Taiwan Glass",      "sector":"玻纖布",    "supply":["NVIDIA","AI"]},
+    "1815.TW": {"name":"富喬工業",  "en":"Fû Chiao Ind",     "sector":"玻纖布",    "supply":["AI"]},
+    "5475.TW": {"name":"德宏工業",  "en":"Deh Horng Ind",     "sector":"玻纖布",    "supply":["AI"]},
     # ── AI伺服器 / ODM ──────────────────────────────────────────────────────
     "6669.TW": {"name":"緯穎",      "en":"Wiwynn",            "sector":"AI伺服器",  "supply":["NVIDIA","AI"]},
     "2382.TW": {"name":"廣達",      "en":"Quanta",            "sector":"伺服器ODM", "supply":["NVIDIA","AI","Apple"]},
@@ -94,8 +103,10 @@ TECH_UNIVERSE: Dict[str, Dict] = {
     "2317.TW": {"name":"鴻海",      "en":"Foxconn",           "sector":"EMS/ODM",   "supply":["Apple","NVIDIA","AI"]},
     "2324.TW": {"name":"仁寶",      "en":"Compal",            "sector":"ODM",       "supply":["Apple","AI"]},
     # ── 被動元件 Passive Components ─────────────────────────────────────────
-    "2327.TW": {"name":"國巨",      "en":"Yageo",             "sector":"被動元件",  "supply":["NVIDIA","Apple"]},
-    "2492.TW": {"name":"華新科",    "en":"Walsin Tech",       "sector":"被動元件",  "supply":[]},
+    "2327.TW": {"name":"國巨",      "en":"Yageo",             "sector":"被動元件",  "supply":["NVIDIA","Apple","AI"]},
+    "2492.TW": {"name":"華新科",    "en":"Walsin Tech",       "sector":"被動元件",  "supply":["AI"]},
+    "3236.TW": {"name":"千如電機",  "en":"Chilisin Elec",     "sector":"被動元件",  "supply":["AI"]},
+    "2472.TW": {"name":"立隆電子",  "en":"Lelon Electronics", "sector":"被動元件",  "supply":[]},
     # ── 連接器 Connectors ────────────────────────────────────────────────────
     "3533.TW": {"name":"嘉澤",      "en":"Lotes",             "sector":"連接器",    "supply":["AI","NVIDIA"]},
     # ── 光學 Optics ─────────────────────────────────────────────────────────
@@ -108,6 +119,9 @@ TECH_UNIVERSE: Dict[str, Dict] = {
     "8163.TW": {"name":"達方電子",  "en":"Darfon Electronics", "sector":"散熱/鍵盤", "supply":[]},
     "1626.TW": {"name":"艾美特",    "en":"Airmate",            "sector":"散熱風扇",  "supply":[]},
     "2369.TW": {"name":"菱生精密",  "en":"Lingsen Precision",  "sector":"精密零件",  "supply":[]},
+    # ── 功率半導體 / 第三代半導體 Power & Compound Semiconductors ──────────────
+    "3016.TW": {"name":"嘉晶電子",  "en":"Episil-Precision",  "sector":"化合物半導體","supply":["EV","AI"]},
+    "8261.TW": {"name":"富鼎先進",  "en":"ASMPT Power",       "sector":"功率IC",    "supply":["AI","EV"]},
     # ── AI/特殊IC ────────────────────────────────────────────────────────────
     "3661.TW": {"name":"世芯-KY",   "en":"Alchip Technologies","sector":"ASIC設計",  "supply":["NVIDIA","AI","AMD"]},
     "3443.TW": {"name":"創意電子",  "en":"Global Unichip",     "sector":"ASIC設計",  "supply":["AI","NVIDIA","TSMC"]},
@@ -199,14 +213,24 @@ TECH_UNIVERSE: Dict[str, Dict] = {
     "2618.TW": {"name":"長榮航",    "en":"EVA Air",           "sector":"航空",      "supply":["航空"]},
 
     # ════════════════════════════════════════════════════════════════════════
+    #  國防 / 無人機 Defense / Drone
+    # ════════════════════════════════════════════════════════════════════════
+    "8033.TW": {"name":"雷虎科技",  "en":"Thunder Tiger",     "sector":"無人機",    "supply":["國防"]},
+    "2634.TW": {"name":"漢翔航空",  "en":"AIDC",              "sector":"航太/國防", "supply":["國防"]},
+    "2630.TW": {"name":"亞洲航空",  "en":"Asia Air Survey",   "sector":"國防航太",  "supply":["國防"]},
+    "5371.TW": {"name":"中光電",    "en":"Coretronic Corp",   "sector":"無人機模組","supply":["國防","AI"]},
+    "5222.TW": {"name":"全訊科技",  "en":"Accton Sys Tech",   "sector":"微波/國防", "supply":["國防"]},
+    "6753.TW": {"name":"龍德造船",  "en":"Long De Shipbldg",  "sector":"造船/國防", "supply":["國防"]},
+
+    # ════════════════════════════════════════════════════════════════════════
     #  鋼鐵 / 石化 / 原材料 Steel / Petrochem / Materials
     # ════════════════════════════════════════════════════════════════════════
     "2002.TW": {"name":"中鋼",      "en":"China Steel",       "sector":"鋼鐵",      "supply":["原物料"]},
     "2015.TW": {"name":"豐興",      "en":"Feng Hsin Steel",   "sector":"鋼鐵",      "supply":["原物料"]},
     "2023.TW": {"name":"燁聯",      "en":"Yieh United Steel", "sector":"鋼鐵",      "supply":["原物料"]},
-    "1301.TW": {"name":"台塑",      "en":"Formosa Plastics",  "sector":"石化",      "supply":["原物料"]},
-    "1303.TW": {"name":"南亞",      "en":"Nan Ya Plastics",   "sector":"石化",      "supply":["原物料"]},
-    "1326.TW": {"name":"台化",      "en":"Formosa Chemicals", "sector":"石化",      "supply":["原物料"]},
+    "1301.TW": {"name":"台塑",      "en":"Formosa Plastics",  "sector":"石化",      "supply":["原物料","石化"]},
+    "1303.TW": {"name":"南亞",      "en":"Nan Ya Plastics",   "sector":"石化",      "supply":["原物料","石化"]},
+    "1326.TW": {"name":"台化",      "en":"Formosa Chemicals", "sector":"石化",      "supply":["原物料","石化"]},
 
     # ════════════════════════════════════════════════════════════════════════
     #  電信 Telecom
@@ -274,11 +298,11 @@ CATALYST_MAP = {
     "Apple":  ["Apple","蘋果","iPhone","iPad","Vision Pro","M4","A18","蘋果鏈"],
     "AI":     ["AI","人工智慧","生成式","LLM","大模型","算力","推論","訓練","GPU","NPU","機器人"],
     "CoWoS":  ["CoWoS","先進封裝","SoIC","2.5D","3D封裝","晶片堆疊"],
-    "記憶體": ["HBM","記憶體","DRAM","NAND","高頻寬"],
-    "漲價":   ["漲價","調漲","報價提升","price hike","報價上調"],
+    "記憶體": ["HBM","記憶體","DRAM","NAND","高頻寬","HBM3E","High Bandwidth Memory"],
+    "漲價":   ["漲價","調漲","報價提升","price hike","報價上調","Q3漲價","全面漲價","規格漲價"],
     "訂單":   ["接單","新訂單","出貨","交貨","獲利","業績","法說"],
-    "外資":   ["外資買超","法人買超","外資大買"],
-    # 非科技主題（新增）
+    "外資":   ["外資買超","法人買超","外資大買","外資連買","外資持續買超","QFII"],
+    # 非科技主題
     "降息":   ["Fed降息","降息","利率下降","rate cut","FOMC寬鬆","貨幣寬鬆","央行降息"],
     "升息":   ["升息","利率上升","rate hike","緊縮","FOMC升息"],
     "航運":   ["運費","貨櫃","航運景氣","SCFI","FBX","BDI","集運","缺艙","運力"],
@@ -286,28 +310,47 @@ CATALYST_MAP = {
     "綠能":   ["離岸風電","太陽能","儲能","綠能","再生能源","風電","淨零","碳中和","電動車","EV"],
     "原物料": ["鋼價","銅價","鐵礦石","原油","油價","鋼鐵漲","煤炭","原物料"],
     "建設":   ["房地產","房市","捷運","新青安","都更","危老重建","土地"],
+    # 新增主題
+    "玻纖布": ["玻纖布","Low Dk","CCL","銅箔基板","電子玻纖","glass fiber cloth","低損耗","PCB材料缺貨"],
+    "無人機": ["無人機","UAV","drone","FPV","國防採購","特別預算","國機國造","軍購","蒼鷹","軍用無人機","無人機標案"],
+    "石化回升":["台塑","南亞","台化","石化景氣","塑化景氣","乙烯","苯乙烯","PVC","石化轉盈","石化升評","塑化升評"],
+    "載板漲價":["載板漲價","ABF缺貨","ABF基板","substrate price","载板供不應求","ABF shortage","載板報價"],
+    "HBM":    ["HBM","HBM3E","High Bandwidth Memory","高頻寬記憶體","HBM供不應求"],
+    "CPO":    ["CPO","共封裝光學","co-packaged optics","矽光子","silicon photonics","800G","1.6T光模組"],
+    "液冷":   ["液冷","water cooling","浸沒式冷卻","冷卻板","liquid cooling","CDU","冷板式"],
 }
 
 # 催化劑觸發的受益股票（科技 + 多元產業）
 CATALYST_BENEFICIARIES = {
     # 科技
-    "NVIDIA":  ["2330.TW","3711.TW","3037.TW","6669.TW","2382.TW","2308.TW","3044.TW","2327.TW","3533.TW","6488.TW"],
+    "NVIDIA":  ["2330.TW","3711.TW","3037.TW","6669.TW","2382.TW","2308.TW","3044.TW","2327.TW","3533.TW","6488.TW",
+                "4958.TW","3189.TW","3017.TW","3324.TW"],
     "AMD":     ["2330.TW","3711.TW","3037.TW","2376.TW","2357.TW"],
     "Apple":   ["2330.TW","4938.TW","2317.TW","3008.TW","3406.TW","2474.TW","3034.TW","2382.TW","2324.TW"],
-    "AI":      ["2330.TW","2454.TW","6669.TW","2382.TW","2308.TW","8299.TW","3037.TW","3533.TW","6488.TW","5483.TW"],
-    "CoWoS":   ["2330.TW","3711.TW","3037.TW"],
-    "記憶體":  ["2344.TW","2408.TW","8299.TW","6488.TW"],
-    "漲價":    ["2330.TW","2454.TW","3008.TW","2344.TW","2408.TW","2002.TW","1301.TW"],
+    "AI":      ["2330.TW","2454.TW","6669.TW","2382.TW","2308.TW","8299.TW","3037.TW","3533.TW","6488.TW","5483.TW",
+                "3661.TW","3443.TW","3017.TW","3324.TW","2345.TW","6138.TW","8046.TW","5289.TW"],
+    "CoWoS":   ["2330.TW","3711.TW","3037.TW","3189.TW","8046.TW","6239.TW"],
+    "記憶體":  ["2344.TW","2408.TW","8299.TW","6488.TW","6239.TW"],
+    "漲價":    ["2330.TW","2454.TW","3008.TW","2344.TW","2408.TW","2002.TW","1301.TW","2327.TW","2492.TW",
+                "3037.TW","8046.TW","1802.TW"],
     "訂單":    ["2330.TW","2454.TW","6669.TW","2382.TW","2317.TW","2603.TW","2609.TW"],
     # 非科技（新增）
     "降息":    ["2881.TW","2882.TW","2884.TW","2891.TW","2886.TW","2892.TW","2880.TW","2883.TW",
-                "5522.TW","2542.TW","2504.TW"],   # 降息利多：金融、建設
-    "升息":    ["2412.TW","3045.TW","4904.TW","2881.TW","2882.TW"],  # 升息：電信（高股息防禦）
+                "5522.TW","2542.TW","2504.TW"],
+    "升息":    ["2412.TW","3045.TW","4904.TW","2881.TW","2882.TW"],
     "航運":    ["2603.TW","2609.TW","2615.TW","2610.TW","2618.TW"],
     "生技":    ["6446.TW","6472.TW","1789.TW","4171.TW"],
     "綠能":    ["1513.TW","1504.TW","1101.TW","2308.TW","3533.TW"],
     "原物料":  ["2002.TW","2015.TW","2023.TW","1301.TW","1303.TW","1326.TW"],
     "建設":    ["5522.TW","2542.TW","2504.TW","1102.TW","1101.TW"],
+    # 新增主題受益股
+    "玻纖布":  ["1802.TW","1815.TW","5475.TW","3037.TW","4958.TW","3044.TW","6213.TW"],
+    "無人機":  ["8033.TW","2634.TW","2630.TW","5371.TW","5222.TW","6753.TW"],
+    "石化回升":["1301.TW","1303.TW","1326.TW","2002.TW"],
+    "載板漲價":["3037.TW","8046.TW","3189.TW","4958.TW"],
+    "HBM":    ["2408.TW","2344.TW","6239.TW","6488.TW","2330.TW"],
+    "CPO":    ["3363.TW","2345.TW"],
+    "液冷":    ["3017.TW","3324.TW","6230.TW","2308.TW"],
 }
 
 # ── 動態查詢股票名稱快取（搜尋非宇宙內股票時由 TWSE live API 填入）───────────────
@@ -359,6 +402,101 @@ def ma_score(close: pd.Series) -> int:
         if len(close) >= n and last > float(close.rolling(n).mean().iloc[-1]):
             score += 1
     return score
+
+def calc_kbar_pattern(df: pd.DataFrame) -> Tuple[int, str]:
+    """
+    K線形態識別（台灣慣例：陽線=紅/上漲，陰線=綠/下跌）
+    Returns (score 0-12, pattern_name)
+
+    形態優先級（由強到弱）：
+    1. 早晨之星 / 曙光初現  (+10) — 底部翻轉最強信號
+    2. 看漲吞噬 / 穿頭破腳  (+9)  — 強力翻轉信號
+    3. 三白兵 / 連三陽      (+8)  — 多頭確認
+    4. 鎚子線 / 倒鎚        (+7)  — 底部反彈信號
+    5. 孕線多頭              (+5)  — 盤整後轉強
+    6. 量增價漲陽線          (+4)  — 動量延續
+    7. 無明確形態            (+0)
+    形態虧空（空頭形態 → 扣分）：
+    8. 流星線 / 上吊線       (-4)  — 頭部警告
+    9. 看跌吞噬              (-6)  — 強力翻轉空頭
+    """
+    if len(df) < 5:
+        return 0, "無資料"
+
+    o  = df["Open"].values.astype(float)
+    h  = df["High"].values.astype(float)
+    l  = df["Low"].values.astype(float)
+    c  = df["Close"].values.astype(float)
+    v  = df["Volume"].values.astype(float)
+    n  = len(df)
+
+    # Latest and prior candles (index -1 = today, -2 = yesterday, -3 = 前天)
+    c0, o0, h0, l0, v0 = c[-1], o[-1], h[-1], l[-1], v[-1]
+    c1, o1, h1, l1     = c[-2], o[-2], h[-2], l[-2]
+    c2, o2, h2, l2     = (c[-3], o[-3], h[-3], l[-3]) if n >= 3 else (c1, o1, h1, l1)
+
+    body0   = abs(c0 - o0)
+    range0  = h0 - l0 if h0 > l0 else 1e-6
+    lower0  = min(c0, o0) - l0
+    upper0  = h0 - max(c0, o0)
+    body1   = abs(c1 - o1)
+    range1  = h1 - l1 if h1 > l1 else 1e-6
+
+    bull0   = c0 > o0   # today bullish (陽線)
+    bear0   = c0 < o0   # today bearish (陰線)
+    bull1   = c1 > o1   # yesterday bullish
+    bear1   = c1 < o1   # yesterday bearish
+    bear2   = c2 < o2   # day-before bearish
+
+    avg_v20 = float(np.mean(v[-21:-1])) if n >= 21 else float(np.mean(v[:-1])) if n > 1 else v0
+
+    # ── 1. 早晨之星 (Morning Star) ──────────────────────────────────────────
+    # Day1: 長陰線, Day2: 小實體, Day3: 陽線收回Day1上半部
+    if n >= 3:
+        small_body1 = body1 < range1 * 0.35
+        if bear2 and (c2 - o2) > range1 * 1.2 and small_body1 and bull0 and c0 > (o2 + c2) / 2:
+            return 10, "🌅 早晨之星（底部翻轉）"
+
+    # ── 2. 看漲吞噬 (Bullish Engulfing) ───────────────────────────────────
+    if bear1 and bull0 and o0 <= c1 and c0 >= o1 and body0 > body1 * 1.0:
+        return 9, "🕯️ 看漲吞噬（多頭翻轉）"
+
+    # ── 3. 三白兵 (Three White Soldiers) ──────────────────────────────────
+    if n >= 3 and bull0 and bull1 and (c2 > o2) and c0 > c1 > c2 and o0 > o1 > o2:
+        return 8, "🚀 連三陽（多頭確認）"
+
+    # ── 4. 鎚子線 (Hammer) ────────────────────────────────────────────────
+    # 小實體, 長下影線 > 2倍實體, 上影線短
+    if body0 < range0 * 0.35 and lower0 > body0 * 2.0 and upper0 < range0 * 0.15:
+        # Only bullish if at a potential bottom (5-day low area)
+        if l0 <= float(np.min(l[-6:-1])) * 1.02:
+            return 7, "🔨 鎚子線（底部反彈）"
+
+    # ── 5. 孕線多頭 (Bullish Harami) ──────────────────────────────────────
+    if bear1 and bull0 and o0 >= c1 and c0 <= o1 and body1 > 0 and body0 < body1 * 0.5:
+        return 5, "🤰 多頭孕線（盤整轉強）"
+
+    # ── 6. 量增價漲陽線 (Volume Surge + Bullish) ──────────────────────────
+    if bull0 and v0 > avg_v20 * 1.5 and body0 > range0 * 0.5:
+        return 4, "📊 量增價漲（動量延續）"
+
+    # ── 空頭形態 (Bearish) ────────────────────────────────────────────────
+
+    # 看跌吞噬 (Bearish Engulfing)
+    if bull1 and bear0 and o0 >= c1 and c0 <= o1 and body0 > body1:
+        return -6, "⚠️ 看跌吞噬（空頭翻轉）"
+
+    # 流星線 / 上吊線 (Shooting Star / Hanging Man)
+    if body0 < range0 * 0.35 and upper0 > body0 * 2.0 and lower0 < range0 * 0.15:
+        if h0 >= float(np.max(h[-6:-1])) * 0.98:
+            return -4, "🌠 流星線（頭部警告）"
+
+    # 無特定形態
+    if bull0:
+        return 2, "陽線（無特定形態）"
+    elif bear0:
+        return -1, "陰線（無特定形態）"
+    return 0, "十字線"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  新聞抓取
@@ -1336,7 +1474,7 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
                 macro_bonus: int = 0) -> Dict:
     """
     綜合評分 0-100：
-      量能 30 + 動能 25 + 技術 25 + 催化劑 30 + 外資 ±5 + 美股盤前 ±10
+      量能 30 + 動能 22 + 技術 23 + K棒形態 ±12 + 催化劑 30 + 外資 ±8 + 美股盤前 ±10
     macro_bonus: 由 us_macro_stock_bonus() 計算，反映美股隔夜對個股影響（-10~+10）
     """
     if df is None or len(df) < 22:
@@ -1353,12 +1491,12 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     elif vr >= 1.2: vol_score = 12
     else:           vol_score = max(0, int(vr * 6))
 
-    # 2. 價格動能 (0-25)
+    # 2. 價格動能 (0-22)
     mom1d = (float(close.iloc[-1]) / float(close.iloc[-2]) - 1) * 100 if len(close) >= 2 else 0
     mom5d = (float(close.iloc[-1]) / float(close.iloc[-6]) - 1) * 100 if len(close) >= 6 else 0
-    mom_score = min(25, max(0, int((mom1d * 2 + mom5d) * 1.5)))
+    mom_score = min(22, max(0, int((mom1d * 2 + mom5d) * 1.4)))
 
-    # 3. 技術指標 (0-25)
+    # 3. 技術指標 (0-23): RSI + MACD + MA位置
     rsi  = calc_rsi(close)
     macd_hist, macd_prev = calc_macd(close)
     mas  = ma_score(close)
@@ -1370,11 +1508,15 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     elif macd_hist > 0:   tech += 5
     tech += mas * 2   # max 6
 
-    # 4. 催化劑 (0-30) + 外資調整 + 美股盤前影響
+    # 4. K棒形態 (±12) — 台灣慣例: 陽線=紅(漲), 陰線=綠(跌)
+    kbar_score, kbar_pattern = calc_kbar_pattern(df)
+
+    # 5. 催化劑 (0-30) + 外資 ±8（強化外資權重）+ 美股盤前影響
     cat_score  = min(30, catalyst_bonus)
-    fi_bonus   = min(5, int(foreign_net / 500)) if foreign_net > 0 else max(-5, int(foreign_net / 500))
-    macro_adj  = max(-10, min(10, int(macro_bonus)))   # clamped just in case
-    total = min(100, max(0, vol_score + mom_score + tech + cat_score + fi_bonus + macro_adj))
+    # 外資：每500萬NT$ = 1分；正向最多+8，負向最多-8（比舊版更重視外資動向）
+    fi_bonus   = min(8, int(foreign_net / 500)) if foreign_net > 0 else max(-8, int(foreign_net / 500))
+    macro_adj  = max(-10, min(10, int(macro_bonus)))
+    total = min(100, max(0, vol_score + mom_score + tech + kbar_score + cat_score + fi_bonus + macro_adj))
 
     last_price = float(close.iloc[-1])
     atr        = calc_atr(df)
@@ -1396,24 +1538,26 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
         "en":          _tinfo.get("en", ""),
         "sector":      _tinfo.get("sector", ""),
         "supply":      _tinfo.get("supply", []),
-        "score":       total,
-        "vol_score":   vol_score,
-        "mom_score":   mom_score,
-        "tech_score":  tech,
-        "cat_score":   cat_score,
-        "macro_bonus": macro_adj,
-        "vol_ratio":   round(vr, 2),
-        "rsi":         round(rsi, 1),
-        "mom1d":       round(mom1d, 2),
-        "mom5d":       round(mom5d, 2),
-        "last_price":  last_price,
-        "atr":         round(atr, 2),
-        "target_pct":  target_pct,
-        "target_price":round(last_price * (1 + target_pct / 100), 2),
-        "stop_loss":   round(last_price - 1.5 * atr, 2),
-        "stop_pct":    round((-1.5 * atr / last_price) * 100, 2) if last_price > 0 else 0,
-        "sell_note":   sell_note,
-        "foreign_net": foreign_net,
+        "score":        total,
+        "vol_score":    vol_score,
+        "mom_score":    mom_score,
+        "tech_score":   tech,
+        "kbar_score":   kbar_score,
+        "kbar_pattern": kbar_pattern,
+        "cat_score":    cat_score,
+        "macro_bonus":  macro_adj,
+        "vol_ratio":    round(vr, 2),
+        "rsi":          round(rsi, 1),
+        "mom1d":        round(mom1d, 2),
+        "mom5d":        round(mom5d, 2),
+        "last_price":   last_price,
+        "atr":          round(atr, 2),
+        "target_pct":   target_pct,
+        "target_price": round(last_price * (1 + target_pct / 100), 2),
+        "stop_loss":    round(last_price - 1.5 * atr, 2),
+        "stop_pct":     round((-1.5 * atr / last_price) * 100, 2) if last_price > 0 else 0,
+        "sell_note":    sell_note,
+        "foreign_net":  foreign_net,
     }
 
 # ═══════════════════════════════════════════════════════════════════════════════
