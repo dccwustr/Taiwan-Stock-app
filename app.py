@@ -1320,13 +1320,19 @@ if _is_market_open() and scored:
     scored.sort(key=lambda x: x["score"], reverse=True)
 
 # ── Final picks split ──────────────────────────────────────────────────────────
-# 今日可進場：RSI合理 + 分數達標 + 今日未大漲 (near-limit guard — belt AND suspenders)
+# 小資戶過濾：股價超過 NT$2,500 的標的不列入精選（買不起零股太貴）
+_MAX_PRICE = 2500
+# 今日可進場：RSI合理 + 分數達標 + 今日未大漲 + 股價在小資範圍內
 today_picks = [r for r in scored
                if r.get("rsi", 50) < 73
                and r["score"] >= 52
-               and r.get("live_chg_pct", 0) < 9.0][:top_n]
-# 準備中：RSI偏熱，或今日大漲，等回落後進場（最多3支）
-watch_picks = [r for r in scored if r.get("rsi", 50) >= 73 and r["score"] >= 45][:3]
+               and r.get("live_chg_pct", 0) < 9.0
+               and r.get("last_price", 0) <= _MAX_PRICE][:top_n]
+# 準備中：RSI偏熱，或今日大漲，等回落後進場（最多3支，同樣限制股價）
+watch_picks = [r for r in scored
+               if r.get("rsi", 50) >= 73
+               and r["score"] >= 45
+               and r.get("last_price", 0) <= _MAX_PRICE][:3]
 # backward compat
 picks = today_picks
 
@@ -3097,7 +3103,8 @@ if st.session_state.view_mode == "categories":
     # Show top-5 by score. Only hard-filter near-limit-up (≥9%) — dangerous to chase.
     # RSI overbought is handled via card advice text (⏳ wait for pullback), NOT filtering.
     _cat_picks = [r for r in _cat_scored
-                  if r.get("live_chg_pct", 0) < 9.0][:5]
+                  if r.get("live_chg_pct", 0) < 9.0
+                  and r.get("last_price", 0) <= _MAX_PRICE][:5]
 
     # ── Sector momentum summary bar ───────────────────────────────────────────
     _avg_rsi, _avg_mom5, _avg_mom1, _n_hot = 50.0, 0.0, 0.0, 0  # safe defaults
@@ -3685,7 +3692,10 @@ if watch_picks:
         render_stock_cards(watch_picks, prices, show_chart)
 
 # ── 備選股 toggle ─────────────────────────────────────────────────────────────
-backups = [r for r in scored if r not in today_picks and r not in watch_picks and r["score"] >= 45][: 5]
+backups = [r for r in scored
+           if r not in today_picks and r not in watch_picks
+           and r["score"] >= 45
+           and r.get("last_price", 0) <= _MAX_PRICE][:5]
 if backups:
     if "show_backups" not in st.session_state:
         st.session_state.show_backups = False
