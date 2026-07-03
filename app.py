@@ -2045,7 +2045,7 @@ def _build_kbar_fi_row(sres: dict) -> str:
     )
 
 
-def render_query_card(ticker, sres, live_d, key_sfx):
+def render_query_card(ticker, sres, live_d, key_sfx, flow: dict = None):
     sc        = sres["score"]
     bar_color = conf_color(sc)
     mom_cls   = "up" if sres["mom5d"] >= 0 else "down"
@@ -2101,8 +2101,9 @@ def render_query_card(ticker, sres, live_d, key_sfx):
         f'<span>量比 <span class="info-val">{sres["vol_ratio"]:.1f}x</span></span>'
         f'<span>5日 <span class="info-val {mom_cls}">{sres["mom5d"]:+.1f}%</span></span>'
         f'</div>'
-        + _build_kbar_fi_row(sres) +
-        f'<div class="catalyst">📌 {cat_str}</div>'
+        + _build_kbar_fi_row(sres)
+        + _build_flow_panel(flow or {}, _is_market_open())
+        + f'<div class="catalyst">📌 {cat_str}</div>'
         f'<div class="conf-wrap"><div class="conf-bar" style="width:{int(sc)}%;background:{bar_color}"></div></div>'
         f'<div style="font-size:11px;color:#555;margin-top:3px">信心指數 {sc}/100</div>'
         f'</div>'
@@ -2732,9 +2733,11 @@ if st.session_state.view_mode == "search":
     if not _recent:
         st.caption("還沒有搜尋記錄。在左側輸入股票代號查詢。")
     else:
+        _recent_flow_map = _fetch_flow_batch(tuple(t for t in _recent if t in _recent_results))
         for _rt in _recent:
             if _rt in _recent_results:
-                render_query_card(_rt, _recent_results[_rt], _query_live.get(_rt), f"r_{_rt}")
+                render_query_card(_rt, _recent_results[_rt], _query_live.get(_rt), f"r_{_rt}",
+                                  flow=_recent_flow_map.get(_rt, {}))
             else:
                 _code = _rt.replace('.TW','').replace('.TWO','')
                 # Hint: codes 30xx-39xx / 40xx-49xx are often 興櫃 (emerging),
@@ -2771,9 +2774,11 @@ if st.session_state.view_mode == "watchlist":
     if not st.session_state.watchlist:
         st.caption("還沒有追蹤的股票。在精選推薦或搜尋結果中點 ☆ 加入。")
     else:
+        _watch_flow_map = _fetch_flow_batch(tuple(t for t in st.session_state.watchlist if t in _watch_results))
         for _wt in st.session_state.watchlist:
             if _wt in _watch_results:
-                render_query_card(_wt, _watch_results[_wt], _query_live.get(_wt), f"wv_{_wt}")
+                render_query_card(_wt, _watch_results[_wt], _query_live.get(_wt), f"wv_{_wt}",
+                                  flow=_watch_flow_map.get(_wt, {}))
     st.divider()
     with st.expander("📰 今日早盤新聞", expanded=False):
         for h in data["headlines"][:8]:
