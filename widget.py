@@ -787,6 +787,87 @@ def fetch_google_news_tw_orders() -> List[Dict]:
     return news
 
 
+def fetch_yahoo_tw_news() -> List[Dict]:
+    """
+    Yahoo奇摩股市 RSS — 台灣股市即時財經新聞
+    URL: https://tw.stock.yahoo.com/rss
+    涵蓋：月營收、法人評等、訂單動態、外資動向、產業分析
+    每篇新聞均含股票代號和公司名稱，適合關鍵字匹配
+    """
+    url = "https://tw.stock.yahoo.com/rss"
+    news: List[Dict] = []
+    try:
+        r = requests.get(
+            url,
+            headers={**HEADERS, "User-Agent": "Mozilla/5.0 (RSS reader; compatible)"},
+            timeout=10
+        )
+        soup = BeautifulSoup(r.content, "xml")
+        for item in soup.find_all("item")[:60]:
+            t_el  = item.find("title")
+            title = t_el.get_text(strip=True) if t_el else ""
+            d_el  = item.find("description")
+            desc  = (d_el.get_text(strip=True) if d_el else "")[:250]
+            p_el  = item.find("pubDate")
+            age   = _rss_age_minutes(p_el.get_text(strip=True) if p_el else "") if p_el else -1
+            if title and 0 <= age <= 1440:   # 24小時內
+                news.append({"title": title, "summary": desc, "time": "--:--",
+                             "source": "Yahoo股市", "age_min": age})
+    except Exception:
+        pass
+    return news
+
+
+def fetch_ltn_news() -> List[Dict]:
+    """
+    自由財經 — 台灣財經重大新聞、法人動態、個股分析
+    URL: breakingnews + securities 兩個列表頁，抓帶 /article/ 的連結
+    涵蓋：外資/投信/自營買賣超、個股暴漲暴跌原因分析、月營收公告
+    """
+    urls = [
+        "https://ec.ltn.com.tw/list/breakingnews",
+        "https://ec.ltn.com.tw/list/securities",
+    ]
+    news: List[Dict] = []
+    seen: set = set()
+    for url in urls:
+        try:
+            r = requests.get(
+                url,
+                headers={**HEADERS,
+                         "Referer": "https://ec.ltn.com.tw/",
+                         "Accept": "text/html,application/xhtml+xml,*/*"},
+                timeout=10
+            )
+            soup = BeautifulSoup(r.text, "lxml")
+            # 自由財經文章連結含 /article/ 路徑
+            for a_tag in soup.find_all("a", href=True):
+                if "/article/" not in a_tag.get("href", ""):
+                    continue
+                title = a_tag.get_text(strip=True)
+                # Strip date prefix "2026/07/03 17:38" if present
+                title = re.sub(r"^\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2}", "", title).strip()
+                if not title or title in seen or len(title) < 8:
+                    continue
+                # Filter: keep finance/stock-relevant articles
+                kw_ok = any(k in title for k in [
+                    "股", "漲", "跌", "外資", "法人", "台積", "聯發", "AI", "半導體",
+                    "營收", "獲利", "訂單", "合作", "市場", "指數", "主力", "投信",
+                    "自營", "買超", "賣超", "漲停", "跌停", "基金", "景氣", "產業",
+                    "電子", "科技", "金融", "航運", "能源", "記憶體", "晶圓"
+                ])
+                if not kw_ok:
+                    continue
+                seen.add(title)
+                news.append({"title": title, "summary": "", "time": "--:--",
+                             "source": "自由財經", "age_min": 0})
+                if len(news) >= 40:
+                    break
+        except Exception:
+            pass
+    return news
+
+
 def fetch_twse_foreign_multi_day(days: int = 5) -> Dict[str, List[float]]:
     """
     抓取最近 N 個交易日的外資買賣超資料。

@@ -103,6 +103,7 @@ from widget import (
     fetch_intraday_flow,
     # ── 早盤情報系統 ─────────────────────────────────────────────────────────
     fetch_technews_rss, fetch_google_news_tw_orders,
+    fetch_yahoo_tw_news, fetch_ltn_news,
     detect_order_signals,
     fetch_twse_foreign_multi_day, calc_foreign_streak,
 )
@@ -751,7 +752,9 @@ def load_data(epoch: str):                       # epoch = "YYYY-MM-DD-SLOT", ch
     news_moneydj  = fetch_moneydj_news()
     news_technews = fetch_technews_rss()
     news_google   = fetch_google_news_tw_orders()
-    news = news_cnyes + news_moneydj + news_technews + news_google
+    news_yahoo    = fetch_yahoo_tw_news()      # Yahoo奇摩股市 — 月營收/法人評等/產業動態
+    news_ltn      = fetch_ltn_news()           # 自由財經 — 財經重大新聞/法人買賣
+    news = news_cnyes + news_moneydj + news_technews + news_google + news_yahoo + news_ltn
     cat_sc, headlines = analyze_catalysts(news)
     # ── 訂單/合作/認證情報偵測（早盤最重要的情報）──────────────────────────────
     order_signals = detect_order_signals(news)
