@@ -509,6 +509,347 @@ HEADERS = {
     "Accept": "application/json, text/html, */*",
 }
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  早盤情報：訂單/合作/認證/外資動向 關鍵字庫
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# 訂單/合作/認證 偵測關鍵字（越靠前優先級越高）
+ORDER_SIGNAL_KW: List[Tuple[str, int]] = [
+    # 直接訂單 (強度15)
+    ("接獲訂單", 15), ("獲得訂單", 15), ("重大訂單", 15), ("大訂單", 14),
+    ("長期合約", 14), ("年度訂單", 14), ("框架協議", 13), ("採購合約", 13),
+    ("供應合約", 13), ("purchase order", 13), ("supply agreement", 13),
+    ("multi-year contract", 13), ("bulk order", 12), ("大單", 12),
+    ("訂單滿載", 12), ("訂單能見度", 11), ("order backlog", 11),
+    # 合作/聯盟 (強度12)
+    ("策略合作", 12), ("策略聯盟", 12), ("簽署MOU", 12), ("合作備忘錄", 12),
+    ("合資協議", 12), ("共同開發", 11), ("技術授權", 11), ("授權協議", 11),
+    ("合作協議", 11), ("partnership", 10), ("joint venture", 11),
+    ("licensing agreement", 11), ("結盟", 10), ("合作案", 9),
+    # 認證/入選 (強度10)
+    ("通過認證", 10), ("獲得認證", 10), ("列入供應鏈", 10), ("入選供應商", 10),
+    ("獨家供應", 12), ("首選供應商", 10), ("認可供應商", 10),
+    ("certified supplier", 10), ("supply chain entry", 10), ("認證通過", 10),
+    # 法人升評 (強度8)
+    ("目標價調升", 8), ("上調目標", 8), ("外資升評", 9), ("升至買進", 9),
+    ("price target raised", 8), ("outperform", 7), ("overweight", 7),
+    ("外資大買", 10), ("外資連買", 10), ("外資大幅買超", 11),
+    # 接單相關
+    ("接單", 8), ("拿到", 7), ("獲選", 9), ("優先供應商", 10),
+]
+
+# 重磅合作對象（出現這些名字 → 新聞重要性倍增）
+BIG_PARTNER_NAMES: List[Tuple[str, int]] = [
+    ("NVIDIA", 15), ("輝達", 15), ("Apple", 15), ("蘋果", 15),
+    ("Microsoft", 13), ("微軟", 13), ("Google", 13), ("Alphabet", 13),
+    ("Amazon", 13), ("亞馬遜", 13), ("Meta", 12), ("Tesla", 12), ("特斯拉", 12),
+    ("Intel", 11), ("英特爾", 11), ("AMD", 11), ("超微", 11),
+    ("Qualcomm", 11), ("高通", 11), ("Samsung", 10), ("三星", 10),
+    ("SK Hynix", 10), ("SK海力士", 10), ("Micron", 10), ("美光", 10),
+    ("台積電", 10), ("TSMC", 10), ("ASML", 11), ("Broadcom", 10), ("博通", 10),
+    ("SpaceX", 11), ("Boeing", 10), ("波音", 10), ("洛馬", 10), ("漢威", 9),
+    ("AWS", 12), ("Azure", 11), ("GCP", 11), ("Snowflake", 9),
+    ("OpenAI", 12), ("Anthropic", 11), ("xAI", 10),
+]
+
+# 金額規模表 (偵測文字中的數字+單位 → 估計訂單大小)
+MAGNITUDE_TABLE: List[Tuple[str, str, str]] = [
+    ("千億", "NT$1,000億+", "🚀超重磅"),
+    ("百億", "NT$100億+",  "🔥重磅"),
+    ("十億", "NT$10億+",   "⚡大單"),
+    ("億",   "NT$1億+",    "📈"),
+    ("千萬", "NT$千萬",    "📊"),
+]
+
+
+def fetch_technews_rss() -> List[Dict]:
+    """科技新報 RSS — 台灣科技財經最快速更新"""
+    url = "https://technews.tw/feed/"
+    news: List[Dict] = []
+    try:
+        r = requests.get(url, headers={**HEADERS, "User-Agent": "Mozilla/5.0 (RSS reader)"}, timeout=8)
+        soup = BeautifulSoup(r.content, "xml")
+        for item in soup.find_all("item")[:40]:
+            t_el = item.find("title")
+            title = t_el.get_text(strip=True) if t_el else ""
+            d_el  = item.find("description")
+            desc  = (d_el.get_text(strip=True) if d_el else "")[:200]
+            p_el  = item.find("pubDate")
+            age   = _rss_age_minutes(p_el.get_text(strip=True) if p_el else "") if p_el else -1
+            if title and 0 <= age <= 720:
+                news.append({"title": title, "summary": desc, "time": "--:--",
+                             "source": "科技新報", "age_min": age})
+    except Exception:
+        pass
+    return news
+
+
+def fetch_google_news_tw_orders() -> List[Dict]:
+    """Google News RSS — 掃描台灣股票訂單/合作/認證最新消息"""
+    queries = [
+        "台股 接獲訂單 OR 重大合作 OR 通過認證 OR 策略聯盟",
+        "台灣 半導體 訂單 OR 合作 OR 認證 NVIDIA OR Apple OR Google OR 微軟",
+        "台股 外資買超 OR 外資大買 OR 外資連買 升評",
+    ]
+    news: List[Dict] = []
+    seen: set = set()
+    for q in queries:
+        try:
+            import urllib.parse
+            rss_url = ("https://news.google.com/rss/search"
+                       f"?q={urllib.parse.quote(q)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
+            r = requests.get(rss_url, timeout=8,
+                             headers={"User-Agent": "Mozilla/5.0 (compatible; newsbot/1.0)"})
+            soup = BeautifulSoup(r.content, "xml")
+            for item in soup.find_all("item")[:20]:
+                t_el  = item.find("title")
+                title = t_el.get_text(strip=True) if t_el else ""
+                p_el  = item.find("pubDate")
+                age   = _rss_age_minutes(p_el.get_text(strip=True) if p_el else "")
+                if title and title not in seen and 0 <= age <= 720:
+                    seen.add(title)
+                    src_el = item.find("source")
+                    src    = src_el.get_text(strip=True) if src_el else "Google News"
+                    news.append({"title": title, "summary": "", "time": "--:--",
+                                 "source": src, "age_min": age})
+        except Exception:
+            pass
+    return news
+
+
+def fetch_twse_foreign_multi_day(days: int = 5) -> Dict[str, List[float]]:
+    """
+    抓取最近 N 個交易日的外資買賣超資料。
+    回傳 {ticker: [最新日, 前1日, 前2日, ...]}，正數=買超（千張），負數=賣超。
+    用於判斷「外資連續買超/賣超 N 天」趨勢。
+    """
+    from datetime import timezone as _tz, timedelta as _td
+    result: Dict[str, List[float]] = {}
+    tw_now = datetime.now(tz=_tz(_td(hours=8)))
+
+    # 嘗試最近10個日曆日，取到 days 個有效交易日
+    dates_tried = 0
+    dates_ok    = 0
+    day_offset  = 0
+    daily_data: List[Dict[str, float]] = []
+
+    while dates_ok < days and dates_tried < 14:
+        d = tw_now - _td(days=day_offset)
+        day_offset += 1
+        dates_tried += 1
+        if d.weekday() >= 5:   # Skip Saturday / Sunday
+            continue
+        date_str = d.strftime("%Y%m%d")
+        url = f"https://www.twse.com.tw/rwd/zh/fund/TWT53U?response=json&date={date_str}"
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=8)
+            data = r.json()
+            rows = data.get("data", [])
+            if not rows:
+                continue   # holiday or no data
+            day_dict: Dict[str, float] = {}
+            for row in rows:
+                if len(row) >= 5:
+                    code = row[0].strip()
+                    try:
+                        net = float(row[4].replace(",", "").replace("+", ""))
+                        day_dict[code + ".TW"] = net / 1000   # 千張
+                    except (ValueError, IndexError):
+                        pass
+            daily_data.append(day_dict)
+            dates_ok += 1
+        except Exception:
+            continue
+
+    if not daily_data:
+        return result
+
+    # Transpose: result[ticker] = [day0_net, day1_net, ...]
+    all_tickers = set(t for d in daily_data for t in d)
+    for ticker in all_tickers:
+        result[ticker] = [d.get(ticker, 0.0) for d in daily_data]
+
+    return result
+
+
+def calc_foreign_streak(multi_day: Dict[str, List[float]]) -> Dict[str, int]:
+    """
+    計算外資連續買超/賣超天數。
+    回傳 {ticker: streak}，正數=連續買超天數，負數=連續賣超天數。
+    例: +3 = 連續買超3天，-2 = 連續賣超2天
+    """
+    streaks: Dict[str, int] = {}
+    for ticker, days_list in multi_day.items():
+        if not days_list:
+            streaks[ticker] = 0
+            continue
+        # Count consecutive same-direction from most recent day
+        if days_list[0] > 0:
+            streak = sum(1 for d in days_list if d > 0)
+            # But must be consecutive from day0
+            consecutive = 0
+            for d in days_list:
+                if d > 0: consecutive += 1
+                else: break
+            streaks[ticker] = consecutive
+        elif days_list[0] < 0:
+            consecutive = 0
+            for d in days_list:
+                if d < 0: consecutive -= 1
+                else: break
+            streaks[ticker] = consecutive
+        else:
+            streaks[ticker] = 0
+    return streaks
+
+
+def detect_order_signals(news_list: List[Dict]) -> List[Dict]:
+    """
+    掃描所有新聞，偵測可能影響股價的訂單/合作/認證/升評訊號。
+
+    回傳 list of {
+        ticker, name, sector, signal_type, headline, source, age_min,
+        partner, magnitude_label, magnitude_icon, base_score, entry_note
+    } 按 base_score 排序（最重要的優先）。
+
+    設計原則：
+    • 只回傳 TECH_UNIVERSE 內的股票，或明確股票代號/名稱被點名的新聞
+    • 新聞發布越新 → 分數越高（讓使用者第一時間看到）
+    • 合作對象越重要 → 分數越高
+    • 金額越大 → 分數越高
+    """
+    signals: List[Dict] = []
+    seen_headlines: set = set()
+
+    # Build a reverse lookup: Chinese name / EN name → ticker
+    name_to_ticker: Dict[str, str] = {}
+    for tk, info in TECH_UNIVERSE.items():
+        nm = info.get("name", "")
+        en = info.get("en", "")
+        if nm: name_to_ticker[nm]       = tk
+        if nm: name_to_ticker[nm[:2]]   = tk   # short alias (first 2 chars)
+        if en and len(en) > 3: name_to_ticker[en.lower()] = tk
+
+    for news in news_list:
+        title   = news.get("title", "")
+        summary = news.get("summary", "")
+        source  = news.get("source", "")
+        age_min = news.get("age_min", 999)
+        combined = (title + " " + summary).strip()
+        if not combined or title in seen_headlines:
+            continue
+
+        # ── Step 1: Does this news contain any order/cooperation signal? ────────
+        best_kw_score = 0
+        signal_type   = ""
+        for kw, strength in ORDER_SIGNAL_KW:
+            if kw.lower() in combined.lower():
+                if strength > best_kw_score:
+                    best_kw_score = strength
+                    # Classify signal type
+                    if any(x in kw for x in ["訂單","order","單"]):
+                        signal_type = "📦 重大訂單"
+                    elif any(x in kw for x in ["合作","MOU","聯盟","partner","joint","licensing","授權","結盟"]):
+                        signal_type = "🤝 策略合作"
+                    elif any(x in kw for x in ["認證","供應鏈","supplier","certified","入選","獲選"]):
+                        signal_type = "✅ 供應鏈認證"
+                    elif any(x in kw for x in ["升評","買進","target","outperform","overweight","外資大買","外資連買"]):
+                        signal_type = "📈 外資/法人升評"
+                    else:
+                        signal_type = "📰 利多消息"
+
+        if best_kw_score == 0:
+            continue   # not an order/coop signal
+
+        # ── Step 2: Find which stock is mentioned ────────────────────────────────
+        matched_ticker = ""
+        matched_name   = ""
+        matched_sector = ""
+        for nm, tk in name_to_ticker.items():
+            if nm and len(nm) >= 2 and nm in combined:
+                info = TECH_UNIVERSE.get(tk, {})
+                matched_ticker = tk
+                matched_name   = info.get("name", nm)
+                matched_sector = info.get("sector", "")
+                break
+
+        if not matched_ticker:
+            continue   # can't map to a known stock, skip
+
+        # ── Step 3: Big partner bonus ────────────────────────────────────────────
+        partner_bonus = 0
+        partner_found = ""
+        for partner, bonus in BIG_PARTNER_NAMES:
+            if partner.lower() in combined.lower():
+                if bonus > partner_bonus:
+                    partner_bonus = bonus
+                    partner_found = partner
+
+        # ── Step 4: Magnitude detection ──────────────────────────────────────────
+        magnitude_label = ""
+        magnitude_icon  = ""
+        mag_bonus       = 0
+        for unit, label, icon in MAGNITUDE_TABLE:
+            if unit in combined:
+                magnitude_label = label
+                magnitude_icon  = icon
+                # Score based on magnitude
+                mag_bonus = {"千億":20,"百億":15,"十億":10,"億":5,"千萬":2}.get(unit, 0)
+                break
+
+        # ── Step 5: Recency bonus ────────────────────────────────────────────────
+        if   age_min < 60:    recency = 20
+        elif age_min < 180:   recency = 15
+        elif age_min < 360:   recency = 10
+        elif age_min < 720:   recency = 5
+        else:                  recency = 0
+
+        # ── Step 6: Final score ──────────────────────────────────────────────────
+        base_score = best_kw_score + partner_bonus + mag_bonus + recency
+
+        # Entry note based on signal type and age
+        if age_min < 60:
+            entry_note = "⚡ 消息剛出！開盤前最佳布局時機"
+        elif age_min < 180:
+            entry_note = "🌅 早盤前消息，留意開盤跳空"
+        elif age_min < 360:
+            entry_note = "📌 今早消息，若尚未大漲可低接"
+        else:
+            entry_note = "📊 昨晚消息，開盤觀察量能確認"
+
+        if partner_found:
+            entry_note += f"　合作方：{partner_found}"
+
+        seen_headlines.add(title)
+        signals.append({
+            "ticker":          matched_ticker,
+            "name":            matched_name,
+            "sector":          matched_sector,
+            "signal_type":     signal_type,
+            "headline":        title[:80],
+            "source":          source,
+            "age_min":         age_min,
+            "partner":         partner_found,
+            "magnitude_label": magnitude_label,
+            "magnitude_icon":  magnitude_icon,
+            "base_score":      base_score,
+            "entry_note":      entry_note,
+        })
+
+    # Sort by score (desc), deduplicate by ticker (keep highest score per stock)
+    signals.sort(key=lambda x: x["base_score"], reverse=True)
+    seen_tickers: set = set()
+    unique_signals: List[Dict] = []
+    for s in signals:
+        if s["ticker"] not in seen_tickers:
+            seen_tickers.add(s["ticker"])
+            unique_signals.append(s)
+        if len(unique_signals) >= 8:
+            break
+
+    return unique_signals
+
+
 def fetch_cnyes_news(limit: int = 60) -> List[Dict]:
     """鉅亨網科技財經新聞"""
     urls = [
@@ -947,7 +1288,6 @@ def analyze_catalysts(news_list: List[Dict]) -> Tuple[Dict[str, int], List[str]]
             catalyst_scores[ticker] = max(prev, bonus)
 
     # ── 3. 個股直接被新聞標題點名 → 疊加直接加分（每篇+4分，上限15分）──────────
-    # 這讓今日真正熱門個股能浮出水面，而非永遠是固定受益股
     for ticker, info in TECH_UNIVERSE.items():
         name = info.get("name", "")
         en   = info.get("en", "")
@@ -959,6 +1299,31 @@ def analyze_catalysts(news_list: List[Dict]) -> Tuple[Dict[str, int], List[str]]
         if direct > 0:
             direct_bonus = min(15, direct * 4)
             catalyst_scores[ticker] = catalyst_scores.get(ticker, 0) + direct_bonus
+
+    # ── 4. 訂單/合作/認證新聞 → 巨型加分（最高+25），這是散戶最需要的情報 ──────
+    # 個股名稱 + 訂單關鍵字同時出現在同一篇文章 → 直接加大量分數
+    order_high_kw = [kw for kw, strength in ORDER_SIGNAL_KW if strength >= 10]
+    for ticker, info in TECH_UNIVERSE.items():
+        name = info.get("name", "")
+        en   = info.get("en", "")
+        for n in news_list:
+            combined = (n["title"] + " " + n["summary"]).lower()
+            name_hit = (name and name in combined) or (en and len(en) > 3 and en.lower() in combined)
+            if not name_hit:
+                continue
+            for kw in order_high_kw:
+                if kw.lower() in combined:
+                    # 訂單/合作新聞與個股同篇 → 最高+25（超過正常催化劑上限，強制浮出）
+                    order_boost = 25
+                    catalyst_scores[ticker] = max(
+                        catalyst_scores.get(ticker, 0),
+                        catalyst_scores.get(ticker, 0) + order_boost
+                    )
+                    # 加入 headline（標記為重大）
+                    hl = f"🔥[{n['time']}][{n['source']}] {n['title'][:60]}"
+                    if hl not in key_headlines:
+                        key_headlines.insert(0, hl)   # Push to top
+                    break
 
     return catalyst_scores, key_headlines[:8]
 

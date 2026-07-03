@@ -101,6 +101,10 @@ from widget import (
     fetch_yf_fundamentals_batch, fetch_twse_shareholder_meetings,
     calc_fundamental_bonus,
     fetch_intraday_flow,
+    # ── 早盤情報系統 ─────────────────────────────────────────────────────────
+    fetch_technews_rss, fetch_google_news_tw_orders,
+    detect_order_signals,
+    fetch_twse_foreign_multi_day, calc_foreign_streak,
 )
 
 warnings.filterwarnings("ignore")
@@ -742,13 +746,25 @@ def load_data(epoch: str):                       # epoch = "YYYY-MM-DD-SLOT", ch
         prices   = fetch_prices_batch(tickers, period="3mo")
         us_data  = fetch_us_overnight()
         g_news   = fetch_global_news()
-    news     = fetch_cnyes_news(100) + fetch_moneydj_news()
+    # ── 廣域新聞抓取（含科技新報 + Google News 訂單/合作專項搜尋）──────────────
+    news_cnyes    = fetch_cnyes_news(100)
+    news_moneydj  = fetch_moneydj_news()
+    news_technews = fetch_technews_rss()
+    news_google   = fetch_google_news_tw_orders()
+    news = news_cnyes + news_moneydj + news_technews + news_google
     cat_sc, headlines = analyze_catalysts(news)
-    foreign  = fetch_twse_foreign_buying()
+    # ── 訂單/合作/認證情報偵測（早盤最重要的情報）──────────────────────────────
+    order_signals = detect_order_signals(news)
+    # ── 外資買賣超（今日 + 連續天數）────────────────────────────────────────────
+    foreign      = fetch_twse_foreign_buying()
+    foreign_multi = fetch_twse_foreign_multi_day(days=5)
+    fi_streak    = calc_foreign_streak(foreign_multi)
     market   = fetch_twse_market_summary()
     ts = _now_tw().strftime("%H:%M")
     return dict(news=news, headlines=headlines, catalyst=cat_sc,
-                foreign=foreign, market=market, prices=prices,
+                foreign=foreign, fi_streak=fi_streak,
+                order_signals=order_signals,
+                market=market, prices=prices,
                 us_data=us_data, global_news=g_news, ts=ts)
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -1003,17 +1019,20 @@ with st.spinner("載入中…"):
             data = load_data(_epoch)
         except Exception:
             data = dict(news=[], headlines=[], catalyst={},
-                        foreign={}, market={}, prices={},
+                        foreign={}, fi_streak={}, order_signals=[],
+                        market={}, prices={},
                         us_data={}, global_news=[], ts="--:--")
             st.warning(f"資料載入失敗，請重新整理頁面。（{type(_load_err).__name__}）")
 
-prices      = data.get("prices", {})
-all_news    = data.get("news", [])
-cat_sc      = data.get("catalyst", {})
-foreign     = data.get("foreign", {})
-mkt         = data.get("market", {})
-us_data     = data.get("us_data", {})
-global_news = data.get("global_news", [])
+prices        = data.get("prices", {})
+all_news      = data.get("news", [])
+cat_sc        = data.get("catalyst", {})
+foreign       = data.get("foreign", {})
+fi_streak     = data.get("fi_streak", {})
+order_signals = data.get("order_signals", [])
+mkt           = data.get("market", {})
+us_data       = data.get("us_data", {})
+global_news   = data.get("global_news", [])
 
 # ── Fundamental data (yfinance quarterly: revenue/earnings growth, margins) ───
 _epoch_day   = _now_tw().strftime("%Y-%m-%d")
@@ -3674,6 +3693,208 @@ def render_stock_cards(picks, prices, show_chart):
                     st.session_state.watchlist.append(p["ticker"])
             st.session_state._needs_save = True
             st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  🚨 早盤情報：訂單/合作/外資 最新動向
+# ══════════════════════════════════════════════════════════════════════════════
+_KBAR_ENTRY_GUIDE = {
+    "🌅 早晨之星（底部翻轉）":   ("✅ 第三根陽線確認後，開盤分批低接", "#ef5350"),
+    "🕯️ 看漲吞噬（多頭翻轉）":   ("✅ 吞噬當日或隔日開盤低接", "#ef5350"),
+    "🚀 連三陽（多頭確認）":      ("✅ 回測前一根收盤價支撐後進場", "#ef5350"),
+    "🔨 鎚子線（底部反彈）":      ("✅ 鎚子線隔日若開高，追進有效", "#ff9800"),
+    "🤰 多頭孕線（盤整轉強）":    ("⚡ 孕線後突破母線高點即可進場", "#ff9800"),
+    "📊 量增價漲（動量延續）":    ("✅ 量能維持高檔，可持續追蹤", "#ef5350"),
+    "⚠️ 看跌吞噬（空頭翻轉）":   ("🚫 避免進場，等反彈後確認", "#4caf7d"),
+    "🌠 流星線（頭部警告）":      ("🚫 高檔流星線，不追高，等回測", "#4caf7d"),
+    "陽線（無特定形態）":         ("📌 陽線方向正確，等量能放大確認", "#ffd54f"),
+    "陰線（無特定形態）":         ("⏳ 陰線整理中，等轉陽再進場", "#607d8b"),
+    "十字線":                     ("⏸️ 十字線盤整，等方向確認", "#607d8b"),
+}
+
+def _render_morning_intel(order_signals, fi_streak, prices, foreign):
+    """早盤情報面板：訂單/合作 + 外資連續動向"""
+    _tw_now_h = _now_tw().hour
+
+    # ── A. 訂單/合作/認證情報 ──────────────────────────────────────────────────
+    if order_signals:
+        st.markdown(
+            '<div style="background:linear-gradient(135deg,#1a0a00,#2d1200);'
+            'border:2px solid #ff6d00;border-radius:12px;padding:14px 18px;margin-bottom:14px">'
+            '<div style="font-size:15px;font-weight:800;color:#ff9800;margin-bottom:10px">'
+            '🚨 早盤情報　<span style="font-size:11px;font-weight:400;color:#888">'
+            '訂單・合作・認證・升評 最新動態</span></div>',
+            unsafe_allow_html=True
+        )
+        for sig in order_signals[:5]:
+            tk     = sig["ticker"]
+            nm     = sig["name"]
+            st_    = sig["signal_type"]
+            hl     = sig["headline"]
+            src    = sig["source"]
+            age    = sig["age_min"]
+            partner = sig.get("partner", "")
+            mag    = sig.get("magnitude_label", "")
+            mag_i  = sig.get("magnitude_icon", "")
+            entry  = sig.get("entry_note", "")
+            sc_    = sig.get("base_score", 0)
+
+            # Current price
+            _df = prices.get(tk)
+            _price_html = ""
+            if _df is not None and len(_df) >= 2:
+                _px  = float(_df["Close"].iloc[-1])
+                _prv = float(_df["Close"].iloc[-2])
+                _chg = (_px - _prv) / _prv * 100 if _prv > 0 else 0
+                _col = "#ef5350" if _chg >= 0 else "#4caf7d"
+                _arr = "▲" if _chg >= 0 else "▼"
+                _price_html = (f'<span style="color:{_col};font-weight:700">'
+                               f'NT${_px:.1f} {_arr}{abs(_chg):.1f}%</span>')
+
+            # Age badge
+            if age < 60:     age_badge = f'<span style="color:#ef5350;font-weight:700">⚡ {age}分鐘前</span>'
+            elif age < 180:  age_badge = f'<span style="color:#ff9800">🕐 {age//60}小時前</span>'
+            else:             age_badge = f'<span style="color:#555">{age//60}小時前</span>'
+
+            # K-bar entry hint
+            _kbar_hint = ""
+            if _df is not None and len(_df) >= 5:
+                from widget import calc_kbar_pattern
+                _ks, _kp = calc_kbar_pattern(_df)
+                _entry_guide, _eg_col = _KBAR_ENTRY_GUIDE.get(_kp, ("", "#888"))
+                if _entry_guide:
+                    _kbar_hint = (f'<div style="margin-top:5px;font-size:11px;'
+                                  f'color:{_eg_col}">🕯️ K棒形態：{_kp}　{_entry_guide}</div>')
+
+            st.markdown(
+                f'<div style="background:#1a0d00;border-left:3px solid #ff6d00;'
+                f'border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px">'
+                f'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+                f'<span style="font-weight:700;color:#ffd54f">{tk.replace(".TW","")} {nm}</span>'
+                f'<span style="background:#2d1500;color:#ff9800;padding:1px 8px;'
+                f'border-radius:10px;font-size:11px">{st_}</span>'
+                + (f'<span style="background:#1a2a00;color:#b5e853;padding:1px 7px;'
+                   f'border-radius:10px;font-size:11px">{mag_i} {mag}</span>' if mag else '')
+                + f'{_price_html}'
+                f'<span style="margin-left:auto">{age_badge}</span>'
+                f'</div>'
+                f'<div style="font-size:12px;color:#ddd;margin-top:5px;line-height:1.5">'
+                f'📰 {hl}'
+                f'</div>'
+                + (f'<div style="font-size:11px;color:#888;margin-top:3px">'
+                   f'出處：{src}' + (f'　合作方：<b style="color:#ffd54f">{partner}</b>' if partner else '')
+                   + f'</div>') +
+                f'<div style="font-size:11px;color:#ff9800;margin-top:5px">'
+                f'💡 {entry}</div>'
+                + _kbar_hint +
+                f'</div>',
+                unsafe_allow_html=True
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── B. 外資連續買超/賣超 動向 ───────────────────────────────────────────────
+    # Top 外資 consecutive buy streaks (≥ 3 days)
+    fi_buy_top = sorted(
+        [(tk, s) for tk, s in fi_streak.items()
+         if s >= 3 and tk in TECH_UNIVERSE and
+         TECH_UNIVERSE.get(tk, {}).get("name")],
+        key=lambda x: (-x[1], -abs(foreign.get(x[0], 0)))
+    )[:6]
+    fi_sell_top = sorted(
+        [(tk, s) for tk, s in fi_streak.items()
+         if s <= -3 and tk in TECH_UNIVERSE and
+         TECH_UNIVERSE.get(tk, {}).get("name")],
+        key=lambda x: (x[1], -abs(foreign.get(x[0], 0)))
+    )[:4]
+
+    if fi_buy_top or fi_sell_top:
+        st.markdown(
+            '<div style="background:#041020;border:1px solid #1e3a5c;'
+            'border-radius:10px;padding:12px 16px;margin-bottom:12px">'
+            '<div style="font-size:14px;font-weight:700;color:#7eb3ff;margin-bottom:10px">'
+            '🏦 外資籌碼動向　<span style="font-size:11px;font-weight:400;color:#555">'
+            '連續買超/賣超≥3天 = 法人確定性部位，重要程度高</span></div>',
+            unsafe_allow_html=True
+        )
+        if fi_buy_top:
+            buy_html = '<div style="margin-bottom:8px"><span style="color:#ef5350;font-weight:700">▲ 外資連續買超</span>　<span style="font-size:11px;color:#888">（天數越多 = 法人越有信心）</span><br>'
+            for tk, streak in fi_buy_top:
+                nm   = TECH_UNIVERSE.get(tk, {}).get("name", tk)
+                fi_t = foreign.get(tk, 0)
+                _df  = prices.get(tk)
+                _px_str = ""
+                if _df is not None and len(_df) >= 1:
+                    _px = float(_df["Close"].iloc[-1])
+                    _px_str = f"NT${_px:.1f}"
+                buy_html += (
+                    f'<span style="display:inline-block;margin:3px 6px 3px 0;'
+                    f'background:#0d2014;border:1px solid #2d5a3d;border-radius:6px;'
+                    f'padding:3px 10px;font-size:12px">'
+                    f'<span style="color:#ef5350;font-weight:700">{tk.replace(".TW","")} {nm}</span>'
+                    f'　連買<b style="color:#ef5350">{streak}</b>天'
+                    f'　{_px_str}'
+                    + (f'　今日{fi_t:+.0f}千張' if fi_t != 0 else '')
+                    + f'</span>'
+                )
+            buy_html += '</div>'
+            st.markdown(buy_html, unsafe_allow_html=True)
+        if fi_sell_top:
+            sell_html = '<div><span style="color:#4caf7d;font-weight:700">▼ 外資連續賣超</span>　<span style="font-size:11px;color:#888">（避免進場或考慮停利）</span><br>'
+            for tk, streak in fi_sell_top:
+                nm   = TECH_UNIVERSE.get(tk, {}).get("name", tk)
+                fi_t = foreign.get(tk, 0)
+                sell_html += (
+                    f'<span style="display:inline-block;margin:3px 6px 3px 0;'
+                    f'background:#120508;border:1px solid #3d1a20;border-radius:6px;'
+                    f'padding:3px 10px;font-size:12px">'
+                    f'<span style="color:#4caf7d;font-weight:700">{tk.replace(".TW","")} {nm}</span>'
+                    f'　連賣<b style="color:#4caf7d">{abs(streak)}</b>天'
+                    + (f'　今日{fi_t:+.0f}千張' if fi_t != 0 else '')
+                    + f'</span>'
+                )
+            sell_html += '</div>'
+            st.markdown(sell_html, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── C. K棒進場指南 ─────────────────────────────────────────────────────────
+    with st.expander("🕯️ K棒進場時機快速參考（點擊展開）", expanded=False):
+        st.markdown(
+            '<div style="background:#070f1c;border-radius:8px;padding:12px 16px;font-size:12px">'
+            '<div style="font-weight:700;color:#7eb3ff;margin-bottom:8px">台灣股市 K棒形態進出場指南'
+            '　<span style="font-weight:400;color:#555">陽線=紅 陰線=綠（台灣慣例）</span></div>'
+            '<table style="width:100%;border-collapse:collapse">'
+            '<tr style="color:#555;font-size:11px">'
+            '<td style="padding:3px 6px">形態</td>'
+            '<td style="padding:3px 6px">意義</td>'
+            '<td style="padding:3px 6px">進場策略</td>'
+            '<td style="padding:3px 6px">強度</td>'
+            '</tr>'
+            + ''.join([
+                f'<tr style="border-top:1px solid #111">'
+                f'<td style="padding:4px 6px;color:{col}">{pat}</td>'
+                f'<td style="padding:4px 6px;color:#aaa;font-size:11px">{meaning}</td>'
+                f'<td style="padding:4px 6px;color:{col};font-size:11px">{action}</td>'
+                f'<td style="padding:4px 6px">{stars}</td>'
+                f'</tr>'
+                for pat, meaning, action, col, stars in [
+                    ("🌅 早晨之星", "三日底部翻轉", "第三陽確認後低接", "#ef5350", "⭐⭐⭐⭐⭐"),
+                    ("🕯️ 看漲吞噬", "大陽吃掉前陰", "吞噬當日或隔日買", "#ef5350", "⭐⭐⭐⭐⭐"),
+                    ("🚀 連三陽", "三日多頭確認", "回測支撐後追進", "#ef5350", "⭐⭐⭐⭐"),
+                    ("🔨 鎚子線", "底部長下影反彈", "鎚子隔日若不破低買", "#ff9800", "⭐⭐⭐⭐"),
+                    ("🤰 多頭孕線", "盤整後蓄力", "突破母線高點進場", "#ff9800", "⭐⭐⭐"),
+                    ("📊 量增價漲", "動量延續", "量能維持高檔可追", "#ff9800", "⭐⭐⭐"),
+                    ("🌠 流星線", "頭部拒絕上漲", "不追高，等回測", "#4caf7d", "⚠️空頭警告"),
+                    ("⚠️ 看跌吞噬", "強力轉空", "停利/停損，勿買", "#4caf7d", "⚠️空頭警告"),
+                ]
+            ]) +
+            '</table>'
+            '<div style="margin-top:10px;font-size:11px;color:#555">'
+            '📌 最佳進場組合：陽線形態 + 量比>1.5x + 外資買超 + RSI 45-65 = 四重確認'
+            '</div></div>',
+            unsafe_allow_html=True
+        )
+
+
+_render_morning_intel(order_signals, fi_streak, prices, foreign)
 
 if not today_picks:
     st.info(
