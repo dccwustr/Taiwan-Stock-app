@@ -88,25 +88,31 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-sys.path.insert(0, os.path.dirname(__file__))
-from widget import (
-    TECH_UNIVERSE, MY_HOLDINGS,
-    fetch_cnyes_news, fetch_moneydj_news, fetch_twse_foreign_buying,
-    fetch_twse_market_summary, fetch_prices_batch, analyze_catalysts,
-    get_catalyst_labels, score_stock, analyze_holdings, fetch_live_prices,
-    analyze_holding_sell, get_beginner_advice,
-    calc_rsi, calc_live_rsi, _TW_STOCK_NAMES,
-    fetch_us_overnight, us_macro_stock_bonus, fetch_global_news,
-    fetch_market_alerts,
-    fetch_yf_fundamentals_batch, fetch_twse_shareholder_meetings,
-    calc_fundamental_bonus,
-    fetch_intraday_flow,
-    # ── 早盤情報系統 ─────────────────────────────────────────────────────────
-    fetch_technews_rss, fetch_google_news_tw_orders,
-    fetch_yahoo_tw_news, fetch_ltn_news,
-    detect_order_signals,
-    fetch_twse_foreign_multi_day, calc_foreign_streak,
-)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from widget import (
+        TECH_UNIVERSE, MY_HOLDINGS,
+        fetch_cnyes_news, fetch_moneydj_news, fetch_twse_foreign_buying,
+        fetch_twse_market_summary, fetch_prices_batch, analyze_catalysts,
+        get_catalyst_labels, score_stock, analyze_holdings, fetch_live_prices,
+        analyze_holding_sell, get_beginner_advice,
+        calc_rsi, calc_live_rsi, _TW_STOCK_NAMES,
+        fetch_us_overnight, us_macro_stock_bonus, fetch_global_news,
+        fetch_market_alerts,
+        fetch_yf_fundamentals_batch, fetch_twse_shareholder_meetings,
+        calc_fundamental_bonus,
+        fetch_intraday_flow,
+        # ── 早盤情報系統 ─────────────────────────────────────────────────────────
+        fetch_technews_rss, fetch_google_news_tw_orders,
+        fetch_yahoo_tw_news, fetch_ltn_news,
+        detect_order_signals,
+        fetch_twse_foreign_multi_day, calc_foreign_streak,
+    )
+except Exception as _widget_err:
+    import traceback as _tb
+    st.error(f"⚠️ 模組載入失敗 [{type(_widget_err).__name__}]: {_widget_err}")
+    st.code(_tb.format_exc())
+    st.stop()
 
 warnings.filterwarnings("ignore")
 

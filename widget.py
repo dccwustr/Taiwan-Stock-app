@@ -738,7 +738,10 @@ def fetch_technews_rss() -> List[Dict]:
     news: List[Dict] = []
     try:
         r = requests.get(url, headers={**HEADERS, "User-Agent": "Mozilla/5.0 (RSS reader)"}, timeout=8)
-        soup = BeautifulSoup(r.content, "xml")
+        try:
+            soup = BeautifulSoup(r.content, "xml")
+        except Exception:
+            soup = BeautifulSoup(r.content, "html.parser")
         for item in soup.find_all("item")[:40]:
             t_el = item.find("title")
             title = t_el.get_text(strip=True) if t_el else ""
@@ -770,7 +773,10 @@ def fetch_google_news_tw_orders() -> List[Dict]:
                        f"?q={urllib.parse.quote(q)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
             r = requests.get(rss_url, timeout=8,
                              headers={"User-Agent": "Mozilla/5.0 (compatible; newsbot/1.0)"})
-            soup = BeautifulSoup(r.content, "xml")
+            try:
+                soup = BeautifulSoup(r.content, "xml")
+            except Exception:
+                soup = BeautifulSoup(r.content, "html.parser")
             for item in soup.find_all("item")[:20]:
                 t_el  = item.find("title")
                 title = t_el.get_text(strip=True) if t_el else ""
@@ -802,7 +808,10 @@ def fetch_yahoo_tw_news() -> List[Dict]:
             headers={**HEADERS, "User-Agent": "Mozilla/5.0 (RSS reader; compatible)"},
             timeout=10
         )
-        soup = BeautifulSoup(r.content, "xml")
+        try:
+            soup = BeautifulSoup(r.content, "xml")
+        except Exception:
+            soup = BeautifulSoup(r.content, "html.parser")
         for item in soup.find_all("item")[:60]:
             t_el  = item.find("title")
             title = t_el.get_text(strip=True) if t_el else ""
@@ -839,7 +848,7 @@ def fetch_ltn_news() -> List[Dict]:
                          "Accept": "text/html,application/xhtml+xml,*/*"},
                 timeout=10
             )
-            soup = BeautifulSoup(r.text, "lxml")
+            soup = BeautifulSoup(r.text, "html.parser")
             # 自由財經文章連結含 /article/ 路徑
             for a_tag in soup.find_all("a", href=True):
                 if "/article/" not in a_tag.get("href", ""):
@@ -2020,7 +2029,10 @@ def fetch_market_alerts(hours_back: int = 6) -> List[Dict]:
                 headers={"User-Agent": "Mozilla/5.0 (compatible; marketalert/1.0)"},
             )
             r.raise_for_status()
-            soup = BeautifulSoup(r.content, "xml")
+            try:
+                soup = BeautifulSoup(r.content, "xml")
+            except Exception:
+                soup = BeautifulSoup(r.content, "html.parser")
 
             for item in soup.find_all("item")[:30]:
                 # ── title ─────────────────────────────────────────────────────
