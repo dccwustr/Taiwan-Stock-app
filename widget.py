@@ -2097,15 +2097,26 @@ def fetch_intraday_flow(ticker: str) -> Dict:
       signal_reasons– list of human-readable Chinese explanations
 
     Returns {} on any error or if fewer than 3 bars available.
-    Data source: yfinance period="1d" interval="5m"
+    Data source: yfinance period="1d" interval="5m" (falls back to 10-day daily if < 3 bars).
     """
     try:
         tk = yf.Ticker(ticker)
         df = tk.history(period="1d", interval="5m")
-        if df is None or len(df) < 3:
-            return {}
+        is_daily_fallback = False
 
-        df = df.copy()
+        # ── Fallback: use daily candles when intraday data is sparse ─────────
+        if df is None or len(df) < 3:
+            try:
+                df_daily = tk.history(period="10d", interval="1d")
+                if df_daily is not None and len(df_daily) >= 2:
+                    df = df_daily.copy()
+                    is_daily_fallback = True
+                else:
+                    return {}
+            except Exception:
+                return {}
+        else:
+            df = df.copy()
 
         # ── VWAP (typical-price × volume weighted) ────────────────────────
         df["tp"]     = (df["High"] + df["Low"] + df["Close"]) / 3.0
@@ -2243,22 +2254,23 @@ def fetch_intraday_flow(ticker: str) -> Dict:
             reasons.append("累積賣超持續加大，法人可能逢高出清")
 
         return {
-            "vwap":           round(vwap, 1),
-            "last_price":     round(last_close, 1),
-            "above_vwap":     above_vwap,
-            "buy_pct":        round(buy_pct, 1),
-            "sell_pct":       round(100.0 - buy_pct, 1),
-            "cum_delta":      int(cum_delta),
-            "delta_trend":    delta_trend,
-            "bar_seq":        bar_seq,
-            "consec_buy":     consec_buy,
-            "consec_sell":    consec_sell,
-            "vol_pace_pct":   vol_pace_pct,
-            "signal":         signal,
-            "signal_color":   sig_col,
-            "signal_score":   sig,
-            "signal_reasons": reasons,
-            "bars":           len(df),
+            "vwap":               round(vwap, 1),
+            "last_price":         round(last_close, 1),
+            "above_vwap":         above_vwap,
+            "buy_pct":            round(buy_pct, 1),
+            "sell_pct":           round(100.0 - buy_pct, 1),
+            "cum_delta":          int(cum_delta),
+            "delta_trend":        delta_trend,
+            "bar_seq":            bar_seq,
+            "consec_buy":         consec_buy,
+            "consec_sell":        consec_sell,
+            "vol_pace_pct":       vol_pace_pct,
+            "signal":             signal,
+            "signal_color":       sig_col,
+            "signal_score":       sig,
+            "signal_reasons":     reasons,
+            "bars":               len(df),
+            "is_daily_fallback":  is_daily_fallback,
         }
     except Exception:
         return {}

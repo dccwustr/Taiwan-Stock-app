@@ -1651,23 +1651,29 @@ def _build_flow_panel(flow: dict, is_open: bool) -> str:
     if not flow:
         return ""
 
-    vwap       = flow.get("vwap", 0.0)
-    lp         = flow.get("last_price", 0.0)
-    above      = flow.get("above_vwap", True)
-    buy_pct    = flow.get("buy_pct", 50.0)
-    sell_pct   = flow.get("sell_pct", 50.0)
-    cum_delta  = flow.get("cum_delta", 0)
-    delta_tr   = flow.get("delta_trend", "flat")
-    bar_seq    = flow.get("bar_seq", [])
-    consec_b   = flow.get("consec_buy", 0)
-    consec_s   = flow.get("consec_sell", 0)
-    vol_pace   = flow.get("vol_pace_pct", 100)
-    signal     = flow.get("signal", "—")
-    sig_col    = flow.get("signal_color", "#888")
-    reasons    = flow.get("signal_reasons", [])
+    vwap        = flow.get("vwap", 0.0)
+    lp          = flow.get("last_price", 0.0)
+    above       = flow.get("above_vwap", True)
+    buy_pct     = flow.get("buy_pct", 50.0)
+    sell_pct    = flow.get("sell_pct", 50.0)
+    cum_delta   = flow.get("cum_delta", 0)
+    delta_tr    = flow.get("delta_trend", "flat")
+    bar_seq     = flow.get("bar_seq", [])
+    consec_b    = flow.get("consec_buy", 0)
+    consec_s    = flow.get("consec_sell", 0)
+    vol_pace    = flow.get("vol_pace_pct", 100)
+    signal      = flow.get("signal", "—")
+    sig_col     = flow.get("signal_color", "#888")
+    reasons     = flow.get("signal_reasons", [])
+    is_fallback = flow.get("is_daily_fallback", False)
 
-    # Session label
-    session_label = "今日即時" if is_open else "上一交易日收盤"
+    # Session label — daily fallback shows "近10日日K趨勢" instead
+    if is_fallback:
+        session_label = "近10日日K趨勢（5分K數據不足）"
+    elif is_open:
+        session_label = "今日即時"
+    else:
+        session_label = "上一交易日收盤"
 
     # VWAP badge — 台灣慣例：站上VWAP=多頭=紅色；跌破=空頭=綠色
     vwap_diff = abs(lp - vwap) / vwap * 100 if vwap > 0 else 0
@@ -1783,36 +1789,42 @@ def _build_flow_panel(flow: dict, is_open: bool) -> str:
         # ── K-bar sequence ──
         f'<div style="margin-bottom:9px">'
         f'<div style="font-size:11px;color:#555;margin-bottom:3px">'
-        f'近 {len(bar_seq)} 根K棒方向（左舊右新）'
+        f'近 {len(bar_seq)} 根{"日" if is_fallback else "5分"}K棒方向（左舊右新）　'
         f'<span style="color:#ef5350">█</span>陽線&nbsp;'
         f'<span style="color:#4caf7d">█</span>陰線</div>'
         f'<div style="letter-spacing:3px;line-height:1.2">{bar_html}</div>'
         f'{streak_html}'
         f'</div>'
 
-        # ── Cumulative delta + volume pace ──
-        f'<div style="display:flex;gap:20px;flex-wrap:wrap;'
-        f'font-size:12px;margin-bottom:11px">'
-        f'<div>'
-        f'<span style="color:#555">累積淨買量　</span>'
-        f'<span style="color:{delta_col};font-weight:700">'
-        f'{delta_arrow} {delta_label}</span>'
-        f'<span style="color:#444;font-size:11px"> {delta_trend_str}</span>'
-        f'</div>'
-        f'<div>'
-        f'<span style="color:#555">今日量能速度　</span>'
-        f'<span style="color:{pace_col}">{pace_label}</span>'
-        f'</div>'
-        f'</div>'
+        # ── Cumulative delta + volume pace (hide vol-pace on daily fallback) ──
+        + (
+            f'<div style="display:flex;gap:20px;flex-wrap:wrap;'
+            f'font-size:12px;margin-bottom:11px">'
+            f'<div>'
+            f'<span style="color:#555">累積淨買量　</span>'
+            f'<span style="color:{delta_col};font-weight:700">'
+            f'{delta_arrow} {delta_label}</span>'
+            f'<span style="color:#444;font-size:11px"> {delta_trend_str}</span>'
+            f'</div>'
+            + (
+                f'<div>'
+                f'<span style="color:#555">今日量能速度　</span>'
+                f'<span style="color:{pace_col}">{pace_label}</span>'
+                f'</div>'
+                if not is_fallback else
+                f'<div style="font-size:11px;color:#444;align-self:center">'
+                f'（盤中5分K不足，以日K趨勢呈現）</div>'
+            )
+            + f'</div>'
+        )
 
         # ── Wall Street signal box ──
-        f'<div style="background:{sig_col}14;border:1px solid {sig_col}44;'
+        + f'<div style="background:{sig_col}14;border:1px solid {sig_col}44;'
         f'border-left:4px solid {sig_col};border-radius:0 8px 8px 0;padding:9px 12px">'
         f'<div style="font-size:13px;font-weight:700;color:{sig_col}">'
         f'🏦 多空信號：{signal}</div>'
         f'{reasons_html}'
         f'</div>'
-
         f'</div>'
     )
 
