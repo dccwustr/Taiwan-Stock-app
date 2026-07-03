@@ -1836,10 +1836,13 @@ def fetch_market_alerts(hours_back: int = 6) -> List[Dict]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net: float,
-                macro_bonus: int = 0) -> Dict:
+                macro_bonus: int = 0, fi_streak_val: int = 0) -> Dict:
     """
     綜合評分 0-100：
-      量能 30 + 動能 22 + 技術 23 + K棒形態 ±12 + 催化劑 30 + 外資 ±8 + 美股盤前 ±10
+      量能 30 + 動能 22 + 技術 23 + K棒形態 ±12 + 催化劑 30 + 外資 ±8+streak ±5 + 美股盤前 ±10
+
+    fi_streak_val: 外資連續買超天數（+N）或連續賣超（-N），由 calc_foreign_streak() 提供。
+                   連買3天=機構建倉訊號，連買5天=高確信度，比單日淨買更有預測力。
     macro_bonus: 由 us_macro_stock_bonus() 計算，反映美股隔夜對個股影響（-10~+10）
     """
     if df is None or len(df) < 22:
@@ -1876,12 +1879,21 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     # 4. K棒形態 (±12) — 台灣慣例: 陽線=紅(漲), 陰線=綠(跌)
     kbar_score, kbar_pattern = calc_kbar_pattern(df)
 
-    # 5. 催化劑 (0-30) + 外資 ±8（強化外資權重）+ 美股盤前影響
+    # 5. 催化劑 (0-30) + 外資今日淨買 ±8 + 外資連續天數 ±5 + 美股盤前影響
     cat_score  = min(30, catalyst_bonus)
-    # 外資：每500萬NT$ = 1分；正向最多+8，負向最多-8（比舊版更重視外資動向）
+    # 外資今日：每500萬NT$ = 1分；±8 上限
     fi_bonus   = min(8, int(foreign_net / 500)) if foreign_net > 0 else max(-8, int(foreign_net / 500))
+    # 外資連續天數：+3天=+3分, +5天=+5分；-3天=-3分, -5天=-5分（連買比單日更可靠）
+    if   fi_streak_val >= 5:  streak_bonus =  5
+    elif fi_streak_val >= 3:  streak_bonus =  3
+    elif fi_streak_val >= 2:  streak_bonus =  1
+    elif fi_streak_val <= -5: streak_bonus = -5
+    elif fi_streak_val <= -3: streak_bonus = -3
+    elif fi_streak_val <= -2: streak_bonus = -1
+    else:                      streak_bonus =  0
     macro_adj  = max(-10, min(10, int(macro_bonus)))
-    total = min(100, max(0, vol_score + mom_score + tech + kbar_score + cat_score + fi_bonus + macro_adj))
+    total = min(100, max(0, vol_score + mom_score + tech + kbar_score + cat_score
+                           + fi_bonus + streak_bonus + macro_adj))
 
     last_price = float(close.iloc[-1])
     atr        = calc_atr(df)
