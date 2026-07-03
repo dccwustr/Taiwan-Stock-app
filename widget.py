@@ -403,6 +403,176 @@ def ma_score(close: pd.Series) -> int:
             score += 1
     return score
 
+
+def calc_ma_alignment(close: pd.Series) -> dict:
+    """
+    均線多頭/空頭排列分析（Stan Weinstein Stage + Taiwan MA convention）
+    Stage 2 (advancing): MA5 > MA20 > MA60, price > MA60, MA60 slope rising
+    Stage 4 (declining): price < MA60, MA60 slope falling
+    Returns: stage(1-4), label, bonus(-4 to +6), is_aligned(bool)
+    """
+    if len(close) < 65:
+        return {"stage": 0, "label": "資料不足", "bonus": 0, "is_aligned": False,
+                "ma5": 0.0, "ma20": 0.0, "ma60": 0.0}
+    last   = float(close.iloc[-1])
+    ma5    = float(close.rolling(5).mean().iloc[-1])
+    ma20   = float(close.rolling(20).mean().iloc[-1])
+    ma60   = float(close.rolling(60).mean().iloc[-1])
+    ma60_4w_ago = float(close.rolling(60).mean().iloc[-21])  # MA60 slope proxy
+
+    ma60_rising = ma60 > ma60_4w_ago
+
+    # Classify Weinstein stage
+    if last > ma60 and ma5 > ma20 > ma60 and ma60_rising:
+        stage, label, bonus = 2, "📈 多頭排列（Stage 2）", 6
+        is_aligned = True
+    elif last > ma20 and ma5 > ma20 and ma60_rising:
+        stage, label, bonus = 2, "📈 均線偏多", 3
+        is_aligned = True
+    elif last > ma60 and not (ma5 > ma20) and not ma60_rising:
+        stage, label, bonus = 3, "⚠️ 頭部整理（Stage 3）", -2
+        is_aligned = False
+    elif last < ma60 and not ma60_rising:
+        stage, label, bonus = 4, "📉 空頭排列（Stage 4）", -4
+        is_aligned = False
+    else:
+        stage, label, bonus = 1, "🔄 底部整理（Stage 1）", 0
+        is_aligned = False
+
+    return {"stage": stage, "label": label, "bonus": bonus, "is_aligned": is_aligned,
+            "ma5": round(ma5, 1), "ma20": round(ma20, 1), "ma60": round(ma60, 1)}
+
+
+def calc_bollinger(close: pd.Series, period: int = 20, std_mult: float = 2.0) -> dict:
+    """
+    布林通道 (Bollinger Bands) — 進場時機偵測
+    pct_b: 0=下軌, 1=上軌; <0.15=買入區, >0.85=超買區
+    squeeze: 帶寬壓縮 → 即將爆發（Mark Minervini VCP 變形）
+    """
+    if len(close) < period:
+        return {"pct_b": 0.5, "signal": "neutral", "squeeze": False,
+                "upper": 0.0, "middle": 0.0, "lower": 0.0, "band_width": 0.0}
+    ma  = close.rolling(period).mean()
+    sd  = close.rolling(period).std(ddof=0)
+    upper  = float((ma + std_mult * sd).iloc[-1])
+    middle = float(ma.iloc[-1])
+    lower  = float((ma - std_mult * sd).iloc[-1])
+    last   = float(close.iloc[-1])
+    bw     = (upper - lower) / middle if middle > 0 else 0.0
+    pct_b  = (last - lower) / (upper - lower) if upper != lower else 0.5
+
+    # Squeeze: current width < 60% of 50-day average width
+    squeeze = False
+    if len(close) >= 50:
+        bw_hist = ((close.rolling(period).std(ddof=0) * 2 * std_mult)
+                   / close.rolling(period).mean()).dropna()
+        avg_bw  = float(bw_hist.iloc[-50:].mean())
+        squeeze = bw < avg_bw * 0.60 if avg_bw > 0 else False
+
+    if pct_b <= 0.15:
+        signal = "buy_zone"      # 貼近下軌 → 超賣買入區
+    elif pct_b >= 0.85 and bw > 0.04:
+        signal = "overbought"    # 貼近上軌 + 帶寬擴張 → 超買
+    elif squeeze and pct_b >= 0.5:
+        signal = "breakout"      # 帶寬壓縮突破 → 爆發前
+    elif squeeze:
+        signal = "squeeze"       # 帶寬壓縮但方向未明
+    else:
+        signal = "neutral"
+
+    return {"pct_b": round(pct_b, 3), "signal": signal, "squeeze": squeeze,
+            "upper": round(upper, 1), "middle": round(middle, 1), "lower": round(lower, 1),
+            "band_width": round(bw, 4)}
+
+
+def calc_stochastic(df: pd.DataFrame, k_period: int = 9, d_period: int = 3) -> dict:
+    """
+    KD 隨機指標 (Stochastic Oscillator) — 台灣最常見進出場指標
+    Golden cross oversold (<20) = 最強買入訊號
+    Death cross overbought (>80) = 最強賣出訊號
+    """
+    if len(df) < k_period + d_period + 2:
+        return {"K": 50.0, "D": 50.0, "signal": "neutral"}
+    high  = df["High"]
+    low   = df["Low"]
+    close = df["Close"]
+    ll    = low.rolling(k_period).min()
+    hh    = high.rolling(k_period).max()
+    denom = (hh - ll).replace(0, np.nan)
+    raw_k = 100 * (close - ll) / denom
+    K     = raw_k.ewm(span=d_period, adjust=False).mean()
+    D     = K.ewm(span=d_period, adjust=False).mean()
+    k_val  = float(K.iloc[-1]) if not K.empty and not np.isnan(K.iloc[-1]) else 50.0
+    d_val  = float(D.iloc[-1]) if not D.empty and not np.isnan(D.iloc[-1]) else 50.0
+    k_prev = float(K.iloc[-2]) if len(K) > 1 else k_val
+    d_prev = float(D.iloc[-2]) if len(D) > 1 else d_val
+    golden = k_prev <= d_prev and k_val > d_val
+    death  = k_prev >= d_prev and k_val < d_val
+    if   golden and k_val < 25:  signal = "golden_cross_oversold"   # 超賣黃金交叉 — 最強
+    elif golden:                  signal = "golden_cross"             # 黃金交叉
+    elif k_val < 20:              signal = "oversold"                 # 超賣
+    elif death and k_val > 75:   signal = "death_cross_overbought"   # 超買死亡交叉
+    elif death:                   signal = "death_cross"              # 死亡交叉
+    elif k_val > 80:              signal = "overbought"               # 超買
+    else:                         signal = "neutral"
+    return {"K": round(k_val, 1), "D": round(d_val, 1), "signal": signal}
+
+
+def calc_obv_trend(df: pd.DataFrame, period: int = 10) -> str:
+    """
+    OBV (On-Balance Volume) 量價背離偵測
+    OBV 上升但價格橫盤 → 悄悄建倉（買入訊號）
+    Returns: "rising" | "falling" | "diverge_up" | "flat"
+    """
+    if len(df) < period + 2:
+        return "flat"
+    close = df["Close"].values.astype(float)
+    vol   = df["Volume"].values.astype(float)
+    obv   = np.zeros(len(close))
+    for i in range(1, len(close)):
+        if close[i] > close[i-1]:   obv[i] = obv[i-1] + vol[i]
+        elif close[i] < close[i-1]: obv[i] = obv[i-1] - vol[i]
+        else:                        obv[i] = obv[i-1]
+    obv_recent = obv[-period:]
+    obv_slope  = float(np.polyfit(range(period), obv_recent, 1)[0])
+    price_chg  = (close[-1] - close[-period]) / close[-period] * 100 if close[-period] > 0 else 0
+    if obv_slope > 0 and price_chg <= 0.5:
+        return "diverge_up"   # 量增但價不漲 → 悄悄建倉
+    elif obv_slope > 0:
+        return "rising"
+    elif obv_slope < 0:
+        return "falling"
+    return "flat"
+
+
+def calc_52w_position(close: pd.Series) -> dict:
+    """
+    Mark Minervini SEPA: 52週位置分析
+    理想進場：距52週低點 >30%（已離底）、距52週高點 <25%（靠近突破區）
+    """
+    if len(close) < 52:
+        return {"position_pct": 50.0, "label": "資料不足", "bonus": 0}
+    w52_high = float(close.iloc[-252:].max()) if len(close) >= 252 else float(close.max())
+    w52_low  = float(close.iloc[-252:].min()) if len(close) >= 252 else float(close.min())
+    last     = float(close.iloc[-1])
+    rng      = w52_high - w52_low
+    pos_pct  = (last - w52_low) / rng * 100 if rng > 0 else 50.0
+
+    from_low  = (last - w52_low)  / w52_low  * 100 if w52_low > 0 else 0
+    from_high = (w52_high - last) / w52_high * 100 if w52_high > 0 else 0
+
+    # Minervini sweet spot: 30-75% of 52w range
+    if 30 <= pos_pct <= 75 and from_low >= 25:
+        bonus, label = 4, "✨ 52週甜蜜區間"
+    elif pos_pct > 75 and from_high < 10:
+        bonus, label = 2, "🚀 靠近52週高點（突破前）"
+    elif pos_pct < 20:
+        bonus, label = -3, "⬇️ 靠近52週低點（下跌趨勢中）"
+    else:
+        bonus, label = 0, ""
+    return {"position_pct": round(pos_pct, 1), "label": label, "bonus": bonus,
+            "w52_high": round(w52_high, 1), "w52_low": round(w52_low, 1)}
+
 def calc_kbar_pattern(df: pd.DataFrame) -> Tuple[int, str]:
     """
     K線形態識別（台灣慣例：陽線=紅/上漲，陰線=綠/下跌）
@@ -1851,7 +2021,7 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     close  = df["Close"]
     volume = df["Volume"]
 
-    # 1. 量能分 (0-30)
+    # 1. 量能分 (0-30)  — O'Neil CANSLIM S factor: volume surging on up days
     vr = volume_ratio(volume, 20)
     if   vr >= 3.0: vol_score = 30
     elif vr >= 2.0: vol_score = 24
@@ -1859,22 +2029,67 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     elif vr >= 1.2: vol_score = 12
     else:           vol_score = max(0, int(vr * 6))
 
-    # 2. 價格動能 (0-22)
-    mom1d = (float(close.iloc[-1]) / float(close.iloc[-2]) - 1) * 100 if len(close) >= 2 else 0
-    mom5d = (float(close.iloc[-1]) / float(close.iloc[-6]) - 1) * 100 if len(close) >= 6 else 0
-    mom_score = min(22, max(0, int((mom1d * 2 + mom5d) * 1.4)))
+    # 2. 價格動能 (0-22) — 加入20日中期趨勢（O'Neil RS + Minervini trend template）
+    #    短視只看1d/5d容易錯判：一支回調中的好股因近期下跌被排名壓低
+    #    加入 mom20d 讓「中期向上但近期回檔」的股票獲得合理分數
+    mom1d  = (float(close.iloc[-1]) / float(close.iloc[-2])  - 1) * 100 if len(close) >= 2  else 0
+    mom5d  = (float(close.iloc[-1]) / float(close.iloc[-6])  - 1) * 100 if len(close) >= 6  else 0
+    mom20d = (float(close.iloc[-1]) / float(close.iloc[-21]) - 1) * 100 if len(close) >= 21 else mom5d
+    # Weight: 20d(most important) > 5d > 1d; cap big single-day spike contribution
+    mom_score = min(22, max(0, int(mom20d * 1.0 + mom5d * 0.7 + min(mom1d, 4.0) * 0.8)))
 
-    # 3. 技術指標 (0-23): RSI + MACD + MA位置
-    rsi  = calc_rsi(close)
+    # 3. 技術指標 — 多層次大師邏輯組合 (0-40, 實際影響視組合而定)
+    rsi           = calc_rsi(close)
     macd_hist, macd_prev = calc_macd(close)
-    mas  = ma_score(close)
+    mas           = ma_score(close)
+    ma_info       = calc_ma_alignment(close)       # Weinstein Stage Analysis
+    bb            = calc_bollinger(close)           # Bollinger Bands
+    kd            = calc_stochastic(df)             # KD — 台灣最常用
+    obv_tr        = calc_obv_trend(df)              # OBV 量價背離
+    pos52w        = calc_52w_position(close)        # Minervini 52週位置
 
     tech = 0
-    if 45 <= rsi <= 72:   tech += 8
-    elif 72 < rsi <= 80:  tech += 4
-    if macd_hist > 0 and macd_hist > macd_prev:  tech += 9
-    elif macd_hist > 0:   tech += 5
-    tech += mas * 2   # max 6
+    # ── RSI 進場區間 (0-8) — 偏好甜蜜區 45-68，避開超買 ──────────────────
+    if   38 <= rsi <= 45: tech += 5   # 輕微超賣，回升中
+    elif 45 <  rsi <= 68: tech += 8   # 甜蜜進場區
+    elif 68 <  rsi <= 78: tech += 3   # 偏熱但可追
+    # rsi > 78 → 不加分（app.py 另有 -12 to -30 懲罰）
+
+    # ── MACD 柱狀線 (0-9) — O'Neil: 動能方向最重要 ───────────────────────
+    if   macd_hist > 0 and macd_hist > macd_prev: tech += 9   # 柱線放大 = 多頭加速
+    elif macd_hist > 0:                            tech += 5   # 柱線正值
+    elif macd_hist > macd_prev:                    tech += 2   # 負值但在收斂
+
+    # ── MA 位置 (0-6) ────────────────────────────────────────────────────
+    tech += mas * 2   # 0/2/4/6: price above MA5/20/60
+
+    # ── Weinstein Stage + 均線排列 (±6) ─────────────────────────────────
+    tech += ma_info["bonus"]   # Stage2 多頭排列 +6; Stage4 空頭 -4
+
+    # ── 布林通道 (Bollinger) (±5) ── 進場時機核心 ───────────────────────
+    bb_sig = bb.get("signal", "neutral")
+    if   bb_sig == "buy_zone":   tech += 5   # 靠近下軌 = 超賣買入區
+    elif bb_sig == "breakout":   tech += 4   # 帶寬壓縮突破
+    elif bb_sig == "overbought": tech -= 3   # 靠近上軌超買
+    if bb.get("squeeze"):        tech += 2   # VCP 帶寬壓縮 (Minervini)
+
+    # ── KD 隨機指標 (±6) — 台灣最常用進出場訊號 ─────────────────────────
+    kd_sig = kd.get("signal", "neutral")
+    if   kd_sig == "golden_cross_oversold": tech += 6   # 超賣黃金交叉 = 最強
+    elif kd_sig == "golden_cross":          tech += 4   # 黃金交叉
+    elif kd_sig == "oversold":              tech += 3   # 超賣（待交叉）
+    elif kd_sig == "death_cross_overbought":tech -= 5   # 超買死亡交叉 = 最弱
+    elif kd_sig == "death_cross":           tech -= 3   # 死亡交叉
+    elif kd_sig == "overbought":            tech -= 2   # 超買
+
+    # ── OBV 量價背離 (+3) — 悄悄建倉訊號 ───────────────────────────────
+    if obv_tr == "diverge_up": tech += 3   # 量增價不漲 = 機構吸貨
+    elif obv_tr == "rising":   tech += 1
+
+    # ── Minervini 52週甜蜜區 (±4) ───────────────────────────────────────
+    tech += pos52w["bonus"]
+
+    tech = max(-10, tech)   # floor（不讓負分無限累積）
 
     # 4. K棒形態 (±12) — 台灣慣例: 陽線=紅(漲), 陰線=綠(跌)
     kbar_score, kbar_pattern = calc_kbar_pattern(df)
@@ -1883,7 +2098,7 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     cat_score  = min(30, catalyst_bonus)
     # 外資今日：每500萬NT$ = 1分；±8 上限
     fi_bonus   = min(8, int(foreign_net / 500)) if foreign_net > 0 else max(-8, int(foreign_net / 500))
-    # 外資連續天數：+3天=+3分, +5天=+5分；-3天=-3分, -5天=-5分（連買比單日更可靠）
+    # 外資連續天數（O'Neil CANSLIM I factor — 機構持續買 > 單日淨買）
     if   fi_streak_val >= 5:  streak_bonus =  5
     elif fi_streak_val >= 3:  streak_bonus =  3
     elif fi_streak_val >= 2:  streak_bonus =  1
@@ -1916,18 +2131,36 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
         "sector":      _tinfo.get("sector", ""),
         "supply":      _tinfo.get("supply", []),
         "score":        total,
-        "vol_score":    vol_score,
-        "mom_score":    mom_score,
-        "tech_score":   tech,
-        "kbar_score":   kbar_score,
-        "kbar_pattern": kbar_pattern,
-        "cat_score":    cat_score,
-        "macro_bonus":  macro_adj,
-        "vol_ratio":    round(vr, 2),
-        "rsi":          round(rsi, 1),
-        "mom1d":        round(mom1d, 2),
-        "mom5d":        round(mom5d, 2),
-        "last_price":   last_price,
+        "vol_score":     vol_score,
+        "mom_score":     mom_score,
+        "tech_score":    tech,
+        "kbar_score":    kbar_score,
+        "kbar_pattern":  kbar_pattern,
+        "cat_score":     cat_score,
+        "macro_bonus":   macro_adj,
+        "vol_ratio":     round(vr, 2),
+        "rsi":           round(rsi, 1),
+        "mom1d":         round(mom1d, 2),
+        "mom5d":         round(mom5d, 2),
+        "mom20d":        round(mom20d, 2),
+        # ── 新增大師指標 ──
+        "bb_signal":     bb_sig,
+        "bb_pct_b":      bb.get("pct_b", 0.5),
+        "bb_squeeze":    bb.get("squeeze", False),
+        "bb_upper":      bb.get("upper", 0.0),
+        "bb_lower":      bb.get("lower", 0.0),
+        "kd_K":          kd.get("K", 50.0),
+        "kd_D":          kd.get("D", 50.0),
+        "kd_signal":     kd_sig,
+        "obv_trend":     obv_tr,
+        "stage":         ma_info["stage"],
+        "stage_label":   ma_info["label"],
+        "ma5":           ma_info["ma5"],
+        "ma20":          ma_info["ma20"],
+        "ma60":          ma_info["ma60"],
+        "w52_pos":       pos52w["position_pct"],
+        "w52_label":     pos52w["label"],
+        "last_price":    last_price,
         "atr":          round(atr, 2),
         "target_pct":   target_pct,
         "target_price": round(last_price * (1 + target_pct / 100), 2),
