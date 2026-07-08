@@ -12,12 +12,15 @@ _TW = timezone(timedelta(hours=8))
 def _now_tw(): return datetime.now(tz=_TW)
 
 def _is_market_open() -> bool:
-    """True during Taiwan stock market hours: weekdays 09:00–13:30 TWN."""
+    """True during Taiwan stock market hours (weekdays):
+    盤中 09:00–13:29 + 盤後零股 14:00–14:30."""
     tw = _now_tw()
     if tw.weekday() >= 5:
         return False
     h, m = tw.hour, tw.minute
-    return (h == 9) or (10 <= h <= 12) or (h == 13 and m <= 30)
+    intraday = (h == 9) or (10 <= h <= 12) or (h == 13 and m < 30)
+    odd_lot_close = (h == 14 and m <= 30)
+    return intraday or odd_lot_close
 
 def _trading_epoch() -> str:
     """Returns the trading-date + intraday slot string used as the cache key.
@@ -1263,7 +1266,7 @@ for ticker in TECH_UNIVERSE:
         elif _rsi > 78:  _adj -= 20  # 很熱：等回落
         elif _rsi > 72:  _adj -= 12  # 偏熱：不適合進場
         elif _rsi > 68:  _adj -=  4  # 微熱：謹慎
-        elif _rsi >= 45: _adj +=  8  # 甜蜜區間 45-68：最佳進場
+        elif _rsi >= 40: _adj +=  8  # 甜蜜區間 40-68：最佳進場
         elif _rsi >= 35: _adj +=  3  # 輕微超賣：還不錯
         else:            _adj -= 15  # 極度超賣：可能下跌趨勢
         if res.get("last_price", 0) > 500: _adj -= 8  # expensive per share
