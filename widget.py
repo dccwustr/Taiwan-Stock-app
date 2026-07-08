@@ -2352,7 +2352,7 @@ def fetch_yf_fundamentals_batch(tickers: List[str], max_workers: int = 6) -> Dic
             f_pe  = info.get("forwardPE")
             peg   = info.get("pegRatio")
             if rg is None and eg is None and t_eps is None:
-                return sym, {}
+                return sym, {"yf_error": True}
             return sym, {
                 "rev_growth":    rg,
                 "earn_growth":   eg,
@@ -2625,8 +2625,9 @@ def calc_fundamental_bonus(ticker: str, fund_map: Dict, meeting_map: Dict) -> Di
     rev_yoy  = 0.0
     earn_yoy = 0.0
     fund = fund_map.get(ticker, {})
+    yf_error = fund.get("yf_error", False)
 
-    if fund:
+    if fund and not yf_error:
         rg    = fund.get("rev_growth")
         eg    = fund.get("earn_growth")
         pm    = fund.get("profit_margin")
@@ -2700,10 +2701,11 @@ def calc_fundamental_bonus(ticker: str, fund_map: Dict, meeting_map: Dict) -> Di
         "labels":       labels[:4],
         "rev_yoy":      rev_yoy,
         "earn_yoy":     earn_yoy,
-        "trailing_eps": fund.get("trailing_eps") if fund else None,
-        "forward_eps":  fund.get("forward_eps")  if fund else None,
-        "forward_pe":   fund.get("forward_pe")   if fund else None,
-        "peg_ratio":    fund.get("peg_ratio")     if fund else None,
+        "trailing_eps": fund.get("trailing_eps") if (fund and not yf_error) else None,
+        "forward_eps":  fund.get("forward_eps")  if (fund and not yf_error) else None,
+        "forward_pe":   fund.get("forward_pe")   if (fund and not yf_error) else None,
+        "peg_ratio":    fund.get("peg_ratio")     if (fund and not yf_error) else None,
+        "yf_error":     yf_error,
     }
 
 

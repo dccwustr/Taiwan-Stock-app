@@ -943,9 +943,11 @@ with st.sidebar:
     sidebar_content = st.container()
 
     st.divider()
-    top_n     = st.slider("推薦數量", 3, 8, 5)
-    min_score = st.slider("最低評分門檻", 30, 75, 40)
-    show_chart = st.checkbox("顯示K線圖", value=False)
+    top_n          = st.slider("推薦數量", 3, 8, 5)
+    min_score      = st.slider("最低評分門檻", 30, 75, 40)
+    max_price_filter = st.slider("零股最高股價 (NT$)", 500, 5000, 2500, step=100,
+                                 help="超過此價位的股票不列入精選，避免零股資金門檻過高")
+    show_chart     = st.checkbox("顯示K線圖", value=False)
     st.divider()
 
     st.divider()
@@ -1281,6 +1283,7 @@ for ticker in TECH_UNIVERSE:
         res["trailing_eps"] = _fund.get("trailing_eps")
         res["forward_eps"]  = _fund.get("forward_eps")
         res["forward_pe"]   = _fund.get("forward_pe")
+        res["yf_error"]     = _fund.get("yf_error", False)
         if res["score"] >= min_score:
             _tech_labels = get_catalyst_labels(ticker, all_news)
             res["catalysts"] = (_fund["labels"] + _tech_labels)[:4]
@@ -1355,19 +1358,17 @@ if _is_market_open() and scored:
     scored.sort(key=lambda x: x["score"], reverse=True)
 
 # ── Final picks split ──────────────────────────────────────────────────────────
-# 小資戶過濾：股價超過 NT$2,500 的標的不列入精選（買不起零股太貴）
-_MAX_PRICE = 2500
-# 今日可進場：RSI合理 + 分數達標 + 今日未大漲 + 股價在小資範圍內
+# 今日可進場：RSI合理 + 分數達標 + 今日未大漲 + 股價在小資範圍內（上限由側邊欄設定）
 today_picks = [r for r in scored
                if r.get("rsi", 50) < 73
                and r["score"] >= 52
                and r.get("live_chg_pct", 0) < 9.0
-               and r.get("last_price", 0) <= _MAX_PRICE][:top_n]
+               and r.get("last_price", 0) <= max_price_filter][:top_n]
 # 準備中：RSI偏熱，或今日大漲，等回落後進場（最多3支，同樣限制股價）
 watch_picks = [r for r in scored
                if r.get("rsi", 50) >= 73
                and r["score"] >= 45
-               and r.get("last_price", 0) <= _MAX_PRICE][:3]
+               and r.get("last_price", 0) <= max_price_filter][:3]
 # backward compat
 picks = today_picks
 
@@ -1499,6 +1500,8 @@ def _build_fund_row(p: dict) -> str:
             tags.append(f'<span class="meeting-tag">🗓 {lbl}</span>')
 
     if not tags:
+        if p.get("yf_error"):
+            return '<div class="fund-row"><span style="color:#555;font-size:11px">基本面資料暫無（Yahoo Finance 連線不穩）</span></div>'
         return ""
     inner = "".join(tags)
     return f'<div class="fund-row">{inner}</div>'
@@ -3031,6 +3034,8 @@ def render_category_cards(picks, prices, show_chart):
 
         ref_price  = (d["price"] if d and d["price"] > 0 else p["last_price"])
         shares_10k = int(10000 / ref_price) if ref_price > 0 else 0
+        shares_10k_str = (f"{shares_10k} 股" if shares_10k > 0
+                          else "股價逾萬元，NT$10,000 不足買 1 股")
         bar_w      = int(sc)
         info_html  = '　'.join(f'<span>{x}</span>' for x in info_parts)
 
@@ -3063,7 +3068,7 @@ def render_category_cards(picks, prices, show_chart):
             f'<span class="pct-badge">+{p["target_pct"]:.0f}%</span>'
             f'</div>'
             f'<div class="stop-row">💰 參考買點 NT${p["last_price"]:.1f}　　🛡 止損 NT${p["stop_loss"]:.1f}　({p["stop_pct"]:.1f}%)</div>'
-            f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
+            f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k_str}</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)
             + _build_kbar_fi_row(p)
@@ -3304,7 +3309,7 @@ if st.session_state.view_mode == "categories":
     # RSI overbought is handled via card advice text (⏳ wait for pullback), NOT filtering.
     _cat_picks = [r for r in _cat_scored
                   if r.get("live_chg_pct", 0) < 9.0
-                  and r.get("last_price", 0) <= _MAX_PRICE][:5]
+                  and r.get("last_price", 0) <= max_price_filter][:5]
 
     # ── Sector momentum summary bar ───────────────────────────────────────────
     _avg_rsi, _avg_mom5, _avg_mom1, _n_hot = 50.0, 0.0, 0.0, 0  # safe defaults
@@ -3702,6 +3707,8 @@ def render_stock_cards(picks, prices, show_chart):
 
         ref_price  = (d["price"] if d and d["price"] > 0 else p["last_price"])
         shares_10k = int(10000 / ref_price) if ref_price > 0 else 0
+        shares_10k_str = (f"{shares_10k} 股" if shares_10k > 0
+                          else "股價逾萬元，NT$10,000 不足買 1 股")
 
         bar_w  = int(sc)
         info_html = '　'.join(f'<span>{x}</span>' for x in info_parts)
@@ -3757,7 +3764,7 @@ def render_stock_cards(picks, prices, show_chart):
             f'<span class="pct-badge">+{p["target_pct"]:.0f}%</span>'
             f'</div>'
             f'<div class="stop-row">💰 參考買點 NT${p["last_price"]:.1f}　　🛡 止損 NT${p["stop_loss"]:.1f}　({p["stop_pct"]:.1f}%)</div>'
-            f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k} 股</div>'
+            f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k_str}</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)
             + _build_kbar_fi_row(p)
@@ -3897,7 +3904,7 @@ if watch_picks:
 backups = [r for r in scored
            if r not in today_picks and r not in watch_picks
            and r["score"] >= 45
-           and r.get("last_price", 0) <= _MAX_PRICE][:5]
+           and r.get("last_price", 0) <= max_price_filter][:5]
 if backups:
     if "show_backups" not in st.session_state:
         st.session_state.show_backups = False
