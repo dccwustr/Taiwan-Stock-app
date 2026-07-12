@@ -110,6 +110,9 @@ try:
         fetch_yahoo_tw_news, fetch_ltn_news,
         detect_order_signals,
         fetch_twse_foreign_multi_day, calc_foreign_streak,
+        # ── 三大法人 + 相對強度 (RS) ──────────────────────────────────────────────
+        fetch_twse_three_investors, calc_three_investors_bonus,
+        fetch_taiex_prices, calc_relative_strength,
     )
 except Exception as _widget_err:
     import traceback as _tb
@@ -768,14 +771,19 @@ def load_data(epoch: str):                       # epoch = "YYYY-MM-DD-SLOT", ch
     # ── 訂單/合作/認證情報偵測（早盤最重要的情報）──────────────────────────────
     order_signals = detect_order_signals(news)
     # ── 外資買賣超（今日 + 連續天數）────────────────────────────────────────────
-    foreign      = fetch_twse_foreign_buying()
+    foreign       = fetch_twse_foreign_buying()
     foreign_multi = fetch_twse_foreign_multi_day(days=5)
-    fi_streak    = calc_foreign_streak(foreign_multi)
+    fi_streak     = calc_foreign_streak(foreign_multi)
+    # ── 三大法人（投信 + 自營 + 外資合計）─────────────────────────────────────────
+    three_inv = fetch_twse_three_investors()
+    # ── TAIEX 歷史收盤 — 計算個股 O'Neil 相對強度 (RS) ─────────────────────────
+    taiex_close = fetch_taiex_prices()
     market   = fetch_twse_market_summary()
     ts = _now_tw().strftime("%H:%M")
     return dict(news=news, headlines=headlines, catalyst=cat_sc,
                 foreign=foreign, fi_streak=fi_streak,
                 order_signals=order_signals,
+                three_inv=three_inv, taiex_close=taiex_close,
                 market=market, prices=prices,
                 us_data=us_data, global_news=g_news, ts=ts)
 
@@ -1034,6 +1042,7 @@ with st.spinner("載入中…"):
         except Exception:
             data = dict(news=[], headlines=[], catalyst={},
                         foreign={}, fi_streak={}, order_signals=[],
+                        three_inv={}, taiex_close=None,
                         market={}, prices={},
                         us_data={}, global_news=[], ts="--:--")
             st.warning(f"資料載入失敗，請重新整理頁面。（{type(_load_err).__name__}）")
@@ -1047,6 +1056,8 @@ order_signals = data.get("order_signals", [])
 mkt           = data.get("market", {})
 us_data       = data.get("us_data", {})
 global_news   = data.get("global_news", [])
+three_inv     = data.get("three_inv", {})    # 三大法人: {ticker: {trust, dealer, total}}
+taiex_close   = data.get("taiex_close")      # pd.Series | None — TAIEX close for RS calc
 
 # ── Fundamental data (yfinance quarterly: revenue/earnings growth, margins) ───
 _epoch_day   = _now_tw().strftime("%Y-%m-%d")
@@ -1284,9 +1295,29 @@ for ticker in TECH_UNIVERSE:
         res["forward_eps"]  = _fund.get("forward_eps")
         res["forward_pe"]   = _fund.get("forward_pe")
         res["yf_error"]     = _fund.get("yf_error", False)
+        # ── 三大法人共識（投信 + 自營 — 外資已在 score_stock 計分）─────────────
+        _3d  = three_inv.get(ticker, {})
+        _3inv = calc_three_investors_bonus(
+            trust_net=_3d.get("trust", 0.0),
+            dealer_net=_3d.get("dealer", 0.0),
+            foreign_net=res.get("foreign_net", 0.0),
+        )
+        res["score"]         = max(0, min(100, res["score"] + _3inv["bonus"]))
+        res["trust_net"]     = _3d.get("trust", 0.0)
+        res["dealer_net"]    = _3d.get("dealer", 0.0)
+        res["three_inv_labels"] = _3inv["labels"]
+        # ── O'Neil 相對強度 (RS) vs TAIEX ─────────────────────────────────────
+        _df_close = prices.get(ticker, None)
+        _rs = calc_relative_strength(
+            _df_close["Close"] if _df_close is not None and "Close" in _df_close.columns else None,
+            taiex_close,
+        )
+        res["score"]    = max(0, min(100, res["score"] + _rs["bonus"]))
+        res["rs_composite"] = _rs.get("rs_composite", 0.0)
+        res["rs_label"]     = _rs.get("label", "")
         if res["score"] >= min_score:
             _tech_labels = get_catalyst_labels(ticker, all_news)
-            res["catalysts"] = (_fund["labels"] + _tech_labels)[:4]
+            res["catalysts"] = (_fund["labels"] + _3inv["labels"] + _tech_labels)[:4]
             scored.append(res)
 scored.sort(key=lambda x: x["score"], reverse=True)
 
@@ -1331,10 +1362,10 @@ if _is_market_open() and scored:
             _live_mom1d = (_lp / _live_prev - 1) * 100
             _old_mom1d  = _r.get("mom1d", 0)
             if abs(_live_mom1d - _old_mom1d) >= 0.3:
-                # score_stock uses: mom1d_s = min(10, max(0, mom1d * 2))
-                _old_m1s = min(10, max(0, _old_mom1d * 2))
-                _new_m1s = min(10, max(0, _live_mom1d * 2))
-                _r["score"] = max(0, min(100, _r["score"] + (_new_m1s - _old_m1s)))
+                # score_stock formula: min(mom1d, 4.0)*0.8 (max contribution = 3.2 pts)
+                _old_m1s = min(4.0, max(0.0, _old_mom1d)) * 0.8
+                _new_m1s = min(4.0, max(0.0, _live_mom1d)) * 0.8
+                _r["score"] = max(0, min(100, _r["score"] + round(_new_m1s - _old_m1s)))
                 _r["mom1d"] = round(_live_mom1d, 2)
 
         # ── 3. Near-limit-up guard ─────────────────────────────────────────────

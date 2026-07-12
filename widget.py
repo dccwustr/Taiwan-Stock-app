@@ -318,6 +318,8 @@ CATALYST_MAP = {
     "HBM":    ["HBM","HBM3E","High Bandwidth Memory","高頻寬記憶體","HBM供不應求"],
     "CPO":    ["CPO","共封裝光學","co-packaged optics","矽光子","silicon photonics","800G","1.6T光模組"],
     "液冷":   ["液冷","water cooling","浸沒式冷卻","冷卻板","liquid cooling","CDU","冷板式"],
+    "月營收":  ["月營收","月銷售額","月業績","單月營收","營收年增","創歷史新高","創同期最高","創新高","逐月成長","月份業績","本月營收"],
+    "投信買超":["投信買超","投信大買","投信持續買","國內投信","基金買超","投信連買","內資買超","投信法人"],
 }
 
 # 催化劑觸發的受益股票（科技 + 多元產業）
@@ -351,6 +353,11 @@ CATALYST_BENEFICIARIES = {
     "HBM":    ["2408.TW","2344.TW","6239.TW","6488.TW","2330.TW"],
     "CPO":    ["3363.TW","2345.TW"],
     "液冷":    ["3017.TW","3324.TW","6230.TW","2308.TW"],
+    "月營收":  ["2330.TW","2454.TW","3661.TW","3443.TW","6669.TW","2382.TW","3037.TW","8046.TW",
+                "2345.TW","3533.TW","3017.TW","3324.TW","6488.TW","2327.TW","3008.TW","1802.TW",
+                "8299.TW","6239.TW","5289.TW","6138.TW"],
+    "投信買超":["2330.TW","2454.TW","3661.TW","3443.TW","6669.TW","2382.TW","3037.TW","8046.TW",
+                "1802.TW","3533.TW","2308.TW","2345.TW","8299.TW","6239.TW","3017.TW","3324.TW"],
 }
 
 # ── 動態查詢股票名稱快取（搜尋非宇宙內股票時由 TWSE live API 填入）───────────────
@@ -545,6 +552,48 @@ def calc_obv_trend(df: pd.DataFrame, period: int = 10) -> str:
     return "flat"
 
 
+def calc_relative_strength(close: pd.Series, market_close: pd.Series) -> dict:
+    """
+    O'Neil CANSLIM 相對強度 (RS) — 個股 vs 台灣加權指數 (TAIEX)
+    比較5日/20日報酬率差異：股票跑贏大盤 → 正RS，跑輸 → 負RS。
+
+    O'Neil 研究：RS評級前20%的股票，比大盤報酬高出3-4倍。
+    短線交易核心邏輯：選強不選弱，在同板塊內挑最強的那支。
+
+    Returns: {"rs5d", "rs20d", "rs_composite", "bonus"(-6~+8), "label"}
+    """
+    if close is None or len(close) < 22:
+        return {"rs5d": 0.0, "rs20d": 0.0, "rs_composite": 0.0, "bonus": 0, "label": ""}
+    if market_close is None or len(market_close) < 22:
+        return {"rs5d": 0.0, "rs20d": 0.0, "rs_composite": 0.0, "bonus": 0, "label": ""}
+
+    def _pct(s: pd.Series, n: int) -> float:
+        if len(s) > n and float(s.iloc[-n - 1]) > 0:
+            return (float(s.iloc[-1]) / float(s.iloc[-n - 1]) - 1) * 100
+        return 0.0
+
+    stock_5d   = _pct(close, 5)
+    market_5d  = _pct(market_close, 5)
+    stock_20d  = _pct(close, 20)
+    market_20d = _pct(market_close, 20)
+
+    rs5d  = stock_5d  - market_5d    # +% = outperforming market over 5 days
+    rs20d = stock_20d - market_20d   # +% = outperforming market over 20 days
+
+    # 20日主導（中期趨勢），5日給近期動能加權
+    rs_composite = rs20d * 0.65 + rs5d * 0.35
+
+    if   rs_composite >= 15: bonus, label = 8, "💪 大幅跑贏大盤 (RS強)"
+    elif rs_composite >= 8:  bonus, label = 5, "📈 跑贏大盤"
+    elif rs_composite >= 3:  bonus, label = 2, "↗️ 微幅跑贏大盤"
+    elif rs_composite >= -3: bonus, label = 0, ""
+    elif rs_composite >= -8: bonus, label = -3, "📉 弱於大盤"
+    else:                    bonus, label = -6, "⬇️ 嚴重落後大盤"
+
+    return {"rs5d": round(rs5d, 1), "rs20d": round(rs20d, 1),
+            "rs_composite": round(rs_composite, 1), "bonus": bonus, "label": label}
+
+
 def calc_52w_position(close: pd.Series) -> dict:
     """
     Mark Minervini SEPA: 52週位置分析
@@ -562,7 +611,10 @@ def calc_52w_position(close: pd.Series) -> dict:
     from_high = (w52_high - last) / w52_high * 100 if w52_high > 0 else 0
 
     # Minervini sweet spot: 30-75% of 52w range
-    if 30 <= pos_pct <= 75 and from_low >= 25:
+    if pos_pct >= 98:
+        # Price AT or ABOVE 52-week high: highest-probability breakout setup (O'Neil Stage 2 breakout)
+        bonus, label = 8, "🚀 突破52週新高！"
+    elif 30 <= pos_pct <= 75 and from_low >= 25:
         bonus, label = 4, "✨ 52週甜蜜區間"
     elif pos_pct > 75 and from_high < 10:
         bonus, label = 2, "🚀 靠近52週高點（突破前）"
@@ -1489,6 +1541,125 @@ def fetch_twse_market_summary() -> Dict:
         pass
     return {}
 
+
+def fetch_twse_three_investors(date_str: Optional[str] = None) -> Dict[str, Dict]:
+    """
+    三大法人買賣超（外資 + 投信 + 自營）— TWSE T86 API
+    台灣短線預測力：投信連買 > 外資連買 > 自營；三大法人同買 = 最強機構共識
+
+    T86 欄位（0-indexed）:
+      0: 代號  1: 名稱
+      2-4: 外陸資 (買/賣/淨)
+      5-7: 投信   (買/賣/淨)
+      8-10: 自營(自行) (買/賣/淨)
+      11-13: 自營(避險)(買/賣/淨)
+      14: 三大法人合計淨買
+
+    回傳 {ticker: {"trust": float, "dealer": float, "total": float}} (千張)
+    """
+    if not date_str:
+        date_str = datetime.now(tz=timezone(timedelta(hours=8))).strftime("%Y%m%d")
+    url = (f"https://www.twse.com.tw/rwd/zh/fund/T86"
+           f"?response=json&date={date_str}&selectType=ALLBUT0999")
+    result: Dict[str, Dict] = {}
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=10)
+        data = r.json()
+        rows = data.get("data", [])
+        for row in rows:
+            if len(row) < 15:
+                continue
+            code = row[0].strip()
+            if not code:
+                continue
+            def _to_k(val: str) -> float:
+                try:
+                    return float(str(val).replace(",", "").replace("+", "")) / 1000
+                except (ValueError, TypeError):
+                    return 0.0
+            trust_net  = _to_k(row[7])    # 投信淨買超（千張）
+            dealer_own = _to_k(row[10])   # 自營(自行)淨買
+            dealer_hdg = _to_k(row[13])   # 自營(避險)淨買
+            total_net  = _to_k(row[14])   # 三大法人合計
+            result[code + ".TW"] = {
+                "trust":  trust_net,
+                "dealer": dealer_own + dealer_hdg,
+                "total":  total_net,
+            }
+    except Exception:
+        pass
+    return result
+
+
+def calc_three_investors_bonus(trust_net: float, dealer_net: float, foreign_net: float) -> Dict:
+    """
+    三大法人買賣超共識評分 (-6 ~ +8)
+    • 三大同買：機構合力建倉，勝率最高   → +8
+    • 外資 + 投信同買：主要機構共識      → +6
+    • 投信單獨買超：台灣短線最強預測信號  → +4
+    • 外資單獨買超：已在 score_stock 計分，這裡補充 → +0 (避免重複)
+    • 三大同賣：機構集體出清             → -6
+    • 外資 + 投信同賣：機構共識看空      → -4
+
+    trust_net / dealer_net / foreign_net 單位：千張（正=買超，負=賣超）
+    """
+    bonus = 0
+    labels: List[str] = []
+
+    fi_buy     = foreign_net > 0
+    trust_buy  = trust_net   > 50    # 投信買超 50張以上（避免雜訊）
+    dealer_buy = dealer_net  > 0
+    fi_sell    = foreign_net < -100
+    trust_sell = trust_net   < -50
+    dealer_sell= dealer_net  < 0
+
+    # ── 買超共識 ──────────────────────────────────────────────────────────────
+    if fi_buy and trust_buy and dealer_buy:
+        bonus += 8
+        labels.append("🏆 三大法人同買（最強）")
+    elif fi_buy and trust_buy:
+        bonus += 6
+        labels.append("💼 外資+投信同買")
+    elif trust_buy:
+        bonus += 4
+        labels.append("📈 投信買超")
+
+    # ── 賣超共識（懲罰）────────────────────────────────────────────────────────
+    if fi_sell and trust_sell and dealer_sell:
+        bonus -= 6
+        labels.append("⚠️ 三大法人同賣")
+    elif fi_sell and trust_sell:
+        bonus -= 4
+        labels.append("⬇️ 外資+投信同賣")
+    elif trust_sell:
+        bonus -= 2
+        labels.append("📉 投信賣超")
+
+    return {"bonus": max(-6, min(8, bonus)), "labels": labels,
+            "trust_net": trust_net, "dealer_net": dealer_net}
+
+
+def fetch_taiex_prices(period: str = "3mo") -> Optional[pd.Series]:
+    """
+    台灣加權指數 (^TWII) 收盤歷史 — O'Neil RS 計算的市場基準。
+    Returns pd.Series (date index, close values), or None on failure.
+    """
+    if not HAS_YF:
+        return None
+    try:
+        raw = yf.download("^TWII", period=period, auto_adjust=True,
+                          progress=False, threads=False, timeout=15)
+        if raw is None or raw.empty:
+            return None
+        if isinstance(raw.columns, pd.MultiIndex):
+            close = raw["Close"]["^TWII"].dropna()
+        else:
+            close = raw["Close"].dropna()
+        return close if len(close) >= 22 else None
+    except Exception:
+        return None
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  催化劑分析：從新聞中找出觸發因素與受益股
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2175,9 +2346,10 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     elif kd_sig == "death_cross":           tech -= 3   # 死亡交叉
     elif kd_sig == "overbought":            tech -= 2   # 超買
 
-    # ── OBV 量價背離 (+3) — 悄悄建倉訊號 ───────────────────────────────
+    # ── OBV 量價背離 (+3/-2) — 悄悄建倉 / 機構出貨偵測 ─────────────────
     if obv_tr == "diverge_up": tech += 3   # 量增價不漲 = 機構吸貨
     elif obv_tr == "rising":   tech += 1
+    elif obv_tr == "falling":  tech -= 2   # 量價背離下跌 = 機構悄悄出清
 
     # ── Minervini 52週甜蜜區 (±4) ───────────────────────────────────────
     tech += pos52w["bonus"]
