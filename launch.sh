@@ -1,6 +1,8 @@
 #!/bin/bash
 # 啟動台灣科技股盤前分析 App
 cd "$(dirname "$0")"
+# Load API keys from project .env if present
+[ -f ".env" ] && export $(grep -v '^#' .env | xargs)
 echo "🚀 啟動台灣科技股分析 App..."
 echo "   瀏覽器會自動開啟 http://localhost:8501"
 /Library/Developer/CommandLineTools/usr/bin/python3 -m streamlit run app.py \

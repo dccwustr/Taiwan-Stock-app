@@ -91,6 +91,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
     from widget import (
@@ -219,6 +220,26 @@ st.markdown("""
   /* Confidence bar */
   .conf-wrap { background: #2a2a2a; border-radius: 4px; height: 6px; width: 100%; margin-top: 10px; }
   .conf-bar  { border-radius: 4px; height: 6px; }
+
+  /* Signal type badge (訊號引擎) */
+  .sig-tag { border-radius: 5px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+  .sig-breakout  { background:#1a2d00; color:#aeea00; border:1px solid #aeea0055; }
+  .sig-pullback  { background:#001a3a; color:#64b5f6; border:1px solid #64b5f655; }
+  .sig-momentum  { background:#2a0a1a; color:#f48fb1; border:1px solid #f48fb155; }
+  .sig-trend     { background:#003a1a; color:#69f0ae; border:1px solid #69f0ae55; }
+  .sig-reversal  { background:#1a0a2a; color:#ce93d8; border:1px solid #ce93d855; }
+  .sig-watching  { background:#1a1a1a; color:#555;    border:1px solid #33333355; }
+
+  /* Trade plan row */
+  .trade-plan {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    background: #0a0f1a; border: 1px solid #1a2035;
+    border-radius: 7px; padding: 8px 12px; margin: 6px 0;
+    font-size: 12px; color: #888;
+  }
+  .tp-item { display: flex; flex-direction: column; gap: 2px; }
+  .tp-label { font-size: 10px; color: #444; }
+  .tp-val   { font-size: 13px; font-weight: 700; color: #c0d4ff; }
 
   /* Sidebar holdings */
   .holding-row {
@@ -947,7 +968,6 @@ with st.sidebar:
             st.session_state.view_mode = _vk
             st.session_state._close_sidebar = True
             st.rerun()
-
     sidebar_content = st.container()
 
     st.divider()
@@ -3624,7 +3644,7 @@ st.markdown(
 )
 st.markdown(
     f'<div style="background:#0a0f1a;border:1px solid #1a2035;border-radius:8px;'
-    f'padding:8px 14px;margin:-4px 0 12px;display:flex;align-items:center;gap:10px">'
+    f'padding:8px 14px;margin:-4px 0 8px;display:flex;align-items:center;gap:10px">'
     f'<span style="font-size:11px;color:{_freshness_col}">{_freshness_icon}</span>'
     f'<span style="font-size:12px;color:#7eb3ff;font-weight:700">{_slot_lbl}</span>'
     f'<span style="font-size:12px;color:#555">'
@@ -3632,6 +3652,16 @@ st.markdown(
     f'</span>'
     f'<span style="margin-left:auto;font-size:11px;color:#333">'
     f'今日精選由系統自動計算，每個時段重新評分排序</span>'
+    f'</div>'
+    f'<div style="display:flex;align-items:center;gap:6px;padding:6px 14px 10px;'
+    f'font-size:11px;color:#444">'
+    f'<span style="color:#7eb3ff;font-weight:700">🔄 掃描</span>'
+    f'<span>→</span><span style="color:#aeea00;font-weight:700">訊號</span>'
+    f'<span>→</span><span style="color:#ffd54f;font-weight:700">計畫</span>'
+    f'<span>→</span><span style="color:#f48fb1;font-weight:700">風控</span>'
+    f'<span>→</span><span style="color:#69f0ae;font-weight:700">執行</span>'
+    f'<span>→</span><span style="color:#ce93d8;font-weight:700">監控</span>'
+    f'<span style="margin-left:auto;color:#333">每支精選已完成全流程評估</span>'
     f'</div>',
     unsafe_allow_html=True
 )
@@ -3643,6 +3673,32 @@ def supply_chips(supply):
         f'<span class="chip {CHIP_CSS[s]}">{s}</span>'
         for s in supply if s in CHIP_CSS
     )
+
+
+# ── Signal type classifier (訊號引擎) ─────────────────────────────────────────
+def _signal_type(p: dict) -> tuple:
+    """Returns (label, css_class) from slide-2 signal taxonomy."""
+    bb   = p.get("bb_signal", "")
+    kd   = p.get("kd_signal", "")
+    stage= p.get("stage", 1)
+    rsi  = p.get("rsi", 50)
+    mom5 = p.get("mom5d", 0)
+    mom20= p.get("mom20d", 0)
+    vr   = p.get("vol_ratio", 1)
+    w52  = p.get("w52_pos", 50)
+    obv  = p.get("obv_trend", "")
+
+    if bb == "breakout" or (w52 > 85 and stage == 2):
+        return "突破型態 🔥", "sig-breakout"
+    if rsi < 42 or kd == "golden_cross_oversold":
+        return "反轉型態 🔄", "sig-reversal"
+    if mom5 < -1.5 and mom20 > 1 and (bb == "buy_zone" or kd in ("golden_cross_oversold", "oversold")):
+        return "回調型態 📉", "sig-pullback"
+    if vr >= 2.0 and mom5 > 1.5 and obv in ("diverge_up", "rising"):
+        return "動能加速 ⚡", "sig-momentum"
+    if stage == 2 and kd in ("golden_cross", "oversold") and 45 <= rsi <= 65:
+        return "趨勢延續 📈", "sig-trend"
+    return "觀察中", "sig-watching"
 
 
 # ── Stock cards with embedded live prices (10s auto-refresh) ─────────────────
@@ -3778,6 +3834,18 @@ def render_stock_cards(picks, prices, show_chart):
             if _is_new_pick else ""
         )
         _pick_flow = _flow_map.get(p["ticker"], {})
+        _sig_label, _sig_cls = _signal_type(p)
+
+        # R:R calculation
+        _entry  = ref_price if ref_price > 0 else p["last_price"]
+        _stop   = p.get("stop_loss", _entry * 0.95)
+        _target = p.get("target_price", _entry * 1.05)
+        _risk   = _entry - _stop
+        _reward = _target - _entry
+        _rr     = (_reward / _risk) if _risk > 0.01 else 0
+        _rr_col = "#69f0ae" if _rr >= 2 else ("#ffd54f" if _rr >= 1.2 else "#ef5350")
+        _invalid_price = round(_stop * 0.995, 1)
+
         st.markdown(
             f'<div style="margin-top:-3rem;pointer-events:none">'
             f'<div class="card">'
@@ -3785,6 +3853,7 @@ def render_stock_cards(picks, prices, show_chart):
             f'<div class="rank">{rank}</div>'
             f'<span class="stock-name">{p["ticker"].replace(".TW","")} {p["name"]}</span>'
             f'{_new_badge}'
+            f'<span class="sig-tag {_sig_cls}">{_sig_label}</span>'
             f'<span class="stock-sub">{p["en"]}</span>'
             f'<span style="margin-left:auto;font-size:20px;color:{_scol};line-height:1">{_star}</span>'
             f'</div>'
@@ -3795,6 +3864,14 @@ def render_stock_cards(picks, prices, show_chart):
             f'<span class="pct-badge">+{p["target_pct"]:.0f}%</span>'
             f'</div>'
             f'<div class="stop-row">💰 參考買點 NT${p["last_price"]:.1f}　　🛡 止損 NT${p["stop_loss"]:.1f}　({p["stop_pct"]:.1f}%)</div>'
+            f'<div class="trade-plan">'
+            f'<div class="tp-item"><span class="tp-label">風險報酬比</span>'
+            f'<span class="tp-val" style="color:{_rr_col}">R:R 1:{_rr:.1f}</span></div>'
+            f'<div class="tp-item"><span class="tp-label">失效條件</span>'
+            f'<span class="tp-val" style="color:#ff7043">跌破 NT${_invalid_price}</span></div>'
+            f'<div class="tp-item"><span class="tp-label">獲利目標</span>'
+            f'<span class="tp-val" style="color:#ef5350">NT${_target:.1f} (+{p["target_pct"]:.0f}%)</span></div>'
+            f'</div>'
             f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k_str}</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)

@@ -8,3 +8,4 @@ lxml>=4.9.0
 streamlit>=1.37.0
 plotly>=5.20.0
 streamlit-javascript>=0.0.16
+google-genai>=1.0.0

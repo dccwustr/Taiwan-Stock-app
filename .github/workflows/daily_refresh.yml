@@ -1,0 +1,31 @@
+name: Daily Market Refresh
+
+on:
+  schedule:
+    # 00:00 UTC = 08:00 CST (Taiwan time) — Mon to Fri only
+    - cron: '0 0 * * 1-5'
+  workflow_dispatch:   # allow manual trigger from GitHub UI anytime
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Bump refresh timestamp
+        run: |
+          mkdir -p data
+          echo "refreshed: $(date '+%Y-%m-%d %H:%M UTC')" > data/last_refreshed.txt
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/last_refreshed.txt
+          git commit -m "chore: daily refresh $(date '+%Y-%m-%d')"
+          git push
