@@ -4,3 +4,4 @@ logs/
 reports/
 .DS_Store
 *.log
+.env
