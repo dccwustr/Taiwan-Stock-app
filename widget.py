@@ -3166,6 +3166,252 @@ def main(args):
     console.print(f"\n[dim]報告已儲存：{log_path}[/dim]")
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  AI 精選：Claude 財務智能代理
+#  Role: Market Researcher + Earnings Reviewer + Valuation Reviewer
+#  Cached per trading slot (epoch changes 4× per day) → at most 4 API calls/day
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def ai_pick_of_day(picks: List[Dict], headlines: List[str], epoch: str) -> Dict:
+    """
+    Calls Claude (Haiku) as a trio of financial agents to pick the single best
+    stock from today_picks. Returns a dict with ticker, reasoning, entry_note,
+    and confidence. Falls back gracefully if API key is absent or call fails.
+
+    Cache: callers should wrap with @st.cache_data(ttl=900) keyed on epoch.
+    """
+    import os
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        try:
+            import streamlit as st
+            api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+        except Exception:
+            pass
+    if not api_key:
+        return {"error": "no_key", "ticker": None}
+
+    if not picks:
+        return {"error": "no_picks", "ticker": None}
+
+    try:
+        import anthropic
+    except ImportError:
+        return {"error": "no_sdk", "ticker": None}
+
+    top = picks[:5]
+
+    def _fmt(p: Dict) -> str:
+        supply = "・".join(p.get("supply", [])[:3]) or "無特定供應鏈"
+        fund_labels = "・".join(p.get("fund_labels", [])[:3]) or "無"
+        three_inv = "・".join(p.get("three_inv_labels", [])[:2]) or "無"
+        return (
+            f"【{p['name']} {p['ticker'].replace('.TW','')}】"
+            f" 評分={p['score']} 板塊={p.get('sector','?')}"
+            f" RSI={p.get('rsi',0):.1f} 量比={p.get('vol_ratio',0):.1f}x"
+            f" 動能(1d/5d/20d)={p.get('mom1d',0):+.1f}%/{p.get('mom5d',0):+.1f}%/{p.get('mom20d',0):+.1f}%"
+            f" Weinstein階段={p.get('stage_label','?')} BB={p.get('bb_signal','?')}"
+            f" KD={p.get('kd_signal','?')} OBV={p.get('obv_trend','?')}"
+            f" 52週位置={p.get('w52_label','?')}"
+            f" 外資淨買={p.get('foreign_net',0):.0f}千張 宏觀加成={p.get('macro_bonus',0):+d}"
+            f" 月營收YoY={p.get('rev_yoy') or '無'} 基本面={fund_labels}"
+            f" 三大法人={three_inv}"
+            f" 供應鏈={supply}"
+            f" 目標={p.get('target_pct',0):.0f}% 現價=NT${p.get('last_price',0):.1f}"
+        )
+
+    stocks_text = "\n".join(_fmt(p) for p in top)
+    news_text = "\n".join(f"- {h}" for h in headlines[:12]) if headlines else "（無）"
+
+    prompt = f"""你是一個由三個專業角色組成的台股 AI 財務分析團隊，今天的任務是從以下精選股票中，選出**今日最值得小資零股買入的一支**。
+
+## 三個角色的分工
+1. **市場研究員（Market Researcher）**：評估新聞面、類股動能、供應鏈位置
+2. **財報審查員（Earnings Reviewer）**：評估月營收年增、基本面標籤、三大法人共識
+3. **估值審查員（Valuation Reviewer）**：評估 RSI 甜蜜區間、技術面（BB/KD/OBV/Weinstein）、量比與動能
+
+## 今日候選股（已通過量化評分 ≥52 分）
+{stocks_text}
+
+## 今日重要新聞
+{news_text}
+
+## 任務
+三個角色分別給出各自觀點後，共同決議出**今日最佳進場股**。
+
+請以 JSON 格式回覆（僅輸出 JSON，不要額外文字）：
+{{
+  "ticker": "股票代號（如 2330.TW）",
+  "name": "股票名稱",
+  "reasoning": "100字以內的繁體中文理由，說明為什麼這支是今日最佳。涵蓋：技術面 + 基本面 + 新聞面",
+  "entry_note": "30字以內的進場策略（例：今日 RSI 52，可分批零股買入，目標 +7%）",
+  "confidence": "high/medium/low",
+  "agent_consensus": "三個角色的簡短共識（各15字以內）：市場研究員：X｜財報審查員：Y｜估值審查員：Z"
+}}"""
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=512,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = msg.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        result = json.loads(raw)
+        result["error"] = None
+        return result
+    except Exception as e:
+        return {"error": str(e)[:80], "ticker": None}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AI 長期潛力股：Thesis Tracker + CIM Builder + Technical Timing
+#  Uses Claude Opus 4.7 with adaptive thinking for deep fundamental analysis.
+#  Cache: 24 hr (theses are long-term, not intraday noise).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def ai_longterm_picks(scored: List[Dict], fund_map: Dict, headlines: List[str], date_str: str) -> Dict:
+    """
+    Identifies 2-3 long-term holds (3-12 months) using three skill frameworks:
+      - Thesis Tracker: core thesis, pillars, risks, catalysts, conviction
+      - CIM Builder:    moat assessment, financial quality, valuation
+      - Technical:      Weinstein stage, foreign flow, RSI timing
+
+    Calls Claude Opus 4.7 with adaptive thinking. Cache at 24 hr by callers.
+    Returns {"longterm_picks": [...], "portfolio_note": "...", "error": None}.
+    """
+    import os
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        try:
+            import streamlit as st
+            api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+        except Exception:
+            pass
+    if not api_key:
+        return {"error": "no_key", "longterm_picks": []}
+
+    candidates = [s for s in scored if s.get("score", 0) >= 50][:20]
+    if not candidates:
+        return {"error": "no_candidates", "longterm_picks": []}
+
+    try:
+        import anthropic
+    except ImportError:
+        return {"error": "no_sdk", "longterm_picks": []}
+
+    def _fmt_lt(s: Dict) -> str:
+        fund = fund_map.get(s["ticker"], {})
+        rev_g  = fund.get("rev_growth")
+        earn_g = fund.get("earn_growth")
+        pm     = fund.get("profit_margin")
+        f_pe   = fund.get("forward_pe")
+        peg    = fund.get("peg_ratio")
+        t_eps  = fund.get("trailing_eps")
+        f_eps  = fund.get("forward_eps")
+        rev_str  = f"{rev_g*100:+.0f}%"  if rev_g  is not None else "N/A"
+        earn_str = f"{earn_g*100:+.0f}%" if earn_g is not None else "N/A"
+        pm_str   = f"{pm*100:.0f}%"      if pm     is not None else "N/A"
+        pe_str   = f"{f_pe:.0f}x"        if f_pe               else "N/A"
+        peg_str  = f"{peg:.2f}"          if peg                else "N/A"
+        eps_str  = (f"${t_eps:.2f}→${f_eps:.2f}" if t_eps and f_eps else "N/A")
+        supply   = "・".join(s.get("supply", [])[:3]) or "一般"
+        return (
+            f"【{s['name']} {s['ticker'].replace('.TW','')}】評分={s['score']}"
+            f" 板塊={s.get('sector','?')} 現價=NT${s.get('last_price',0):.1f}"
+            f" RSI={s.get('rsi',0):.0f} Weinstein={s.get('stage_label','?')}"
+            f" 動能(1M/3M)={s.get('mom20d',0):+.1f}%/{s.get('mom60d',0):+.1f}%"
+            f" 外資連買={s.get('foreign_streak',0)}天"
+            f" 營收YoY={rev_str} 盈利YoY={earn_str} 毛利={pm_str}"
+            f" 預估PE={pe_str} PEG={peg_str} EPS={eps_str}"
+            f" 供應鏈={supply}"
+        )
+
+    candidates_text = "\n".join(_fmt_lt(s) for s in candidates)
+    news_text = "\n".join(f"- {h}" for h in headlines[:10]) if headlines else "（無）"
+
+    prompt = f"""你是一個台股長期投資 AI 分析團隊，整合三個專業框架，為小資零股投資人找出 2-3 支**值得長期持有（3-12個月）**的潛力股。
+
+## 分析框架
+
+### 框架一：Thesis Tracker（投資論點追蹤器）
+為每支入選股建立：
+- **核心論點**：一句話說明長期看多原因（含產業位置、競爭優勢）
+- **三大支柱**：支持論點的3個關鍵驅動因素
+- **主要風險**：2個可能使論點失效的風險
+- **關鍵催化劑**：未來3-6個月的觸發事件
+- **確信程度**：high / medium / low（附簡短理由）
+
+### 框架二：CIM Builder（商業質量評估）
+從買方盡職調查視角評估護城河：
+- **商業模式質量**：供應鏈位置、定價能力（護城河強/中/弱）
+- **財務質量**：營收/盈利成長性、毛利率可持續性、EPS趨勢
+- **估值合理性**：相對同業 PE/PEG 是否有安全邊際
+
+### 框架三：技術面擇時
+- Weinstein 階段2（多頭上升）優先
+- 外資連續淨買 ≥3天為正面訊號
+- RSI < 68 避免追高
+
+## 候選股（量化評分 ≥50，已由高到低排序）
+{candidates_text}
+
+## 今日市場背景
+{news_text}
+
+## 投資限制（必須遵守）
+- 小資零股戶，每筆金額有限，偏好長線持有3-12個月
+- 禁止當沖建議，禁止高槓桿
+- 最多選3支，寧缺勿濫，高確信優先
+
+請以 JSON 格式回覆（僅輸出 JSON，不要任何說明文字）：
+{{
+  "longterm_picks": [
+    {{
+      "ticker": "股票代號（如 2330.TW）",
+      "name": "股票名稱",
+      "thesis": "核心論點（50字以內）",
+      "pillars": ["支柱一（20字以內）", "支柱二（20字以內）", "支柱三（20字以內）"],
+      "key_risks": ["風險一（15字以內）", "風險二（15字以內）"],
+      "catalyst": "最重要近期催化劑（20字以內）",
+      "moat": "強/中/弱",
+      "valuation_note": "估值評語（20字以內，含PE或PEG）",
+      "entry_strategy": "進場策略（25字以內：分批/等回調/RSI目標）",
+      "conviction": "high/medium/low",
+      "conviction_reason": "確信原因（20字以內）"
+    }}
+  ],
+  "portfolio_note": "三支股票整體組合建議（50字以內，含板塊分散度）"
+}}"""
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        msg = client.messages.create(
+            model="claude-opus-4-7",
+            max_tokens=2048,
+            thinking={"type": "adaptive"},
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = ""
+        for block in msg.content:
+            if getattr(block, "type", "") == "text":
+                raw = block.text.strip()
+                break
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        result = json.loads(raw)
+        result["error"] = None
+        return result
+    except Exception as e:
+        return {"error": str(e)[:120], "longterm_picks": []}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  啟動
 # ═══════════════════════════════════════════════════════════════════════════════
 

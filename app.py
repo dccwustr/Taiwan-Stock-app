@@ -114,6 +114,8 @@ try:
         # ── 三大法人 + 相對強度 (RS) ──────────────────────────────────────────────
         fetch_twse_three_investors, calc_three_investors_bonus,
         fetch_taiex_prices, calc_relative_strength,
+        ai_pick_of_day,
+        ai_longterm_picks,
     )
 except Exception as _widget_err:
     import traceback as _tb
@@ -122,6 +124,23 @@ except Exception as _widget_err:
     st.stop()
 
 warnings.filterwarnings("ignore")
+
+# ── AI pick cache wrapper (max 4 calls/day, one per trading slot) ─────────────
+@st.cache_data(ttl=900, show_spinner=False)
+def _cached_ai_pick(picks_json: str, headlines_json: str, epoch: str) -> Dict:
+    import json as _json
+    picks = _json.loads(picks_json)
+    headlines = _json.loads(headlines_json)
+    return ai_pick_of_day(picks, headlines, epoch)
+
+# ── Long-term thesis cache (1 call/day max) ───────────────────────────────────
+@st.cache_data(ttl=3600 * 24, show_spinner=False)
+def _cached_ai_longterm(scored_json: str, fund_json: str, headlines_json: str, date_str: str) -> Dict:
+    import json as _json
+    scored    = _json.loads(scored_json)
+    fund_map  = _json.loads(fund_json)
+    headlines = _json.loads(headlines_json)
+    return ai_longterm_picks(scored, fund_map, headlines, date_str)
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -3992,6 +4011,56 @@ def render_stock_cards(picks, prices, show_chart):
             st.session_state._needs_save = True
             st.rerun()
 
+# ── AI 精選 Banner ────────────────────────────────────────────────────────────
+if today_picks:
+    with st.spinner("🤖 AI 財務代理分析中…"):
+        _ai_result = _cached_ai_pick(
+            json.dumps([{k: v for k, v in p.items()
+                         if k not in ("supply",) and not isinstance(v, (pd.Series, pd.DataFrame))}
+                        for p in today_picks], ensure_ascii=False, default=str),
+            json.dumps([h for h in data.get("headlines", [])[:12]], ensure_ascii=False),
+            _epoch,
+        )
+
+    _ai_err = _ai_result.get("error")
+    _ai_ticker = _ai_result.get("ticker")
+
+    if not _ai_err and _ai_ticker:
+        _conf_color = {"high": "#ffd54f", "medium": "#aeea00", "low": "#78909c"}.get(
+            _ai_result.get("confidence", "medium"), "#aeea00"
+        )
+        _conf_label = {"high": "高確信", "medium": "中確信", "low": "低確信"}.get(
+            _ai_result.get("confidence", "medium"), "中確信"
+        )
+        _ai_name = _ai_result.get("name", _ai_ticker.replace(".TW", ""))
+        _ai_code = _ai_ticker.replace(".TW", "").replace(".TWO", "")
+        _consensus = _ai_result.get("agent_consensus", "")
+        st.markdown(
+            f'<div style="background:linear-gradient(135deg,#1a1200,#221a00);'
+            f'border:1.5px solid #b8860b;border-radius:10px;padding:14px 18px;margin-bottom:10px">'
+            f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
+            f'<span style="font-size:18px">🏆</span>'
+            f'<span style="color:#ffd54f;font-size:14px;font-weight:700">AI 精選・今日最佳進場</span>'
+            f'<span style="margin-left:auto;background:#ffd54f22;color:{_conf_color};'
+            f'font-size:11px;border-radius:4px;padding:2px 8px;border:1px solid {_conf_color}">'
+            f'{_conf_label}</span>'
+            f'</div>'
+            f'<div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:4px">'
+            f'{_ai_code} {_ai_name}</div>'
+            f'<div style="font-size:13px;color:#e0d0a0;line-height:1.6;margin-bottom:8px">'
+            f'{_ai_result.get("reasoning","")}</div>'
+            f'<div style="font-size:12px;color:#aeea00;margin-bottom:6px">'
+            f'📌 {_ai_result.get("entry_note","")}</div>'
+            + (f'<div style="font-size:11px;color:#555;border-top:1px solid #333;padding-top:6px">'
+               f'👥 {_consensus}</div>' if _consensus else "")
+            + f'<div style="font-size:10px;color:#444;margin-top:4px">'
+            f'Market Researcher ＋ Earnings Reviewer ＋ Valuation Reviewer ｜ Claude Haiku 4.5</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    elif _ai_err == "no_key":
+        st.caption("💡 設定 ANTHROPIC_API_KEY 可啟用 AI 精選功能")
+
 if not today_picks:
     st.info(
         "🌡️ **今日市場偏熱，暫無理想進場點。**\n\n"
@@ -4025,6 +4094,100 @@ if backups:
     if st.session_state.show_backups:
         st.caption("備選股僅供觀察，建議等待更佳進場訊號後再考慮")
         render_stock_cards(backups, prices, show_chart)
+
+# ── 🌱 AI 長期潛力股 ─────────────────────────────────────────────────────────
+st.divider()
+with st.expander("🌱 長期潛力股・AI 論點分析（每日更新一次）", expanded=False):
+    st.caption("整合 Thesis Tracker ＋ CIM Builder ＋ 技術擇時，為小資零股找出 3-12 個月持有標的。由 Claude Opus 4.7 分析，每日更新一次。")
+    if scored:
+        with st.spinner("🔍 AI 長期論點分析中（首次載入需30秒）…"):
+            _lt_scored_safe = [
+                {k: v for k, v in r.items()
+                 if not isinstance(v, (pd.Series, pd.DataFrame))}
+                for r in scored[:30]
+            ]
+            _lt_fund_safe = {
+                tk: {k: v for k, v in fd.items()
+                     if not isinstance(v, (pd.Series, pd.DataFrame, float)) or isinstance(v, float)}
+                for tk, fd in fund_map.items()
+                if tk in {r["ticker"] for r in _lt_scored_safe}
+            }
+            _lt_result = _cached_ai_longterm(
+                json.dumps(_lt_scored_safe, ensure_ascii=False, default=str),
+                json.dumps(_lt_fund_safe,   ensure_ascii=False, default=str),
+                json.dumps(data.get("headlines", [])[:10], ensure_ascii=False),
+                datetime.now().strftime("%Y-%m-%d"),
+            )
+
+        _lt_err = _lt_result.get("error")
+        _lt_picks = _lt_result.get("longterm_picks", [])
+
+        if _lt_err == "no_key":
+            st.caption("💡 設定 ANTHROPIC_API_KEY 可啟用 AI 長期分析")
+        elif _lt_err:
+            st.caption(f"⚠️ 分析暫時不可用：{_lt_err}")
+        elif _lt_picks:
+            _moat_color = {"強": "#4caf50", "中": "#ff9800", "弱": "#ef5350"}
+            _conv_color = {"high": "#69f0ae", "medium": "#ffd740", "low": "#90a4ae"}
+            _conv_label = {"high": "高確信", "medium": "中確信", "low": "低確信"}
+            for _lp in _lt_picks:
+                _ticker = _lp.get("ticker", "")
+                _name   = _lp.get("name", _ticker.replace(".TW", ""))
+                _code   = _ticker.replace(".TW", "").replace(".TWO", "")
+                _moat   = _lp.get("moat", "中")
+                _conv   = _lp.get("conviction", "medium")
+                _mc     = _moat_color.get(_moat, "#ff9800")
+                _cc     = _conv_color.get(_conv, "#ffd740")
+                _cl     = _conv_label.get(_conv, "中確信")
+                _pillars = _lp.get("pillars", [])
+                _risks   = _lp.get("key_risks", [])
+                _pillars_html = "".join(
+                    f'<li style="margin:2px 0;color:#b9f6ca">{p}</li>' for p in _pillars
+                )
+                _risks_html = "".join(
+                    f'<li style="margin:2px 0;color:#ffab91">{r}</li>' for r in _risks
+                )
+                st.markdown(
+                    f'<div style="background:linear-gradient(135deg,#001a00,#0a1f0a);'
+                    f'border:1.5px solid #2e7d32;border-radius:10px;padding:14px 18px;margin-bottom:12px">'
+                    f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
+                    f'<span style="font-size:16px">🌱</span>'
+                    f'<span style="font-size:20px;font-weight:700;color:#fff">{_code} {_name}</span>'
+                    f'<span style="margin-left:auto;background:{_mc}22;color:{_mc};'
+                    f'font-size:11px;border-radius:4px;padding:2px 8px;border:1px solid {_mc}">護城河{_moat}</span>'
+                    f'<span style="background:{_cc}22;color:{_cc};'
+                    f'font-size:11px;border-radius:4px;padding:2px 8px;border:1px solid {_cc};margin-left:4px">{_cl}</span>'
+                    f'</div>'
+                    f'<div style="font-size:13px;color:#e8f5e9;margin-bottom:10px;line-height:1.6">'
+                    f'📋 {_lp.get("thesis","")}</div>'
+                    f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">'
+                    f'<div>'
+                    f'<div style="font-size:11px;color:#81c784;font-weight:600;margin-bottom:4px">▲ 三大支柱</div>'
+                    f'<ul style="margin:0;padding-left:14px;font-size:12px">{_pillars_html}</ul>'
+                    f'</div>'
+                    f'<div>'
+                    f'<div style="font-size:11px;color:#e57373;font-weight:600;margin-bottom:4px">⚠ 主要風險</div>'
+                    f'<ul style="margin:0;padding-left:14px;font-size:12px">{_risks_html}</ul>'
+                    f'</div>'
+                    f'</div>'
+                    f'<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin-bottom:8px">'
+                    f'<span style="color:#80cbc4">🎯 催化劑：{_lp.get("catalyst","")}</span>'
+                    f'<span style="color:#fff176">💰 估值：{_lp.get("valuation_note","")}</span>'
+                    f'</div>'
+                    f'<div style="font-size:12px;color:#a5d6a7;border-top:1px solid #2e7d32;padding-top:8px">'
+                    f'📌 {_lp.get("entry_strategy","")}｜{_lp.get("conviction_reason","")}'
+                    f'</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            _portfolio_note = _lt_result.get("portfolio_note", "")
+            if _portfolio_note:
+                st.caption(f"📊 組合建議：{_portfolio_note}")
+            st.caption("Claude Opus 4.7 ｜ Thesis Tracker ＋ CIM Builder ＋ Technical Timing")
+        else:
+            st.caption("目前量化評分達標股票不足，暫無長期推薦")
+    else:
+        st.caption("資料載入中，請稍後重新整理")
 
 # ── News (collapsed by default) ───────────────────────────────────────────────
 st.divider()
