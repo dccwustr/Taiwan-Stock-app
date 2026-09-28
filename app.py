@@ -104,6 +104,7 @@ try:
         fetch_us_overnight, us_macro_stock_bonus, fetch_global_news,
         fetch_market_alerts,
         fetch_yf_fundamentals_batch, fetch_twse_shareholder_meetings,
+        fetch_twse_monthly_revenue,
         calc_fundamental_bonus,
         fetch_intraday_flow,
         # ── 早盤情報系統 ─────────────────────────────────────────────────────────
@@ -114,6 +115,9 @@ try:
         # ── 三大法人 + 相對強度 (RS) ──────────────────────────────────────────────
         fetch_twse_three_investors, calc_three_investors_bonus,
         fetch_taiex_prices, calc_relative_strength,
+        fetch_twse_trust_multi_day, calc_trust_streak,
+        calc_market_direction,
+        fetch_twse_margin_balance,
         ai_pick_of_day,
         ai_longterm_picks,
     )
@@ -796,7 +800,7 @@ def load_data(epoch: str):                       # epoch = "YYYY-MM-DD-SLOT", ch
     # (yfinance prints "N Failed downloads:" etc. which can confuse some Streamlit Cloud versions)
     _buf = io.StringIO()
     with contextlib.redirect_stdout(_buf), contextlib.redirect_stderr(_buf):
-        prices   = fetch_prices_batch(tickers, period="3mo")
+        prices   = fetch_prices_batch(tickers, period="1y")
         us_data  = fetch_us_overnight()
         g_news   = fetch_global_news()
     # ── 廣域新聞抓取（含科技新報 + Google News 訂單/合作專項搜尋）──────────────
@@ -815,13 +819,20 @@ def load_data(epoch: str):                       # epoch = "YYYY-MM-DD-SLOT", ch
     foreign_multi = fetch_twse_foreign_multi_day(days=5)
     fi_streak     = calc_foreign_streak(foreign_multi)
     # ── 三大法人（投信 + 自營 + 外資合計）─────────────────────────────────────────
-    three_inv = fetch_twse_three_investors()
+    three_inv   = fetch_twse_three_investors()
+    # ── 投信連續買超天數（台灣最強短線信號）──────────────────────────────────────
+    trust_multi = fetch_twse_trust_multi_day(days=5)
+    trust_streak = calc_trust_streak(trust_multi)
+    # ── 融資融券餘額 — 散戶籌碼逆向指標 (carsonchou/tw-stock-radar) ────────────
+    margin_bal = fetch_twse_margin_balance()
     # ── TAIEX 歷史收盤 — 計算個股 O'Neil 相對強度 (RS) ─────────────────────────
     taiex_close = fetch_taiex_prices()
     market   = fetch_twse_market_summary()
     ts = _now_tw().strftime("%H:%M")
     return dict(news=news, headlines=headlines, catalyst=cat_sc,
                 foreign=foreign, fi_streak=fi_streak,
+                trust_streak=trust_streak,
+                margin_bal=margin_bal,
                 order_signals=order_signals,
                 three_inv=three_inv, taiex_close=taiex_close,
                 market=market, prices=prices,
@@ -850,6 +861,12 @@ def load_fundamentals(epoch_day: str) -> dict:
                 all_tickers.append(_ct)
     fund_map = fetch_yf_fundamentals_batch(all_tickers)
     meetings = fetch_twse_shareholder_meetings()   # returns {} when API unavailable
+    # 月營收年增率 from MOPS — one HTML request, all companies, more current than quarterly yfinance
+    monthly_rev = fetch_twse_monthly_revenue()
+    for tk, yoy in monthly_rev.items():
+        if tk not in fund_map:
+            fund_map[tk] = {}
+        fund_map[tk]["monthly_rev_yoy"] = yoy
     return {"fund": fund_map, "meetings": meetings}
 
 # ── Session state init ────────────────────────────────────────────────────────
@@ -1097,6 +1114,12 @@ us_data       = data.get("us_data", {})
 global_news   = data.get("global_news", [])
 three_inv     = data.get("three_inv", {})    # 三大法人: {ticker: {trust, dealer, total}}
 taiex_close   = data.get("taiex_close")      # pd.Series | None — TAIEX close for RS calc
+trust_streak  = data.get("trust_streak", {}) # 投信連續買超/賣超天數
+margin_bal    = data.get("margin_bal", {})   # 融資融券餘額：{ticker: {margin_chg_pct, short_margin_ratio}}
+
+# ── CANSLIM M: market direction filter — applied to ALL picks scores ──────────
+mkt_dir       = calc_market_direction(taiex_close)
+_mkt_penalty  = mkt_dir["penalty"]          # 0 (bull) / -8 (neutral) / -20 (bear)
 
 # ── Fundamental data (yfinance quarterly: revenue/earnings growth, margins) ───
 _epoch_day   = _now_tw().strftime("%Y-%m-%d")
@@ -1127,7 +1150,10 @@ _sres = None
 if _sticker:
     _sres = score_stock(_sticker, prices.get(_sticker), cat_sc.get(_sticker, 0), foreign.get(_sticker, 0),
                         us_macro_stock_bonus(_sticker, us_data),
-                        fi_streak_val=fi_streak.get(_sticker, 0))
+                        fi_streak_val=fi_streak.get(_sticker, 0),
+                        trust_streak_val=trust_streak.get(_sticker, 0),
+                        margin_chg_pct=margin_bal.get(_sticker, {}).get("margin_chg_pct", 0.0),
+                        short_margin_ratio=margin_bal.get(_sticker, {}).get("short_margin_ratio", 0.0))
     if _sres:
         _sf = calc_fundamental_bonus(_sticker, fund_map, meeting_map)
         _sres["score"]        = max(0, min(100, _sres["score"] + _sf["bonus"]))
@@ -1137,14 +1163,22 @@ if _sticker:
         _sres["trailing_eps"] = _sf.get("trailing_eps")
         _sres["forward_eps"]  = _sf.get("forward_eps")
         _sres["forward_pe"]   = _sf.get("forward_pe")
-        _sres["catalysts"]    = (_sf["labels"] + get_catalyst_labels(_sticker, all_news))[:4]
+        _s_mlbls = []
+        _s_mc  = _sres.get("margin_chg_pct", 0.0); _s_smr = _sres.get("short_margin_ratio", 0.0)
+        if _s_mc >= 25: _s_mlbls.append(f"融資暴增+{_s_mc:.0f}% ⚠️")
+        elif _s_mc <= -15: _s_mlbls.append(f"融資大減{_s_mc:.0f}% 清洗")
+        if _s_smr >= 30: _s_mlbls.append(f"券資比{_s_smr:.0f}% 潛在軋空")
+        _sres["catalysts"]    = (_sf["labels"] + _s_mlbls + get_catalyst_labels(_sticker, all_news))[:5]
 
 # Score watchlist tickers
 _watch_results = {}
 for _wt in st.session_state.watchlist:
     _wr = score_stock(_wt, prices.get(_wt), cat_sc.get(_wt, 0), foreign.get(_wt, 0),
                       us_macro_stock_bonus(_wt, us_data),
-                      fi_streak_val=fi_streak.get(_wt, 0))
+                      fi_streak_val=fi_streak.get(_wt, 0),
+                      trust_streak_val=trust_streak.get(_wt, 0),
+                      margin_chg_pct=margin_bal.get(_wt, {}).get("margin_chg_pct", 0.0),
+                      short_margin_ratio=margin_bal.get(_wt, {}).get("short_margin_ratio", 0.0))
     if _wr:
         _wf = calc_fundamental_bonus(_wt, fund_map, meeting_map)
         _wr["score"]        = max(0, min(100, _wr["score"] + _wf["bonus"]))
@@ -1154,7 +1188,12 @@ for _wt in st.session_state.watchlist:
         _wr["trailing_eps"] = _wf.get("trailing_eps")
         _wr["forward_eps"]  = _wf.get("forward_eps")
         _wr["forward_pe"]   = _wf.get("forward_pe")
-        _wr["catalysts"]    = (_wf["labels"] + get_catalyst_labels(_wt, all_news))[:4]
+        _w_mlbls = []
+        _w_mc  = _wr.get("margin_chg_pct", 0.0); _w_smr = _wr.get("short_margin_ratio", 0.0)
+        if _w_mc >= 25: _w_mlbls.append(f"融資暴增+{_w_mc:.0f}% ⚠️")
+        elif _w_mc <= -15: _w_mlbls.append(f"融資大減{_w_mc:.0f}% 清洗")
+        if _w_smr >= 30: _w_mlbls.append(f"券資比{_w_smr:.0f}% 潛在軋空")
+        _wr["catalysts"]    = (_wf["labels"] + _w_mlbls + get_catalyst_labels(_wt, all_news))[:5]
         _watch_results[_wt] = _wr
 
 # Score recent search tickers
@@ -1162,7 +1201,10 @@ _recent_results = {}
 for _rt in _recent:
     _rr = score_stock(_rt, prices.get(_rt), cat_sc.get(_rt, 0), foreign.get(_rt, 0),
                       us_macro_stock_bonus(_rt, us_data),
-                      fi_streak_val=fi_streak.get(_rt, 0))
+                      fi_streak_val=fi_streak.get(_rt, 0),
+                      trust_streak_val=trust_streak.get(_rt, 0),
+                      margin_chg_pct=margin_bal.get(_rt, {}).get("margin_chg_pct", 0.0),
+                      short_margin_ratio=margin_bal.get(_rt, {}).get("short_margin_ratio", 0.0))
     if _rr:
         _rf = calc_fundamental_bonus(_rt, fund_map, meeting_map)
         _rr["score"]        = max(0, min(100, _rr["score"] + _rf["bonus"]))
@@ -1172,7 +1214,12 @@ for _rt in _recent:
         _rr["trailing_eps"] = _rf.get("trailing_eps")
         _rr["forward_eps"]  = _rf.get("forward_eps")
         _rr["forward_pe"]   = _rf.get("forward_pe")
-        _rr["catalysts"]    = (_rf["labels"] + get_catalyst_labels(_rt, all_news))[:4]
+        _r_mlbls = []
+        _r_mc  = _rr.get("margin_chg_pct", 0.0); _r_smr = _rr.get("short_margin_ratio", 0.0)
+        if _r_mc >= 25: _r_mlbls.append(f"融資暴增+{_r_mc:.0f}% ⚠️")
+        elif _r_mc <= -15: _r_mlbls.append(f"融資大減{_r_mc:.0f}% 清洗")
+        if _r_smr >= 30: _r_mlbls.append(f"券資比{_r_smr:.0f}% 潛在軋空")
+        _rr["catalysts"]    = (_rf["labels"] + _r_mlbls + get_catalyst_labels(_rt, all_news))[:5]
         _recent_results[_rt] = _rr
 
 # ── Fill holdings in sidebar ──────────────────────────────────────────────────
@@ -1309,7 +1356,10 @@ for ticker in TECH_UNIVERSE:
         continue
     res = score_stock(ticker, prices.get(ticker), cat_sc.get(ticker, 0), foreign.get(ticker, 0),
                       us_macro_stock_bonus(ticker, us_data),
-                      fi_streak_val=fi_streak.get(ticker, 0))
+                      fi_streak_val=fi_streak.get(ticker, 0),
+                      trust_streak_val=trust_streak.get(ticker, 0),
+                      margin_chg_pct=margin_bal.get(ticker, {}).get("margin_chg_pct", 0.0),
+                      short_margin_ratio=margin_bal.get(ticker, {}).get("short_margin_ratio", 0.0))
     if res:
         # 零股小資調整：RSI是否在適合進場區間；高價股零股難累積
         _adj = 0
@@ -1322,6 +1372,8 @@ for ticker in TECH_UNIVERSE:
         elif _rsi >= 35: _adj +=  3  # 輕微超賣：還不錯
         else:            _adj -= 15  # 極度超賣：可能下跌趨勢
         if res.get("last_price", 0) > 500: _adj -= 8  # expensive per share
+        # CANSLIM M: market direction penalty (保護機制：空頭市場不追高)
+        _adj += _mkt_penalty
         res["score"]    = max(0, min(100, res["score"] + _adj))
         res["_rsi_adj"] = _adj   # stored so live-RSI update can undo and reapply
         # ── 基本面加權 (月營收 / 股東會) ──────────────────────────────────────
@@ -1356,7 +1408,14 @@ for ticker in TECH_UNIVERSE:
         res["rs_label"]     = _rs.get("label", "")
         if res["score"] >= min_score:
             _tech_labels = get_catalyst_labels(ticker, all_news)
-            res["catalysts"] = (_fund["labels"] + _3inv["labels"] + _tech_labels)[:4]
+            _margin_lbls = []
+            _mc  = res.get("margin_chg_pct", 0.0)
+            _smr = res.get("short_margin_ratio", 0.0)
+            if   _mc  >= 25: _margin_lbls.append(f"融資暴增+{_mc:.0f}% ⚠️")
+            elif _mc  >= 15: _margin_lbls.append(f"融資增+{_mc:.0f}%")
+            elif _mc  <= -15: _margin_lbls.append(f"融資大減{_mc:.0f}% 清洗")
+            if   _smr >= 30: _margin_lbls.append(f"券資比{_smr:.0f}% 潛在軋空")
+            res["catalysts"] = (_fund["labels"] + _3inv["labels"] + _margin_lbls + _tech_labels)[:5]
             scored.append(res)
 scored.sort(key=lambda x: x["score"], reverse=True)
 
@@ -3292,7 +3351,10 @@ if st.session_state.view_mode == "categories":
             continue
         _cres = score_stock(_ct, _cdf, cat_sc.get(_ct, 0), foreign.get(_ct, 0),
                             us_macro_stock_bonus(_ct, us_data),
-                            fi_streak_val=fi_streak.get(_ct, 0))
+                            fi_streak_val=fi_streak.get(_ct, 0),
+                            trust_streak_val=trust_streak.get(_ct, 0),
+                            margin_chg_pct=margin_bal.get(_ct, {}).get("margin_chg_pct", 0.0),
+                            short_margin_ratio=margin_bal.get(_ct, {}).get("short_margin_ratio", 0.0))
         if not _cres:
             continue
         # Zero-stock RSI + price adjustments (identical to main picks loop)

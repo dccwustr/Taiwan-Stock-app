@@ -413,21 +413,36 @@ def ma_score(close: pd.Series) -> int:
 
 def calc_ma_alignment(close: pd.Series) -> dict:
     """
-    均線多頭/空頭排列分析（Stan Weinstein Stage + Taiwan MA convention）
+    均線多頭/空頭排列分析（Weinstein Stage + Minervini SEPA MA200 criteria）
     Stage 2 (advancing): MA5 > MA20 > MA60, price > MA60, MA60 slope rising
     Stage 4 (declining): price < MA60, MA60 slope falling
-    Returns: stage(1-4), label, bonus(-4 to +6), is_aligned(bool)
+    SEPA bonus: Minervini 5-criteria check adds +3 when MA200 confirms uptrend
+    Returns: stage(1-4), label, bonus(-4 to +9), is_aligned(bool),
+             ma5/ma20/ma60/ma150/ma200, sepa_count(0-5)
     """
     if len(close) < 65:
         return {"stage": 0, "label": "資料不足", "bonus": 0, "is_aligned": False,
-                "ma5": 0.0, "ma20": 0.0, "ma60": 0.0}
+                "ma5": 0.0, "ma20": 0.0, "ma60": 0.0, "ma150": None, "ma200": None,
+                "sepa_count": 0}
     last   = float(close.iloc[-1])
     ma5    = float(close.rolling(5).mean().iloc[-1])
     ma20   = float(close.rolling(20).mean().iloc[-1])
     ma60   = float(close.rolling(60).mean().iloc[-1])
-    ma60_4w_ago = float(close.rolling(60).mean().iloc[-21])  # MA60 slope proxy
-
+    ma60_4w_ago = float(close.rolling(60).mean().iloc[-21])
     ma60_rising = ma60 > ma60_4w_ago
+
+    ma150 = float(close.rolling(150).mean().iloc[-1]) if len(close) >= 150 else None
+    ma200 = float(close.rolling(200).mean().iloc[-1]) if len(close) >= 200 else None
+    ma200_1mo = float(close.rolling(200).mean().iloc[-21]) if len(close) >= 221 else None
+    ma200_rising = (ma200 > ma200_1mo) if (ma200 is not None and ma200_1mo is not None) else None
+
+    # Minervini SEPA: count criteria met (0-5)
+    sepa_count = 0
+    if ma200 is not None and last > ma200:    sepa_count += 1  # price > MA200
+    if ma150 is not None and last > ma150:    sepa_count += 1  # price > MA150
+    if ma150 is not None and ma200 is not None and ma150 > ma200: sepa_count += 1  # MA150 > MA200
+    if ma200_rising is True:                  sepa_count += 1  # MA200 trending up
+    if ma60_rising:                           sepa_count += 1  # MA60 trending up
 
     # Classify Weinstein stage
     if last > ma60 and ma5 > ma20 > ma60 and ma60_rising:
@@ -446,8 +461,61 @@ def calc_ma_alignment(close: pd.Series) -> dict:
         stage, label, bonus = 1, "🔄 底部整理（Stage 1）", 0
         is_aligned = False
 
+    # SEPA upgrade: Minervini full-criteria confirmation adds +3 on top of Weinstein Stage 2
+    if is_aligned and sepa_count >= 4:
+        bonus += 3
+        label = label.replace("Stage 2", "Stage 2 ★SEPA")
+
     return {"stage": stage, "label": label, "bonus": bonus, "is_aligned": is_aligned,
-            "ma5": round(ma5, 1), "ma20": round(ma20, 1), "ma60": round(ma60, 1)}
+            "ma5": round(ma5, 1), "ma20": round(ma20, 1), "ma60": round(ma60, 1),
+            "ma150": round(ma150, 1) if ma150 else None,
+            "ma200": round(ma200, 1) if ma200 else None,
+            "sepa_count": sepa_count}
+
+
+def calc_market_direction(taiex_close: Optional[pd.Series]) -> Dict:
+    """
+    CANSLIM M factor: O'Neil rule — 3 out of 4 stocks follow the general market.
+    Penalty applied to ALL scores when TAIEX is in correction/bear market.
+
+    Returns {"status": "bull"|"neutral"|"bear", "penalty": int, "label": str,
+             "dist_days": int, "ma50": float, "ma200": float}
+    """
+    if taiex_close is None or len(taiex_close) < 22:
+        return {"status": "neutral", "penalty": 0, "label": "", "dist_days": 0,
+                "ma50": 0.0, "ma200": 0.0}
+    close = taiex_close.dropna()
+    last  = float(close.iloc[-1])
+    ma20  = float(close.rolling(20).mean().iloc[-1])
+    ma50  = float(close.rolling(min(50, len(close))).mean().iloc[-1])
+    ma200 = float(close.rolling(min(200, len(close))).mean().iloc[-1])
+
+    # Distribution days: high-volume down-days signal institutional selling
+    dist_days = 0
+    if len(close) >= 26:
+        pct_chg   = close.pct_change()
+        dist_days = int((pct_chg.iloc[-25:] < -0.015).sum())
+
+    if last > ma50 and last > ma200 and ma50 > ma200:
+        if dist_days >= 5:
+            status, penalty = "neutral", -8
+            label = f"大盤多頭但出貨壓力({dist_days}日) ⚠️"
+        else:
+            status, penalty = "bull", 0
+            label = "大盤多頭 ✅"
+    elif last < ma50 and last < ma200:
+        status, penalty = "bear", -20
+        label = "大盤空頭 — 慎買 ⛔"
+    elif last < ma50:
+        status, penalty = "neutral", -8
+        label = "大盤修正中 ⚠️"
+    else:
+        status, penalty = "neutral", -5
+        label = "大盤整理中"
+
+    return {"status": status, "penalty": penalty, "label": label,
+            "dist_days": dist_days,
+            "ma50": round(ma50, 0), "ma200": round(ma200, 0)}
 
 
 def calc_bollinger(close: pd.Series, period: int = 20, std_mult: float = 2.0) -> dict:
@@ -624,6 +692,67 @@ def calc_52w_position(close: pd.Series) -> dict:
         bonus, label = 0, ""
     return {"position_pct": round(pos_pct, 1), "label": label, "bonus": bonus,
             "w52_high": round(w52_high, 1), "w52_low": round(w52_low, 1)}
+
+
+def detect_52w_breakout(df: pd.DataFrame) -> Dict:
+    """
+    O'Neil 突破進場訊號：52週新高突破 + 成交量確認
+    - 確認突破 (Volume ≥ 1.4x MA20): +15 ← O'Neil #1 買點
+    - 新高但量不足:                   +8
+    - 距年高 3%以內:                  +6
+    - 距年高 7%以內:                  +3
+    - 底部25%以下:                   -6 (避免接刀)
+    """
+    if df is None or len(df) < 22:
+        return {"score": 0, "type": "none", "label": "",
+                "pct_vs_high": 0.0, "vol_surge": 1.0}
+
+    close  = df["Close"]
+    volume = df["Volume"]
+    n      = len(close)
+
+    # Prior 52w high (exclude last 5 days to detect fresh breakouts)
+    lookback   = min(252, n)
+    prior_slice = close.iloc[-lookback:-5] if n > 5 else close.iloc[-lookback:]
+    prior_high  = float(prior_slice.max()) if len(prior_slice) > 0 else float(close.max())
+    low52w      = float(close.iloc[-lookback:].min())
+
+    last       = float(close.iloc[-1])
+    vol_ma20   = float(volume.rolling(20).mean().iloc[-1])
+    vol_latest = float(volume.iloc[-1])
+    vol_surge  = vol_latest / vol_ma20 if vol_ma20 > 0 else 1.0
+
+    if prior_high <= 0:
+        return {"score": 0, "type": "none", "label": "", "pct_vs_high": 0.0, "vol_surge": round(vol_surge, 2)}
+
+    pct_vs_high  = (last / prior_high - 1) * 100
+    pct_above_low = (last - low52w) / (prior_high - low52w) if prior_high != low52w else 0.5
+
+    if pct_vs_high >= 0:
+        if vol_surge >= 1.4:
+            score, btype = 15, "breakout"
+            label = f"突破52週新高 📈 量{vol_surge:.1f}x"
+        else:
+            score, btype = 8, "near_high"
+            label = f"新52週高（量{vol_surge:.1f}x 待放量）"
+    elif pct_vs_high >= -3:
+        score, btype = 6, "near_high"
+        label = f"逼近年高 -{abs(pct_vs_high):.1f}%"
+    elif pct_vs_high >= -7:
+        score, btype = 3, "none"
+        label = ""
+    elif pct_above_low < 0.25:
+        score, btype = -6, "none"
+        label = "52週低位 ⚠️"
+    else:
+        score, btype = 0, "none"
+        label = ""
+
+    return {"score": score, "type": btype, "label": label,
+            "pct_vs_high": round(pct_vs_high, 1),
+            "prior_high52w": round(prior_high, 1),
+            "vol_surge": round(vol_surge, 2)}
+
 
 def calc_kbar_pattern(df: pd.DataFrame) -> Tuple[int, str]:
     """
@@ -999,6 +1128,84 @@ def calc_foreign_streak(multi_day: Dict[str, List[float]]) -> Dict[str, int]:
         if days_list[0] > 0:
             streak = sum(1 for d in days_list if d > 0)
             # But must be consecutive from day0
+            consecutive = 0
+            for d in days_list:
+                if d > 0: consecutive += 1
+                else: break
+            streaks[ticker] = consecutive
+        elif days_list[0] < 0:
+            consecutive = 0
+            for d in days_list:
+                if d < 0: consecutive -= 1
+                else: break
+            streaks[ticker] = consecutive
+        else:
+            streaks[ticker] = 0
+    return streaks
+
+
+def fetch_twse_trust_multi_day(days: int = 5) -> Dict[str, List[float]]:
+    """
+    抓取最近 N 個交易日的投信買賣超 (T86 欄位7: 投信淨買超千張)。
+    回傳 {ticker: [最新日, 前1日, ...]}，用於計算連續買超/賣超天數。
+    投信連續買超 = 台灣短線最強預測信號（比外資連買更精準）
+    """
+    from datetime import timezone as _tz, timedelta as _td
+    result: Dict[str, List[float]] = {}
+    tw_now    = datetime.now(tz=_tz(_td(hours=8)))
+    daily_data: List[Dict[str, float]] = []
+    dates_tried = dates_ok = day_offset = 0
+
+    while dates_ok < days and dates_tried < 14:
+        d = tw_now - _td(days=day_offset)
+        day_offset += 1; dates_tried += 1
+        if d.weekday() >= 5:
+            continue
+        date_str = d.strftime("%Y%m%d")
+        url = (f"https://www.twse.com.tw/rwd/zh/fund/T86"
+               f"?response=json&date={date_str}&selectType=ALLBUT0999")
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=8)
+            data = r.json()
+            rows = data.get("data", [])
+            if not rows:
+                continue
+            day_dict: Dict[str, float] = {}
+            for row in rows:
+                if len(row) < 8:
+                    continue
+                code = row[0].strip()
+                if not code:
+                    continue
+                try:
+                    net = float(str(row[7]).replace(",", "").replace("+", "")) / 1000
+                    day_dict[code + ".TW"] = net
+                except (ValueError, TypeError):
+                    pass
+            daily_data.append(day_dict)
+            dates_ok += 1
+        except Exception:
+            continue
+
+    if not daily_data:
+        return result
+    all_tickers = set(t for d in daily_data for t in d)
+    for ticker in all_tickers:
+        result[ticker] = [d.get(ticker, 0.0) for d in daily_data]
+    return result
+
+
+def calc_trust_streak(multi_day: Dict[str, List[float]]) -> Dict[str, int]:
+    """
+    計算投信連續買超/賣超天數。
+    +N = 連買N天（最強短線多頭信號），-N = 連賣N天。
+    """
+    streaks: Dict[str, int] = {}
+    for ticker, days_list in multi_day.items():
+        if not days_list:
+            streaks[ticker] = 0
+            continue
+        if days_list[0] > 0:
             consecutive = 0
             for d in days_list:
                 if d > 0: consecutive += 1
@@ -2270,14 +2477,21 @@ def fetch_market_alerts(hours_back: int = 6) -> List[Dict]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net: float,
-                macro_bonus: int = 0, fi_streak_val: int = 0) -> Dict:
+                macro_bonus: int = 0, fi_streak_val: int = 0,
+                trust_streak_val: int = 0,
+                margin_chg_pct: float = 0.0, short_margin_ratio: float = 0.0) -> Dict:
     """
     綜合評分 0-100：
-      量能 30 + 動能 22 + 技術 23 + K棒形態 ±12 + 催化劑 30 + 外資 ±8+streak ±5 + 美股盤前 ±10
+      量能 30 + 動能 22 + 技術(含SEPA) + K棒形態 ±12 + 催化劑 30
+      + 外資 ±8 + 外資連買 ±5 + 投信連買 ±7 + 52週突破 ±15 + 美股盤前 ±10
+      + 融資融券籌碼 ±5 (contrarian: 融資暴增=-5, 融資大減=+4, 高券資比=+4)
 
-    fi_streak_val: 外資連續買超天數（+N）或連續賣超（-N），由 calc_foreign_streak() 提供。
-                   連買3天=機構建倉訊號，連買5天=高確信度，比單日淨買更有預測力。
-    macro_bonus: 由 us_macro_stock_bonus() 計算，反映美股隔夜對個股影響（-10~+10）
+    fi_streak_val:       外資連續買超天數，由 calc_foreign_streak() 提供
+    trust_streak_val:    投信連續買超天數，由 calc_trust_streak() 提供
+                         台灣最強短線預測信號 — 投信連買 > 外資連買 > 自營
+    macro_bonus:         美股隔夜對個股影響（-10~+10）
+    margin_chg_pct:      融資今日vs前日餘額% — 散戶逆向指標 (fetch_twse_margin_balance)
+    short_margin_ratio:  融券/融資 × 100% — 高券資比潛在軋空 (fetch_twse_margin_balance)
     """
     if df is None or len(df) < 22:
         return {}
@@ -2351,8 +2565,8 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     elif obv_tr == "rising":   tech += 1
     elif obv_tr == "falling":  tech -= 2   # 量價背離下跌 = 機構悄悄出清
 
-    # ── Minervini 52週甜蜜區 (±4) ───────────────────────────────────────
-    tech += pos52w["bonus"]
+    # ── 52週位置（不再加分，由下面 detect_52w_breakout 接管）──────────────
+    # pos52w bonus removed: breakout detection below covers this with volume confirmation
 
     tech = max(-10, tech)   # floor（不讓負分無限累積）
 
@@ -2361,9 +2575,8 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
 
     # 5. 催化劑 (0-30) + 外資今日淨買 ±8 + 外資連續天數 ±5 + 美股盤前影響
     cat_score  = min(30, catalyst_bonus)
-    # 外資今日：每500萬NT$ = 1分；±8 上限
     fi_bonus   = min(8, int(foreign_net / 500)) if foreign_net > 0 else max(-8, int(foreign_net / 500))
-    # 外資連續天數（O'Neil CANSLIM I factor — 機構持續買 > 單日淨買）
+    # 外資連續天數（O'Neil CANSLIM I factor）
     if   fi_streak_val >= 5:  streak_bonus =  5
     elif fi_streak_val >= 3:  streak_bonus =  3
     elif fi_streak_val >= 2:  streak_bonus =  1
@@ -2371,9 +2584,39 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     elif fi_streak_val <= -3: streak_bonus = -3
     elif fi_streak_val <= -2: streak_bonus = -1
     else:                      streak_bonus =  0
+
+    # 投信連續天數（台灣最強短線預測信號 — 投信資訊優勢 > 外資）
+    if   trust_streak_val >= 5:  trust_bonus =  7
+    elif trust_streak_val >= 3:  trust_bonus =  5
+    elif trust_streak_val >= 2:  trust_bonus =  2
+    elif trust_streak_val <= -5: trust_bonus = -7
+    elif trust_streak_val <= -3: trust_bonus = -5
+    elif trust_streak_val <= -2: trust_bonus = -2
+    else:                         trust_bonus =  0
+
+    # 52週突破偵測（O'Neil #1 買點：量價齊揚突破年高）
+    bo         = detect_52w_breakout(df)
+    bo_score   = bo["score"]   # -6 (52w low) ~ +15 (confirmed breakout with volume)
+
+    # 融資融券籌碼面 — 散戶逆向指標 (carsonchou/tw-stock-radar approach)
+    # 融資暴增 = 散戶追高 = 頭部危險信號 (contrarian bearish)
+    # 融資大減 = 弱手出清 = 潛在買點 (contrarian bullish)
+    # 高券資比 = 空頭集中 = 潛在軋空燃料 (squeeze potential)
+    margin_score = 0
+    if   margin_chg_pct >= 25:  margin_score -= 5   # 融資單日暴增25%+，散戶瘋追
+    elif margin_chg_pct >= 15:  margin_score -= 3   # 融資明顯增加
+    elif margin_chg_pct >=  8:  margin_score -= 1
+    elif margin_chg_pct <= -15: margin_score += 4   # 融資大減：弱手清倉，籌碼轉乾淨
+    elif margin_chg_pct <=  -8: margin_score += 2   # 融資縮減：散戶離場
+    if   short_margin_ratio >= 40: margin_score += 4   # 極高券資比：多頭被空頭壓制 → 潛在軋空
+    elif short_margin_ratio >= 25: margin_score += 2   # 中高券資比：空頭有壓力
+    elif short_margin_ratio <=  3 and margin_score >= 0: margin_score += 1  # 幾無空頭純多格局
+    margin_score = max(-5, min(5, margin_score))
+
     macro_adj  = max(-10, min(10, int(macro_bonus)))
     total = min(100, max(0, vol_score + mom_score + tech + kbar_score + cat_score
-                           + fi_bonus + streak_bonus + macro_adj))
+                           + fi_bonus + streak_bonus + trust_bonus + bo_score + macro_adj
+                           + margin_score))
 
     last_price = float(close.iloc[-1])
     atr        = calc_atr(df)
@@ -2423,8 +2666,18 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
         "ma5":           ma_info["ma5"],
         "ma20":          ma_info["ma20"],
         "ma60":          ma_info["ma60"],
+        "ma200":         ma_info.get("ma200"),
+        "sepa_count":    ma_info.get("sepa_count", 0),
         "w52_pos":       pos52w["position_pct"],
         "w52_label":     pos52w["label"],
+        "bo_type":       bo["type"],
+        "bo_label":      bo["label"],
+        "bo_pct_vs_high": bo["pct_vs_high"],
+        "bo_vol_surge":  bo["vol_surge"],
+        "trust_bonus":    trust_bonus,
+        "margin_score":   margin_score,
+        "margin_chg_pct": margin_chg_pct,
+        "short_margin_ratio": short_margin_ratio,
         "last_price":    last_price,
         "atr":          round(atr, 2),
         "target_pct":   target_pct,
@@ -2487,9 +2740,76 @@ def fetch_prices_batch(tickers: List[str], period: str = "3mo") -> Dict[str, pd.
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  基本面資料：營收 / 盈利 / 股東會評分
-#  Data source: yfinance .info (quarterly YoY figures, cached 24h)
+#  Data source: yfinance .info + quarterly_income_stmt (full quarterly statements)
 #  TWSE/MOPS opendata APIs return HTML errors — not usable from cloud servers.
 # ═══════════════════════════════════════════════════════════════════════════════
+
+def _parse_quarterly_stmt(stmt) -> Dict:
+    """
+    Extract scoring-ready metrics from yfinance quarterly_income_stmt DataFrame.
+    Returns subset of: rev_qoq, rev_yoy_q, gross_margin_latest, gm_trend, ni_yoy_q.
+    All fields are optional — absent when data is insufficient.
+    """
+    result: Dict = {}
+    try:
+        cols = sorted(stmt.columns, reverse=True)
+        if len(cols) < 2:
+            return result
+
+        def _row(label):
+            if label in stmt.index:
+                s = stmt.loc[label, cols].dropna()
+                return s if len(s) >= 2 else None
+            return None
+
+        rev = _row("Total Revenue") or _row("Operating Revenue")
+        gp  = _row("Gross Profit")
+        ni  = _row("Net Income")
+
+        if rev is None:
+            return result
+
+        rev_latest = float(rev.iloc[0])
+        rev_prev   = float(rev.iloc[1])
+
+        if rev_prev > 0:
+            result["rev_qoq"] = (rev_latest / rev_prev) - 1
+
+        if len(rev) >= 5:
+            base = float(rev.iloc[4])
+            if base > 0:
+                result["rev_yoy_q"] = (rev_latest / base) - 1
+
+        if gp is not None and rev_latest > 0:
+            gm_vals = []
+            for i in range(min(4, len(gp), len(rev))):
+                rv = float(rev.iloc[i])
+                gv = float(gp.iloc[i])
+                if rv > 0:
+                    gm_vals.append(gv / rv)
+            if gm_vals:
+                result["gross_margin_latest"] = gm_vals[0]
+                if len(gm_vals) >= 3:
+                    recent = sum(gm_vals[:2]) / 2
+                    prior  = sum(gm_vals[2:]) / len(gm_vals[2:])
+                    if   recent > prior + 0.015: result["gm_trend"] = "improving"
+                    elif recent < prior - 0.015: result["gm_trend"] = "declining"
+                    else:                        result["gm_trend"] = "stable"
+                elif len(gm_vals) >= 2:
+                    if   gm_vals[0] > gm_vals[1] + 0.015: result["gm_trend"] = "improving"
+                    elif gm_vals[0] < gm_vals[1] - 0.015: result["gm_trend"] = "declining"
+                    else:                                   result["gm_trend"] = "stable"
+
+        if ni is not None and len(ni) >= 5:
+            ni_latest = float(ni.iloc[0])
+            ni_base   = float(ni.iloc[4])
+            if ni_base > 0 and ni_latest > 0:
+                result["ni_yoy_q"] = (ni_latest / ni_base) - 1
+
+    except Exception:
+        pass
+    return result
+
 
 def fetch_yf_fundamentals_batch(tickers: List[str], max_workers: int = 6) -> Dict:
     """
@@ -2523,7 +2843,18 @@ def fetch_yf_fundamentals_batch(tickers: List[str], max_workers: int = 6) -> Dic
             t_pe  = info.get("trailingPE")
             f_pe  = info.get("forwardPE")
             peg   = info.get("pegRatio")
-            if rg is None and eg is None and t_eps is None:
+
+            q_data: Dict = {}
+            try:
+                buf2 = io.StringIO()
+                with contextlib.redirect_stdout(buf2), contextlib.redirect_stderr(buf2):
+                    stmt = t.quarterly_income_stmt
+                if stmt is not None and not stmt.empty:
+                    q_data = _parse_quarterly_stmt(stmt)
+            except Exception:
+                pass
+
+            if rg is None and eg is None and t_eps is None and not q_data:
                 return sym, {"yf_error": True}
             return sym, {
                 "rev_growth":    rg,
@@ -2535,6 +2866,7 @@ def fetch_yf_fundamentals_batch(tickers: List[str], max_workers: int = 6) -> Dic
                 "trailing_pe":   t_pe,
                 "forward_pe":    f_pe,
                 "peg_ratio":     peg,
+                **q_data,
             }
         except Exception:
             return sym, {}
@@ -2543,7 +2875,7 @@ def fetch_yf_fundamentals_batch(tickers: List[str], max_workers: int = 6) -> Dic
     # Submit all futures; collect completed ones within 60s wall time
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
         pending = {ex.submit(_one, t): t for t in tickers}
-        done, _ = wait(pending, timeout=60)
+        done, _ = wait(pending, timeout=90)
         for fut in done:
             try:
                 sym, d = fut.result()
@@ -2554,14 +2886,142 @@ def fetch_yf_fundamentals_batch(tickers: List[str], max_workers: int = 6) -> Dic
     return result
 
 
-def fetch_twse_monthly_revenue() -> Dict:
-    """Stub: TWSE opendata API returns HTML errors from cloud servers. Returns {}."""
-    return {}
+def fetch_twse_monthly_revenue() -> Dict[str, float]:
+    """
+    月營收年增率 from MOPS HTML (公開資訊觀測站)。
+    URL: https://mops.twse.com.tw/nas/t21/{market}/t21sc03_{ROC_YEAR}_{MONTH}_0.html
+    One request per market (sii/otc) gets ALL companies — far more efficient than per-ticker APIs.
+
+    Returns {ticker: yoy_pct}, e.g. {"2330.TW": 42.5, "2454.TW": 18.3}
+    Returns {} gracefully when MOPS is unreachable from cloud servers.
+
+    MOPS column layout (0-indexed):
+      0: 公司代號  1: 名稱  2: 當月營收  3: 上月  4: 去年同月
+      5: 月增%  6: 年增%  7: 累計  8: 去年累計  9: 累計年增%
+    """
+    from bs4 import BeautifulSoup
+    from datetime import timezone as _tz, timedelta as _td
+
+    tw_now = datetime.now(tz=_tz(_td(hours=8)))
+    # Revenue reports published by the 10th of each month; use prior month if < 10th
+    if tw_now.day < 10:
+        first_of_month = tw_now.replace(day=1)
+        target = (first_of_month - _td(days=1))
+    else:
+        target = tw_now
+
+    roc_year = target.year - 1911
+    month    = target.month
+    result: Dict[str, float] = {}
+
+    for market, suffix in (("sii", ".TW"), ("otc", ".TWO")):
+        url = (f"https://mops.twse.com.tw/nas/t21/{market}/"
+               f"t21sc03_{roc_year}_{month}_0.html")
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            if r.status_code != 200:
+                continue
+            r.encoding = "big5"
+            soup = BeautifulSoup(r.text, "lxml")
+            for table in soup.find_all("table"):
+                for row in table.find_all("tr"):
+                    cols = row.find_all("td")
+                    if len(cols) < 7:
+                        continue
+                    code = cols[0].get_text(strip=True)
+                    if not code.isdigit() or len(code) != 4:
+                        continue
+                    yoy_raw = cols[6].get_text(strip=True).replace(",", "").replace("+", "")
+                    try:
+                        result[code + suffix] = float(yoy_raw)
+                    except (ValueError, TypeError):
+                        pass
+        except Exception:
+            pass
+    return result
 
 
 def fetch_tpex_monthly_revenue() -> Dict:
-    """Stub: TPEx opendata API unavailable from cloud servers. Returns {}."""
+    """TPEx monthly revenue is included in fetch_twse_monthly_revenue() (otc market). Returns {}."""
     return {}
+
+
+def fetch_twse_margin_balance() -> Dict[str, Dict]:
+    """
+    融資融券餘額 from TWSE MI_MARGN — one request, all listed stocks.
+    URL: https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=YYYYMMDD&selectType=ALL&response=json
+
+    Key signals:
+      margin_chg_pct   — 融資今日/前日比% (>+15% = 散戶追高 → negative; <-10% = 弱手出清 → positive)
+      short_margin_ratio — 融券/融資 × 100% (>30% = 潛在軋空 → positive)
+
+    Returns {ticker: {margin_bal, margin_prev, short_bal, margin_chg_pct, short_margin_ratio}}
+    Returns {} gracefully on failure (holiday / geo-block).
+    """
+    from datetime import timezone as _tz, timedelta as _td
+
+    tw_now = datetime.now(tz=_tz(_td(hours=8)))
+    result: Dict[str, Dict] = {}
+
+    def _n(v) -> int:
+        s = str(v).strip().replace(",", "").replace("+", "").replace(" ", "")
+        return 0 if s in ("", "-", "--", "X") else int(round(float(s))) if s.replace(".", "").replace("-", "").isdigit() else 0
+
+    for day_offset in range(6):
+        d = tw_now - _td(days=day_offset)
+        if d.weekday() >= 5:
+            continue
+        url = (f"https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN"
+               f"?date={d.strftime('%Y%m%d')}&selectType=ALL&response=json")
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            if r.status_code != 200:
+                continue
+            j = r.json()
+            if j.get("stat") != "OK":
+                continue
+            tables = j.get("tables", [])
+            # Pick the individual-stock detail table (most rows, 4-digit codes, ≥14 cols)
+            best = None
+            for t in tables:
+                rows = t.get("data", [])
+                fields = t.get("fields", [])
+                if not rows or len(fields) < 12:
+                    continue
+                sample = sum(1 for row in rows[:20]
+                             if row and len(str(row[0]).strip()) == 4 and str(row[0]).strip().isdigit())
+                if sample >= 5:
+                    if best is None or len(rows) > len(best.get("data", [])):
+                        best = t
+            if best is None:
+                continue
+            # Typical column layout (0-indexed):
+            # 0=代號 1=名稱 | 融資: 2買 3賣 4現償 5前餘 6今餘 7限額 | 融券: 8買 9賣 10現償 11前餘 12今餘 13限額
+            for row in best.get("data", []):
+                if len(row) < 13:
+                    continue
+                code = str(row[0]).strip()
+                if len(code) != 4 or not code.isdigit() or code.startswith("00"):
+                    continue
+                m_today = _n(row[6])
+                m_prev  = _n(row[5])
+                s_today = _n(row[12])
+                if m_today <= 0 and s_today <= 0:
+                    continue
+                margin_chg_pct     = round((m_today - m_prev) / m_prev * 100, 1) if m_prev > 0 else 0.0
+                short_margin_ratio = round(s_today / m_today * 100, 1) if m_today > 0 else 0.0
+                result[code + ".TW"] = {
+                    "margin_bal":          m_today,
+                    "margin_prev":         m_prev,
+                    "short_bal":           s_today,
+                    "margin_chg_pct":      margin_chg_pct,
+                    "short_margin_ratio":  short_margin_ratio,
+                }
+            if result:
+                return result
+        except Exception:
+            continue
+    return result
 
 
 def fetch_twse_shareholder_meetings() -> Dict:
@@ -2860,6 +3320,47 @@ def calc_fundamental_bonus(ticker: str, fund_map: Dict, meeting_map: Dict) -> Di
             if   peg < 0.8: bonus += 3; labels.append(f"PEG {peg:.1f} \u4f4e\u4f30")
             elif peg > 3.0: bonus -= 2
 
+        # -- \u6708\u71df\u6536\u5e74\u589e\u7387 (MOPS \u6700\u5373\u6642\u4fe1\u865f \u2014 \u6bd4\u5b63\u5831\u5feb2\u500b\u6708) --
+        monthly_yoy = fund.get("monthly_rev_yoy")
+        if monthly_yoy is not None:
+            if   monthly_yoy >= 50: bonus += 8; labels.append(f"\u6708\u71df\u6536\u5e74\u589e +{monthly_yoy:.0f}% \U0001f680")
+            elif monthly_yoy >= 30: bonus += 6; labels.append(f"\u6708\u71df\u6536\u5e74\u589e +{monthly_yoy:.0f}%")
+            elif monthly_yoy >= 15: bonus += 4; labels.append(f"\u6708\u71df\u6536\u5e74\u589e +{monthly_yoy:.0f}%")
+            elif monthly_yoy >=  5: bonus += 2
+            elif monthly_yoy >= -10: bonus -= 2
+            elif monthly_yoy >= -20: bonus -= 4
+            else:                    bonus -= 6; labels.append(f"\u6708\u71df\u6536\u5e74\u6e1b {monthly_yoy:.0f}% \u26a0\ufe0f")
+
+        # -- Quarterly gross margin trend (from quarterly_income_stmt) --
+        gm_trend  = fund.get("gm_trend")
+        gm_latest = fund.get("gross_margin_latest")
+        if gm_trend == "improving":
+            bonus += 4
+            _gm_s = f" {gm_latest*100:.1f}%" if gm_latest else ""
+            labels.append(f"\u6bdb\u5229\u7387\u64f4\u5f35\u2191{_gm_s}")
+        elif gm_trend == "declining":
+            bonus -= 3
+            labels.append("\u6bdb\u5229\u7387\u6536\u7e2e\u2193 \u26a0\ufe0f")
+
+        # -- Quarterly revenue QoQ (sequential acceleration signal) --
+        rev_qoq = fund.get("rev_qoq")
+        if rev_qoq is not None:
+            if   rev_qoq >= 0.20: bonus += 5; labels.append(f"\u5b63\u71df\u6536\u74b0\u6bd4 +{rev_qoq*100:.0f}% \U0001f680")
+            elif rev_qoq >= 0.10: bonus += 3; labels.append(f"\u5b63\u71df\u6536\u74b0\u6bd4 +{rev_qoq*100:.0f}%")
+            elif rev_qoq >= 0.05: bonus += 1
+            elif rev_qoq <= -0.20: bonus -= 4; labels.append(f"\u5b63\u71df\u6536\u74b0\u6bd4 {rev_qoq*100:.0f}% \u26a0\ufe0f")
+            elif rev_qoq <= -0.10: bonus -= 2
+
+        # -- Quarterly net income YoY (fills gap when earningsGrowth unavailable) --
+        ni_yoy_q = fund.get("ni_yoy_q")
+        if ni_yoy_q is not None and eg is None:
+            earn_yoy = ni_yoy_q * 100
+            if   ni_yoy_q >= 0.80: bonus += 7; labels.append(f"\u6de8\u5229\u5e74\u589e +{earn_yoy:.0f}% \U0001f4b0")
+            elif ni_yoy_q >= 0.40: bonus += 5; labels.append(f"\u6de8\u5229\u5e74\u589e +{earn_yoy:.0f}%")
+            elif ni_yoy_q >= 0.20: bonus += 3; labels.append(f"\u6de8\u5229\u5e74\u589e +{earn_yoy:.0f}%")
+            elif ni_yoy_q >= 0.00: bonus += 1
+            elif ni_yoy_q <= -0.20: bonus -= 4; labels.append(f"\u6de8\u5229\u5e74\u6e1b {earn_yoy:.0f}% \u26a0\ufe0f")
+
     # -- Shareholder meetings (API unavailable) --
     code = ticker.replace(".TW", "").replace(".TWO", "")
     days = meeting_map.get(code)
@@ -2869,15 +3370,18 @@ def calc_fundamental_bonus(ticker: str, fund_map: Dict, meeting_map: Dict) -> Di
         elif days <= 60: bonus += 2; labels.append(f"\u80a1\u6771\u6703 {days}\u65e5\u5f8c")
 
     return {
-        "bonus":        max(-15, min(30, bonus)),
-        "labels":       labels[:4],
-        "rev_yoy":      rev_yoy,
-        "earn_yoy":     earn_yoy,
-        "trailing_eps": fund.get("trailing_eps") if (fund and not yf_error) else None,
-        "forward_eps":  fund.get("forward_eps")  if (fund and not yf_error) else None,
-        "forward_pe":   fund.get("forward_pe")   if (fund and not yf_error) else None,
-        "peg_ratio":    fund.get("peg_ratio")     if (fund and not yf_error) else None,
-        "yf_error":     yf_error,
+        "bonus":               max(-15, min(40, bonus)),
+        "labels":              labels[:4],
+        "rev_yoy":             rev_yoy,
+        "earn_yoy":            earn_yoy,
+        "trailing_eps":        fund.get("trailing_eps")        if (fund and not yf_error) else None,
+        "forward_eps":         fund.get("forward_eps")         if (fund and not yf_error) else None,
+        "forward_pe":          fund.get("forward_pe")          if (fund and not yf_error) else None,
+        "peg_ratio":           fund.get("peg_ratio")           if (fund and not yf_error) else None,
+        "gross_margin_latest": fund.get("gross_margin_latest") if (fund and not yf_error) else None,
+        "gm_trend":            fund.get("gm_trend")            if (fund and not yf_error) else None,
+        "rev_qoq":             fund.get("rev_qoq")             if (fund and not yf_error) else None,
+        "yf_error":            yf_error,
     }
 
 
