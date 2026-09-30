@@ -3717,6 +3717,53 @@ _freshness_col  = "#00c853" if _is_mkt_open else "#555"
 _freshness_icon = "🟢" if _is_mkt_open else "⚫"
 _live_rsi_note  = "　●　已套用即時RSI" if _is_mkt_open else ""
 
+# ── 早安精選 banner (from morning_picks.json generated at 08:30 by remote CCR) ──
+import json as _json_mod, os as _os_mod
+_mp_path = _os_mod.path.join(_os_mod.path.dirname(_os_mod.path.abspath(__file__)), "data", "morning_picks.json")
+_mp = {}
+try:
+    with open(_mp_path, encoding="utf-8") as _mpf:
+        _mp = _json_mod.load(_mpf)
+except Exception:
+    pass
+_mp_today = _mp.get("date", "") == _now_tw().strftime("%Y-%m-%d")
+if _mp_today and _mp.get("top_picks"):
+    _mp_mkt = _mp.get("market_direction", {})
+    _mp_penalty = _mp_mkt.get("penalty", 0)
+    _mp_mkt_color = "#ef5350" if _mp_penalty <= -20 else ("#ffd54f" if _mp_penalty < 0 else "#69f0ae")
+    _mp_picks_html = ""
+    for _i, _pk in enumerate(_mp["top_picks"][:5], 1):
+        _pk_code = _pk["ticker"].replace(".TW","").replace(".TWO","")
+        _pk_labels = " · ".join(_pk.get("labels", [])[:2])
+        _afford = f"NT$10,000≈{_pk['affordability']}股" if _pk.get("affordability", 0) > 0 else ""
+        _mp_picks_html += (
+            f'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;'
+            f'border-bottom:1px solid #1a2035;font-size:12px">'
+            f'<span style="color:#555;min-width:16px">#{_i}</span>'
+            f'<span style="color:#ffd54f;font-weight:700;min-width:60px">{_pk_code} {_pk["name"]}</span>'
+            f'<span style="background:#1a3a5c;color:#7eb3ff;border-radius:4px;'
+            f'padding:1px 6px;font-size:11px">{_pk["score"]}分</span>'
+            f'<span style="color:#aaa">NT${_pk["last_price"]:,.0f}</span>'
+            f'<span style="color:#555">RSI {_pk["rsi"]}</span>'
+            f'<span style="color:#888;font-size:11px">{_pk_labels}</span>'
+            f'<span style="color:#444;margin-left:auto;font-size:11px">{_afford}</span>'
+            f'</div>'
+        )
+    st.markdown(
+        f'<div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:8px;'
+        f'padding:10px 14px;margin-bottom:12px">'
+        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+        f'<span style="font-size:13px;color:#69f0ae;font-weight:700">☀️ 早安精選</span>'
+        f'<span style="font-size:11px;color:#555">{_mp["generated_at"]} 自動分析</span>'
+        f'<span style="background:#1a2a1a;color:{_mp_mkt_color};border-radius:4px;'
+        f'padding:1px 8px;font-size:11px;margin-left:auto">'
+        f'大盤 {_mp_mkt.get("label","")}</span>'
+        f'</div>'
+        f'{_mp_picks_html}'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
 st.markdown(
     "## ✅ 今日可進場股　"
     "<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>"
