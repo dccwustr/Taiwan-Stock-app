@@ -1153,6 +1153,97 @@ def build_trading_plan(sres: dict, sr: dict) -> dict:
     }
 
 
+def build_longterm_plan(sres: dict, sr: dict) -> dict:
+    """
+    長期持有（5-10年）四階段計劃，適合零股小資戶分批建倉
+    ① 建倉前評估  ② 零股建倉策略  ③ 持倉管理  ④ 停利/停損準則
+    與 build_trading_plan 的短線版本不同：以月/季為單位，強調複利累積
+    """
+    last   = sres.get("last_price", 0.0)
+    atr    = sres.get("atr", last * 0.02) or last * 0.02
+    score  = sres.get("score", 50)
+    rsi    = sres.get("rsi", 50)
+    stage  = sres.get("stage", 1)
+    ma20   = sres.get("ma20", last)
+    ma60   = sres.get("ma60", last)
+    ma200  = sres.get("ma200")
+    sepa   = sres.get("sepa_count", 0)
+    mom20d = sres.get("mom20d", 0)
+    vr     = sres.get("vol_ratio", 1.0)
+    bo_type= sres.get("bo_type", "none")
+    s1     = sr.get("S1", round(last * 0.97, 1))
+    s2     = sr.get("S2", round(last * 0.94, 1))
+    r1     = sr.get("R1", round(last * 1.03, 1))
+    fib618 = sr.get("fib_618", round(last * 0.95, 1))
+    fib50  = sr.get("fib_50",  round(last * 0.97, 1))
+    pivot  = sr.get("pivot", last)
+
+    # ① 建倉前評估
+    if stage == 4:
+        assess = (f"⛔ 空頭排列（Stage 4）——目前不宜建倉，等股價站回 MA60（NT${ma60:.1f}）且趨勢轉平，"
+                  f"才是長期佈局開始的訊號。急著在下跌趨勢中買進，複利起點會虧損。")
+    elif stage == 2 and sepa >= 4:
+        assess = (f"✅ 多頭強勢（Stage 2 + SEPA {sepa}/5）——現在是理想的長期建倉視窗。"
+                  f"MA200={f'NT${ma200:.1f}' if ma200 else '—'}，股價站穩均線之上，趨勢確立。"
+                  f"可啟動零股月定投。")
+    elif stage in (1, 2):
+        assess = (f"🟡 偏多整理中（Stage {stage}）——基本面進入觀察期，可小量試探建倉。"
+                  f"建議先買目標倉位的 20-30%，等 MA20 站穩後再加碼。")
+    else:
+        assess = (f"⚠️ 趨勢不明確——建議先觀察 1-2 個月。"
+                  f"等均線多頭排列（MA5>MA20>MA60）才正式啟動建倉計劃。")
+
+    # ② 零股建倉策略
+    shares_10k = int(10000 / last) if last > 0 else 0
+    shares_10k_str = f"約 {shares_10k} 股" if shares_10k > 0 else "股價過高，考慮更小單位"
+    if rsi <= 55 and stage in (1, 2):
+        accumulate = (f"現在可開始第一批零股：每月 NT$3,000-5,000 分批買入（NT$10,000 可買 {shares_10k_str}）。"
+                      f"逢回測 Fib 61.8%（NT${fib618}）或 S1（NT${s1}）可加碼 1-2 倍月定投量。"
+                      f"目標：6 個月內建立完整倉位。")
+    elif rsi >= 70:
+        accumulate = (f"RSI {rsi:.0f} 偏熱，短期追高風險高。建議暫緩首批，等回落至 RSI<60 再啟動。"
+                      f"若已持有，維持現有倉位即可，暫停加碼。"
+                      f"回測 NT${fib50}（Fib 50%）或 MA20（NT${ma20:.1f}）後再啟動定投。")
+    else:
+        accumulate = (f"可小量起步（每月 NT$2,000-3,000 定投）：NT$10,000 可買 {shares_10k_str}。"
+                      f"在 S1（NT${s1}）到 S2（NT${s2}）之間逢低加大買入量，高過 R1（NT${r1}）時"
+                      f"暫緩加碼。以季度（每3個月）回顧一次佈局進度。")
+
+    # ③ 持倉管理
+    if ma200 and last > ma200:
+        hold_mgmt = (f"股價站穩 MA200（NT${ma200:.1f}）之上——多頭確認，持倉不動。"
+                     f"每季檢視：若連續3個月月營收 YoY 轉負或外資連續賣超 10 日，考慮減倉 1/3。"
+                     f"否則讓複利自行運作，不因短期波動操作。")
+    elif stage == 2:
+        hold_mgmt = (f"多頭排列中，持倉策略：跌破 MA60（NT${ma60:.1f}）以上可加碼，"
+                     f"跌破 MA60 超過 5% 暫停加碼，等趨勢確認後再恢復定投。"
+                     f"持有期間每季確認一次基本面（EPS 成長、本業獲利）是否如預期。")
+    else:
+        hold_mgmt = (f"持倉管理原則：以 MA20（NT${ma20:.1f}）為分界線，站上持有，跌破暫停定投。"
+                     f"每月第一個週一檢視一次：確認 RSI 沒有連續 2 個月 < 35（系統性風險訊號）。"
+                     f"每半年重新評估公司基本面與行業地位。")
+
+    # ④ 停利/停損準則
+    stop_lt = round(last * 0.85, 1)   # 15% from current for long-term
+    target_3y = round(last * 2.0, 1)  # 100% 3-year target as rough benchmark
+    if score >= 75:
+        exit_rules = (f"停利：達 +50%（NT${round(last*1.5,1)}）賣出 1/3，達 +100%（NT${target_3y}）再賣 1/3，"
+                      f"剩餘長期持有。停損：若基本面惡化（連續兩季 EPS 大幅下滑）"
+                      f"+ 股價跌破 MA200 後 2 週未回，才考慮全面出場。"
+                      f"技術止損線：NT${stop_lt}（−15%）。")
+    else:
+        exit_rules = (f"停利：達 +30%（NT${round(last*1.3,1)}）先出一半，等基本面確認後再決定其餘。"
+                      f"停損：跌破買入均價 15%（NT${stop_lt}），或基本面出現重大惡化時出場。"
+                      f"長期標的最忌頻繁進出——除非基本面故事改變，否則以持有為主。")
+
+    return {
+        "pre_market": assess,
+        "opening":    accumulate,
+        "intraday":   hold_mgmt,
+        "closing":    exit_rules,
+    }
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  新聞抓取
 # ═══════════════════════════════════════════════════════════════════════════════

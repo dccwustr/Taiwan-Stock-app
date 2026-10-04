@@ -120,6 +120,8 @@ try:
         fetch_twse_margin_balance,
         ai_pick_of_day,
         ai_longterm_picks,
+        build_longterm_plan,
+        calc_support_resistance,
     )
 except Exception as _widget_err:
     import traceback as _tb
@@ -2426,6 +2428,55 @@ def _build_trading_plan_html(p: dict) -> str:
     )
 
 
+def _build_longterm_plan_html(p: dict) -> str:
+    """長期持有版分析 HTML：S/R 區 + 建倉前評估 / 零股建倉策略 / 持倉管理 / 停利停損"""
+    plan = p.get("lt_plan") or p.get("plan") or {}
+    sr   = p.get("sr") or {}
+
+    if not plan:
+        return ""
+
+    def phase(icon, title, body, color="#90caf9"):
+        return (
+            f'<div style="margin-bottom:10px">'
+            f'<div style="font-size:12px;font-weight:700;color:{color};margin-bottom:3px">'
+            f'{icon} {title}</div>'
+            f'<div style="font-size:12px;color:#ccc;line-height:1.6">{body}</div>'
+            f'</div>'
+        )
+
+    pivot = sr.get("pivot", 0)
+    r1, r2 = sr.get("R1", 0), sr.get("R2", 0)
+    s1, s2 = sr.get("S1", 0), sr.get("S2", 0)
+    f618 = sr.get("fib_618", 0)
+    f50  = sr.get("fib_50", 0)
+    f382 = sr.get("fib_382", 0)
+    sh20 = sr.get("swing_high_20d", 0)
+    sl20 = sr.get("swing_low_20d", 0)
+
+    sr_html = (
+        f'<div style="background:#0a1020;border-radius:6px;padding:8px 12px;margin-bottom:10px">'
+        f'<div style="font-size:11px;font-weight:700;color:#7eb3ff;margin-bottom:6px">📐 支撐與壓力區（長線建倉參考）</div>'
+        f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:11px">'
+        f'<div style="color:#ef5350">壓力 R1 <b>NT${r1}</b>　R2 <b>NT${r2}</b></div>'
+        f'<div style="color:#00c853">支撐 S1 <b>NT${s1}</b>　S2 <b>NT${s2}</b></div>'
+        f'<div style="color:#ffd54f">Fib 61.8% <b>NT${f618}</b>（強支撐/建倉區）　50% <b>NT${f50}</b>　38.2% <b>NT${f382}</b></div>'
+        f'<div style="color:#90caf9">樞紐點 PP <b>NT${pivot}</b>　52週擺動高 <b>NT${sh20}</b>／低 <b>NT${sl20}</b></div>'
+        f'</div>'
+        f'</div>'
+    )
+
+    return (
+        f'<div style="padding:4px 0">'
+        + sr_html
+        + phase("🔍", "建倉前評估", plan.get("pre_market", ""), "#90caf9")
+        + phase("📦", "零股建倉策略", plan.get("opening", ""), "#69f0ae")
+        + phase("📋", "持倉管理", plan.get("intraday", ""), "#ffd54f")
+        + phase("🎯", "停利 / 停損準則", plan.get("closing", ""), "#ef9a9a")
+        + f'</div>'
+    )
+
+
 def render_query_card(ticker, sres, live_d, key_sfx, flow: dict = None):
     sc        = sres["score"]
     bar_color = conf_color(sc)
@@ -3392,7 +3443,6 @@ def render_category_cards(picks, prices, show_chart):
 @st.fragment(run_every="300s")
 def render_future_giants(prices: dict):
     """Auto-refreshes every 5 min to update live prices on the Future Giants view."""
-    all_html = ""
     for _fg_ticker, _fg_meta in FUTURE_GIANTS_UNIVERSE.items():
         _df = prices.get(_fg_ticker)
         _fg_price = _fg_chg = 0.0
@@ -3400,8 +3450,21 @@ def render_future_giants(prices: dict):
             _fg_price = float(_df["Close"].iloc[-1])
             _fg_prev  = float(_df["Close"].iloc[-2])
             _fg_chg   = (_fg_price - _fg_prev) / _fg_prev * 100 if _fg_prev > 0 else 0.0
-        all_html += _build_future_card(_fg_ticker, _fg_meta, _fg_price, _fg_chg)
-    st.markdown(all_html, unsafe_allow_html=True)
+        st.markdown(_build_future_card(_fg_ticker, _fg_meta, _fg_price, _fg_chg), unsafe_allow_html=True)
+
+        # ── Technical analysis for long-term stocks ───────────────────────────
+        if _df is not None and len(_df) >= 22:
+            try:
+                _fg_sres = score_stock(_fg_ticker, _df, catalyst_bonus=0, foreign_net=0)
+                if _fg_sres:
+                    _fg_sres["lt_plan"] = build_longterm_plan(_fg_sres, _fg_sres.get("sr", {}))
+                    _tc = _fg_ticker.replace(".TW", "").replace(".TWO", "")
+                    with st.expander(f"📊 {_tc} 技術分析 + 長期建倉計劃（點擊展開）", expanded=False):
+                        sig_html = _build_signal_badge(_fg_sres)
+                        plan_html = _build_longterm_plan_html(_fg_sres)
+                        st.markdown(sig_html + plan_html, unsafe_allow_html=True)
+            except Exception:
+                pass
 
 
 # ── Main view: Category Picks ─────────────────────────────────────────────────
@@ -4400,6 +4463,25 @@ with st.expander("🌱 長期潛力股・AI 論點分析（每日更新一次）
                     f'</div>',
                     unsafe_allow_html=True,
                 )
+                # ── Technical analysis expander for each AI pick ──────────────
+                _lt_sres = next((r for r in scored if r.get("ticker") == _ticker), None)
+                if _lt_sres:
+                    try:
+                        _lt_sres_copy = dict(_lt_sres)
+                        if not _lt_sres_copy.get("sr"):
+                            _lt_df = prices.get(_ticker)
+                            if _lt_df is not None and len(_lt_df) >= 20:
+                                _lt_sres_copy["sr"] = calc_support_resistance(_lt_df)
+                        _lt_sres_copy["lt_plan"] = build_longterm_plan(
+                            _lt_sres_copy, _lt_sres_copy.get("sr", {}))
+                        with st.expander(f"📊 {_code} 技術分析 + 長期建倉計劃（點擊展開）", expanded=False):
+                            st.markdown(
+                                _build_signal_badge(_lt_sres_copy)
+                                + _build_longterm_plan_html(_lt_sres_copy),
+                                unsafe_allow_html=True,
+                            )
+                    except Exception:
+                        pass
             _portfolio_note = _lt_result.get("portfolio_note", "")
             if _portfolio_note:
                 st.caption(f"📊 組合建議：{_portfolio_note}")
