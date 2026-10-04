@@ -849,6 +849,310 @@ def calc_kbar_pattern(df: pd.DataFrame) -> Tuple[int, str]:
         return -1, "陰線（無特定形態）"
     return 0, "十字線"
 
+
+def calc_support_resistance(df: pd.DataFrame) -> dict:
+    """
+    支撐與壓力區計算
+    1. 標準樞紐點（Pivot Points）：前日 H/L/C → PP, R1~R3, S1~S3
+    2. 近20日擺動高低（Swing High/Low）
+    3. 費波那契回撤（52週高低區間）
+    """
+    empty = {"pivot": 0.0, "R1": 0.0, "R2": 0.0, "R3": 0.0,
+             "S1": 0.0, "S2": 0.0, "S3": 0.0,
+             "fib_618": 0.0, "fib_50": 0.0, "fib_382": 0.0,
+             "swing_high_20d": 0.0, "swing_low_20d": 0.0}
+    if len(df) < 20:
+        return empty
+
+    prev_h = float(df["High"].iloc[-2])
+    prev_l = float(df["Low"].iloc[-2])
+    prev_c = float(df["Close"].iloc[-2])
+    if prev_h == 0:
+        return empty
+
+    pivot = (prev_h + prev_l + prev_c) / 3
+    r1 = 2 * pivot - prev_l
+    r2 = pivot + (prev_h - prev_l)
+    r3 = prev_h + 2 * (pivot - prev_l)
+    s1 = 2 * pivot - prev_h
+    s2 = pivot - (prev_h - prev_l)
+    s3 = prev_l - 2 * (prev_h - pivot)
+
+    n52 = min(252, len(df))
+    high_52 = float(df["High"].tail(n52).max())
+    low_52  = float(df["Low"].tail(n52).min())
+    fib_rng = high_52 - low_52
+    fib_618 = high_52 - fib_rng * 0.618
+    fib_50  = high_52 - fib_rng * 0.500
+    fib_382 = high_52 - fib_rng * 0.382
+
+    swing_h = float(df["High"].tail(20).max())
+    swing_l = float(df["Low"].tail(20).min())
+
+    return {
+        "pivot":         round(pivot, 1),
+        "R1":            round(r1, 1),
+        "R2":            round(r2, 1),
+        "R3":            round(r3, 1),
+        "S1":            round(s1, 1),
+        "S2":            round(s2, 1),
+        "S3":            round(s3, 1),
+        "fib_618":       round(fib_618, 1),
+        "fib_50":        round(fib_50, 1),
+        "fib_382":       round(fib_382, 1),
+        "swing_high_20d": round(swing_h, 1),
+        "swing_low_20d":  round(swing_l, 1),
+    }
+
+
+def calc_trading_signal(sres: dict) -> dict:
+    """
+    綜合買進/持有/賣出訊號
+    聚合：信心指數、RSI、KD、布林通道、Weinstein Stage、OBV、突破
+    回傳：signal(BUY/HOLD/SELL), confidence(0-100), reasons(list)
+    """
+    score   = sres.get("score", 0)
+    rsi     = sres.get("rsi", 50)
+    kd_sig  = sres.get("kd_signal", "neutral")
+    bb_sig  = sres.get("bb_signal", "neutral")
+    bb_sq   = sres.get("bb_squeeze", False)
+    stage   = sres.get("stage", 1)
+    obv     = sres.get("obv_trend", "flat")
+    bo_type = sres.get("bo_type", "none")
+    sepa    = sres.get("sepa_count", 0)
+    mom20d  = sres.get("mom20d", 0)
+    fi_stk  = sres.get("trust_bonus", 0)   # 投信連買最強信號
+
+    buy_cnt = 0
+    sell_cnt = 0
+    reasons: List[str] = []
+
+    # ── 信心指數 ─────────────────────────────────────────────────────────────
+    if score >= 78:
+        buy_cnt += 2;  reasons.append(f"信心指數 {score}/100 強勢")
+    elif score >= 62:
+        buy_cnt += 1;  reasons.append(f"信心指數 {score}/100 偏多")
+    elif score < 45:
+        sell_cnt += 2; reasons.append(f"信心指數 {score}/100 偏弱")
+
+    # ── RSI ─────────────────────────────────────────────────────────────────
+    if 40 <= rsi <= 68:
+        buy_cnt += 1;  reasons.append(f"RSI {rsi:.0f} 甜蜜進場區")
+    elif rsi >= 78:
+        sell_cnt += 2; reasons.append(f"RSI {rsi:.0f} 嚴重超買")
+    elif rsi >= 72:
+        sell_cnt += 1; reasons.append(f"RSI {rsi:.0f} 偏熱追高風險")
+    elif rsi <= 30:
+        sell_cnt += 1; reasons.append(f"RSI {rsi:.0f} 超賣仍在下跌")
+
+    # ── KD ──────────────────────────────────────────────────────────────────
+    if kd_sig == "golden_cross_oversold":
+        buy_cnt += 2;  reasons.append("KD 超賣黃金交叉（最強買點）")
+    elif kd_sig == "golden_cross":
+        buy_cnt += 1;  reasons.append("KD 黃金交叉")
+    elif kd_sig == "death_cross_overbought":
+        sell_cnt += 2; reasons.append("KD 超買死亡交叉（最強賣點）")
+    elif kd_sig == "death_cross":
+        sell_cnt += 1; reasons.append("KD 死亡交叉")
+
+    # ── 布林通道 ─────────────────────────────────────────────────────────────
+    if bb_sig == "buy_zone":
+        buy_cnt += 1;  reasons.append("布林下軌買入區")
+    elif bb_sig in ("breakout",) or bb_sq:
+        buy_cnt += 1;  reasons.append("布林帶壓縮突破")
+    elif bb_sig == "overbought":
+        sell_cnt += 1; reasons.append("布林上軌超買")
+
+    # ── Weinstein Stage ──────────────────────────────────────────────────────
+    if stage == 2:
+        buy_cnt += 1;  reasons.append("Stage 2 多頭排列")
+    elif stage == 4:
+        sell_cnt += 2; reasons.append("Stage 4 空頭排列")
+
+    # ── 52週突破 ─────────────────────────────────────────────────────────────
+    if bo_type in ("confirmed", "near"):
+        buy_cnt += 2;  reasons.append("52週高點突破確認")
+
+    # ── OBV 量價 ─────────────────────────────────────────────────────────────
+    if obv == "diverge_up":
+        buy_cnt += 1;  reasons.append("OBV 量增機構悄悄吸貨")
+    elif obv == "falling":
+        sell_cnt += 1; reasons.append("OBV 量縮機構出清")
+
+    # ── 投信連買 ─────────────────────────────────────────────────────────────
+    if fi_stk >= 5:
+        buy_cnt += 1;  reasons.append("投信連買 5+ 天")
+
+    # ── 判斷訊號 ─────────────────────────────────────────────────────────────
+    net = buy_cnt - sell_cnt
+    if buy_cnt >= 5 or (net >= 3 and score >= 62):
+        signal = "BUY"
+        confidence = min(95, 55 + buy_cnt * 7)
+    elif sell_cnt >= 4 or (net <= -3 and score < 52):
+        signal = "SELL"
+        confidence = min(92, 55 + sell_cnt * 7)
+    else:
+        signal = "HOLD"
+        confidence = 45 + abs(net) * 5
+
+    return {
+        "signal":     signal,
+        "confidence": int(confidence),
+        "buy_cnt":    buy_cnt,
+        "sell_cnt":   sell_cnt,
+        "reasons":    reasons[:5],
+    }
+
+
+def calc_strategy_stats(df: pd.DataFrame, hold_days: int = 5) -> dict:
+    """
+    策略回測統計（向量化，快速）
+    訊號：RSI 40-70 且 MACD 柱線正 且 收盤 > MA20
+    正向回報：hold_days 後收盤價 > 進場價
+    回傳：win_rate(%), profit_factor, max_drawdown(%), total_trades
+    """
+    empty = {"win_rate": 0.0, "profit_factor": 0.0,
+             "max_drawdown": 0.0, "total_trades": 0}
+    if len(df) < 50:
+        return empty
+
+    close = df["Close"].astype(float)
+    high  = df["High"].astype(float)
+
+    # 向量化指標
+    delta    = close.diff()
+    up_s     = delta.clip(lower=0).ewm(alpha=1/14, min_periods=14).mean()
+    dn_s     = (-delta).clip(lower=0).ewm(alpha=1/14, min_periods=14).mean()
+    rsi_s    = 100 - 100 / (1 + up_s / dn_s.replace(0, 1e-10))
+    ema12    = close.ewm(span=12, adjust=False).mean()
+    ema26    = close.ewm(span=26, adjust=False).mean()
+    macd_h   = (ema12 - ema26) - (ema12 - ema26).ewm(span=9, adjust=False).mean()
+    ma20     = close.rolling(20).mean()
+
+    # 訊號：RSI 40-70, MACD > 0, 收盤 > MA20（無訊號重疊：取第一根）
+    raw_sig  = rsi_s.between(40, 70) & (macd_h > 0) & (close > ma20)
+    # 避免連續訊號重疊（keep only new entries after hold_days gap）
+    entries  = raw_sig & ~raw_sig.shift(1, fill_value=False)
+
+    fwd_ret  = close.shift(-hold_days) / close - 1
+    ret_vals = fwd_ret[entries].dropna()
+    if len(ret_vals) < 3:
+        return empty
+
+    wins   = ret_vals[ret_vals > 0]
+    losses = ret_vals[ret_vals <= 0]
+    win_rate = len(wins) / len(ret_vals)
+
+    avg_win  = float(wins.mean())          if len(wins)   > 0 else 0.0
+    avg_loss = abs(float(losses.mean()))   if len(losses) > 0 else 1e-6
+    n_win    = len(wins)
+    n_loss   = len(losses)
+    pf       = (avg_win * n_win) / (avg_loss * n_loss + 1e-10) if n_loss > 0 else min(avg_win * n_win / 1e-4, 9.99)
+
+    eq   = (1 + ret_vals.clip(lower=-0.15)).cumprod()
+    peak = eq.cummax()
+    dd   = float(((peak - eq) / peak).max())
+
+    return {
+        "win_rate":      round(win_rate * 100, 1),
+        "profit_factor": round(min(float(pf), 9.99), 2),
+        "max_drawdown":  round(dd * 100, 1),
+        "total_trades":  int(len(ret_vals)),
+    }
+
+
+def build_trading_plan(sres: dict, sr: dict) -> dict:
+    """
+    四階段交易計劃
+    ① 盤前掃描  ② 開牌策略  ③ 盤中調整  ④ 收盤策略
+    """
+    last   = sres.get("last_price", 0.0)
+    atr    = sres.get("atr", last * 0.02) or last * 0.02
+    score  = sres.get("score", 50)
+    rsi    = sres.get("rsi", 50)
+    stage  = sres.get("stage", 1)
+    ma5    = sres.get("ma5", last)
+    ma20   = sres.get("ma20", last)
+    ma60   = sres.get("ma60", last)
+    target = sres.get("target_price", round(last * 1.05, 1))
+    stop   = sres.get("stop_loss", round(last - 1.5 * atr, 1))
+    tgt_pct= sres.get("target_pct", 5.0)
+    mom1d  = sres.get("mom1d", 0.0)
+    vr     = sres.get("vol_ratio", 1.0)
+    bo_type= sres.get("bo_type", "none")
+    kd_sig = sres.get("kd_signal", "neutral")
+    s1     = sr.get("S1", round(last * 0.98, 1))
+    s2     = sr.get("S2", round(last * 0.96, 1))
+    r1     = sr.get("R1", round(last * 1.02, 1))
+    r2     = sr.get("R2", round(last * 1.04, 1))
+    fib50  = sr.get("fib_50", round(last * 0.98, 1))
+    pivot  = sr.get("pivot", last)
+
+    # ① 盤前掃描
+    pre_parts = []
+    if mom1d >= 4:
+        pre_parts.append(f"昨日強漲 {mom1d:.1f}%，今日注意高開追價風險——RSI 偏熱時不追")
+    elif mom1d <= -4:
+        pre_parts.append(f"昨日大跌 {abs(mom1d):.1f}%，低開可能測試支撐 S1=NT${s1}，跌破勿接")
+    else:
+        pre_parts.append(f"盤前無重大跳空，重點觀察大盤指數方向與美股盤後訊號")
+    pre_parts.append(f"壓力區：R1 NT${r1}、R2 NT${r2}　支撐區：S1 NT${s1}、S2 NT${s2}")
+    if vr >= 1.5:
+        pre_parts.append(f"量比 {vr:.1f}x 明顯放大，留意是否有法人佈局動作")
+    if bo_type in ("confirmed", "near"):
+        pre_parts.append("52週高點突破訊號，留意今日能否放量站穩")
+    pre_market = "　".join(pre_parts)
+
+    # ② 開牌策略
+    if mom1d >= 3:
+        if score >= 70:
+            opening = (f"高開強勢：開盤前5分K若站穩 NT${pivot:.1f}（樞紐點）且量能 > 均量1.2x，"
+                       f"可分兩批進場（各五成），第一目標 NT${r1}，達標後看 R2 NT${r2}")
+        else:
+            opening = (f"高開但信心指數僅 {score}，等開盤後第一根15分K收紅確認再進；"
+                       f"站穩 NT${ma5:.1f}（MA5）為進場條件，破則不進")
+    elif mom1d <= -3:
+        opening = (f"低開觀察：先等股價在 NT${s1}（S1）附近止穩，出現紅K且量能回升才考慮進場；"
+                   f"若開盤即跌破 S2 NT${s2}，當日不進場")
+    else:
+        opening = (f"平開策略：開盤5分鐘若收盤 > NT${ma5:.1f}（MA5）且量比 > 1.0x，"
+                   f"可小量試探；止損設在 NT${stop:.1f}（−1.5×ATR）")
+
+    # ③ 盤中調整
+    if stage == 2 and rsi < 65:
+        intraday = (f"多頭排列（Stage 2）——回調至 MA20（NT${ma20:.1f}）附近，"
+                    f"若 KD 未死叉可加碼；Fib 50% 支撐 NT${fib50} 為強支撐，跌破才停損")
+    elif score >= 75:
+        intraday = (f"高分強勢：盤中回測 NT${pivot:.1f}（樞紐點）可持倉，"
+                    f"量能萎縮至均量 0.8x 以下時減半；上漲超過 {tgt_pct:.0f}% 考慮分批了結")
+    elif kd_sig in ("death_cross", "death_cross_overbought"):
+        intraday = (f"KD 死叉警示：建議盤中減倉至三成，"
+                    f"等 KD K值 < 30 再考慮重新佈局；持倉止損收緊至 NT${round(last - atr, 1)}")
+    else:
+        intraday = (f"中性觀察：股價守住 MA20（NT${ma20:.1f}）可持倉，"
+                    f"若量縮於均量 0.7x 以下則減碼，等量能回升再加")
+
+    # ④ 收盤策略
+    if score >= 80 and rsi < 70:
+        closing = (f"強勢可隔夜：目標 NT${target:.1f}（+{tgt_pct:.0f}%）未達前持倉，"
+                   f"止損 NT${stop:.1f}（跌破 ATR 1.5倍出場）")
+    elif rsi >= 72:
+        closing = (f"RSI {rsi:.0f} 偏熱：收盤前先出一半獲利，"
+                   f"隔日若 RSI 回落至 65 以下且價格未破 MA20，可再考慮佈局")
+    elif stage == 4:
+        closing = "Stage 4 空頭：當日收盤無論如何出清，不留隔夜風險"
+    else:
+        closing = (f"標準收盤：收盤前確認仍站上 MA20（NT${ma20:.1f}），"
+                   f"若破則出清；達目標價 NT${target:.1f} 了結至少五成")
+
+    return {
+        "pre_market": pre_market,
+        "opening":    opening,
+        "intraday":   intraday,
+        "closing":    closing,
+    }
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  新聞抓取
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2630,6 +2934,29 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
     else:
         sell_note = "T+1 早盤高點賣出"
 
+    # ── 支撐壓力 / 訊號 / 回測統計 / 四階段計劃 ────────────────────────────
+    sr_levels  = calc_support_resistance(df)
+    strat_stats = calc_strategy_stats(df)
+
+    _partial = {
+        "score": total, "rsi": round(rsi, 1),
+        "kd_signal": kd_sig, "bb_signal": bb_sig, "bb_squeeze": bb.get("squeeze", False),
+        "stage": ma_info["stage"], "obv_trend": obv_tr,
+        "bo_type": bo["type"], "sepa_count": ma_info.get("sepa_count", 0),
+        "mom20d": round(mom20d, 2), "trust_bonus": trust_bonus,
+    }
+    trade_sig  = calc_trading_signal(_partial)
+    _partial.update({
+        "last_price": last_price, "atr": round(atr, 2),
+        "target_price": round(last_price * (1 + target_pct / 100), 2),
+        "target_pct": target_pct,
+        "stop_loss": round(last_price - 1.5 * atr, 2),
+        "ma5": ma_info["ma5"], "ma20": ma_info["ma20"], "ma60": ma_info["ma60"],
+        "mom1d": round(mom1d, 2), "vol_ratio": round(vr, 2),
+        "kd_signal": kd_sig,
+    })
+    trade_plan = build_trading_plan(_partial, sr_levels)
+
     _tinfo     = TECH_UNIVERSE.get(ticker, {})
     _base_code = ticker.replace(".TW", "").replace(".TWO", "")
     return {
@@ -2651,7 +2978,7 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
         "mom1d":         round(mom1d, 2),
         "mom5d":         round(mom5d, 2),
         "mom20d":        round(mom20d, 2),
-        # ── 新增大師指標 ──
+        # ── 大師指標 ──
         "bb_signal":     bb_sig,
         "bb_pct_b":      bb.get("pct_b", 0.5),
         "bb_squeeze":    bb.get("squeeze", False),
@@ -2686,6 +3013,15 @@ def score_stock(ticker: str, df: pd.DataFrame, catalyst_bonus: int, foreign_net:
         "stop_pct":     round((-1.5 * atr / last_price) * 100, 2) if last_price > 0 else 0,
         "sell_note":    sell_note,
         "foreign_net":  foreign_net,
+        # ── 新增：支撐壓力 / 交易訊號 / 策略統計 / 四階段計劃 ──
+        "sr":           sr_levels,
+        "signal":       trade_sig["signal"],
+        "signal_conf":  trade_sig["confidence"],
+        "signal_buy":   trade_sig["buy_cnt"],
+        "signal_sell":  trade_sig["sell_cnt"],
+        "signal_reasons": trade_sig["reasons"],
+        "stats":        strat_stats,
+        "plan":         trade_plan,
     }
 
 # ═══════════════════════════════════════════════════════════════════════════════

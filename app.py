@@ -2327,6 +2327,105 @@ def _build_kbar_fi_row(sres: dict) -> str:
     )
 
 
+def _build_signal_badge(p: dict) -> str:
+    """交易訊號徽章：BUY / HOLD / SELL + 勝率統計一覽"""
+    sig   = p.get("signal", "HOLD")
+    conf  = p.get("signal_conf", 50)
+    stats = p.get("stats") or {}
+    wr    = stats.get("win_rate", 0)
+    pf    = stats.get("profit_factor", 0)
+    dd    = stats.get("max_drawdown", 0)
+    n     = stats.get("total_trades", 0)
+
+    if sig == "BUY":
+        sig_bg, sig_color, sig_text = "#1b3a1b", "#69f0ae", "▲ 買進訊號"
+    elif sig == "SELL":
+        sig_bg, sig_color, sig_text = "#3a1b1b", "#ef5350", "▼ 賣出訊號"
+    else:
+        sig_bg, sig_color, sig_text = "#1e2233", "#ffd54f", "— 觀望持有"
+
+    reasons = p.get("signal_reasons") or []
+    reason_html = "　".join(
+        f'<span style="color:#ccc">{r}</span>' for r in reasons[:3]
+    )
+
+    stats_html = ""
+    if n >= 3:
+        wr_col = "#69f0ae" if wr >= 55 else ("#ffd54f" if wr >= 45 else "#ef5350")
+        pf_col = "#69f0ae" if pf >= 1.3 else ("#ffd54f" if pf >= 1.0 else "#ef5350")
+        dd_col = "#ef5350" if dd >= 15 else ("#ffd54f" if dd >= 8 else "#69f0ae")
+        stats_html = (
+            f'<div style="display:flex;gap:14px;margin-top:5px;flex-wrap:wrap">'
+            f'<span style="font-size:11px;color:#888">策略回測（近期{n}次）</span>'
+            f'<span style="font-size:11px;color:{wr_col};font-weight:700">勝率 {wr:.0f}%</span>'
+            f'<span style="font-size:11px;color:{pf_col}">獲利因子 {pf:.2f}</span>'
+            f'<span style="font-size:11px;color:{dd_col}">最大回撤 −{dd:.1f}%</span>'
+            f'</div>'
+        )
+
+    return (
+        f'<div style="background:{sig_bg};border:1px solid {sig_color}44;'
+        f'border-radius:6px;padding:8px 12px;margin:6px 0">'
+        f'<div style="display:flex;align-items:center;gap:10px">'
+        f'<span style="color:{sig_color};font-size:13px;font-weight:700">{sig_text}</span>'
+        f'<span style="color:#888;font-size:11px">訊號強度 {conf}%</span>'
+        f'</div>'
+        f'<div style="font-size:11px;margin-top:3px">{reason_html}</div>'
+        f'{stats_html}'
+        f'</div>'
+    )
+
+
+def _build_trading_plan_html(p: dict) -> str:
+    """四階段交易計劃 HTML：盤前掃描 / 開牌策略 / 盤中調整 / 收盤策略"""
+    plan = p.get("plan") or {}
+    sr   = p.get("sr") or {}
+
+    if not plan:
+        return ""
+
+    def phase(icon, title, body, color="#90caf9"):
+        return (
+            f'<div style="margin-bottom:10px">'
+            f'<div style="font-size:12px;font-weight:700;color:{color};margin-bottom:3px">'
+            f'{icon} {title}</div>'
+            f'<div style="font-size:12px;color:#ccc;line-height:1.6">{body}</div>'
+            f'</div>'
+        )
+
+    # Support / Resistance table
+    pivot = sr.get("pivot", 0)
+    r1, r2, r3 = sr.get("R1", 0), sr.get("R2", 0), sr.get("R3", 0)
+    s1, s2, s3 = sr.get("S1", 0), sr.get("S2", 0), sr.get("S3", 0)
+    f618 = sr.get("fib_618", 0)
+    f50  = sr.get("fib_50", 0)
+    f382 = sr.get("fib_382", 0)
+    sh20 = sr.get("swing_high_20d", 0)
+    sl20 = sr.get("swing_low_20d", 0)
+
+    sr_html = (
+        f'<div style="background:#0a1020;border-radius:6px;padding:8px 12px;margin-bottom:10px">'
+        f'<div style="font-size:11px;font-weight:700;color:#7eb3ff;margin-bottom:6px">📐 支撐與壓力區</div>'
+        f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:11px">'
+        f'<div style="color:#ef5350">壓力 R1 <b>NT${r1}</b>　R2 <b>NT${r2}</b>　R3 <b>NT${r3}</b></div>'
+        f'<div style="color:#00c853">支撐 S1 <b>NT${s1}</b>　S2 <b>NT${s2}</b>　S3 <b>NT${s3}</b></div>'
+        f'<div style="color:#ffd54f">Fib 61.8% <b>NT${f618}</b>　50% <b>NT${f50}</b>　38.2% <b>NT${f382}</b></div>'
+        f'<div style="color:#90caf9">樞紐點 PP <b>NT${pivot}</b>　20日高 <b>NT${sh20}</b>　20日低 <b>NT${sl20}</b></div>'
+        f'</div>'
+        f'</div>'
+    )
+
+    return (
+        f'<div style="padding:4px 0">'
+        + sr_html
+        + phase("🔍", "盤前掃描", plan.get("pre_market", ""), "#90caf9")
+        + phase("🚀", "開牌策略", plan.get("opening", ""), "#69f0ae")
+        + phase("⚡", "盤中調整", plan.get("intraday", ""), "#ffd54f")
+        + phase("🏁", "收盤策略", plan.get("closing", ""), "#ef9a9a")
+        + f'</div>'
+    )
+
+
 def render_query_card(ticker, sres, live_d, key_sfx, flow: dict = None):
     sc        = sres["score"]
     bar_color = conf_color(sc)
@@ -3202,6 +3301,7 @@ def render_category_cards(picks, prices, show_chart):
             + _build_fund_row(p)
             + _build_kbar_fi_row(p)
             + _build_flow_panel(_cat_flow, is_open)
+            + _build_signal_badge(p)
             + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
@@ -3220,6 +3320,11 @@ def render_category_cards(picks, prices, show_chart):
                     st.session_state.watchlist.append(p["ticker"])
             st.session_state._needs_save = True
             st.rerun()
+
+        # ── 四階段交易計劃 ────────────────────────────────────────────────────
+        if p.get("plan"):
+            with st.expander(f"📊 {p['ticker'].replace('.TW','')} 交易計劃 + 支撐壓力區（點擊展開）", expanded=False):
+                st.markdown(_build_trading_plan_html(p), unsafe_allow_html=True)
 
         _ref  = d["price"] if d and d["price"] > 0 else p["last_price"]
         _adv  = get_beginner_advice(prices.get(p["ticker"]), _ref)
@@ -4005,6 +4110,7 @@ def render_stock_cards(picks, prices, show_chart):
             + _build_fund_row(p)
             + _build_kbar_fi_row(p)
             + _build_flow_panel(_pick_flow, is_open)
+            + _build_signal_badge(p)
             + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
@@ -4013,6 +4119,11 @@ def render_stock_cards(picks, prices, show_chart):
             f'</div>',
             unsafe_allow_html=True
         )
+
+        # ── 四階段交易計劃（展開查看）───────────────────────────────────────
+        if p.get("plan"):
+            with st.expander(f"📊 {p['ticker'].replace('.TW','')} 交易計劃 + 支撐壓力區（點擊展開）", expanded=False):
+                st.markdown(_build_trading_plan_html(p), unsafe_allow_html=True)
 
         # ── 新手操作建議（即時更新，每10秒隨股價重算）────────────────────────
         _ref = d["price"] if d and d["price"] > 0 else p["last_price"]
