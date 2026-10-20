@@ -215,8 +215,7 @@ st.markdown("## 💸 台股即時資金流向")
 
 snap = load()
 if not snap or not snap.get("minutes"):
-    st.info("還沒有資料。盤中由本機 `flow_collector.py` 收集（週一至五 08:55 自動啟動），"
-            "收盤後可執行 `python3 flow_backfill.py` 補今天的資料。")
+    st.info("今天還沒有盤中資料。開盤（09:00）後約 3–5 分鐘開始顯示，盤中每 3 分鐘更新。")
     st.stop()
 
 if snap.get("source") == "demo":
