@@ -5,3 +5,8 @@ reports/
 .DS_Store
 *.log
 .env
+# 資金流向（本機資料；雲端讀 flow-data 分支）
+data/flow.db*
+data/flow_snapshot.json
+data/flow_universe.json
+.flow_pub/
