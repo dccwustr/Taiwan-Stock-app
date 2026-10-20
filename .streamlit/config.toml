@@ -1,0 +1,7 @@
+# 與 launch.sh 相同的深色主題（雲端版也一致）
+[theme]
+base = "dark"
+primaryColor = "#1565c0"
+backgroundColor = "#0e1117"
+secondaryBackgroundColor = "#1c2030"
+textColor = "#e0e0e0"
