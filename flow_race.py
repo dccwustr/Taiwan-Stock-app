@@ -2,8 +2,8 @@
 """
 即時資金流 — 動畫元件（canvas）
 仿 Threads @alpha.ddm 影片：中線兩側的彗星光條 + 粒子流、上 8 名流入 / 下 8 名流出、
-大時鐘、時間軸。開啟時從開盤回放，播到最新後進入 LIVE，自己每 30 秒抓 GitHub 快照、
-平滑滑到新數字（頁面不用整頁重整，動畫不會被打斷）。
+大時鐘、時間軸。開啟時從開盤回放，播到最新後進入 LIVE：頁面每 15 秒把新快照放進
+隱藏元素，元件讀到就平滑滑到新數字（元件不重載，動畫不會被打斷）。
 """
 import json
 from typing import Dict
@@ -299,17 +299,24 @@ track.addEventListener("pointerdown", e => { drag = true; track.setPointerCaptur
 track.addEventListener("pointermove", e => drag && seek(e));
 track.addEventListener("pointerup", () => drag = false);
 
-// ── LIVE：每 30 秒抓雲端快照 ───────────────────────────────────────────────
-if (IS_LIVE && REMOTE) setInterval(async () => {
+// ── LIVE：頁面每 15 秒把新快照放進隱藏元素 #flow-live-data，這裡每 2 秒讀一次 ─────
+function accept(s) {
+  if (s && s.date === D.snap.date && (s.updated || "") > (D.snap.updated || "") && s.minutes && s.minutes.length) {
+    D = prep(s); liveTarget = last();
+    $("sub").textContent = s.date.replace(/-/g, "/") + " " + hhmm(D.mins[0]) + "–" + hhmm(last()) + " · 全天的主動買賣淨額";
+  }
+}
+let parentOK = true, lastRaw = "";
+if (IS_LIVE) setInterval(() => {
   try {
-    const r = await fetch(REMOTE + "?t=" + Date.now(), { cache: "no-store" });
-    if (!r.ok) return;
-    const s = await r.json();
-    if (s.date === D.snap.date && (s.updated || "") > (D.snap.updated || "") && s.minutes && s.minutes.length) {
-      D = prep(s); liveTarget = last();
-      $("sub").textContent = s.date.replace(/-/g, "/") + " " + hhmm(D.mins[0]) + "–" + hhmm(last()) + " · 全天的主動買賣淨額";
-    }
-  } catch (e) {}
+    const el = window.parent.document.getElementById("flow-live-data");
+    if (el && el.textContent !== lastRaw) { lastRaw = el.textContent; accept(JSON.parse(lastRaw)); }
+  } catch (e) { parentOK = false; }
+}, 2000);
+// 讀不到父頁面（例如被瀏覽器擋）→ 退回直接抓 GitHub（有 CDN 快取，較慢）
+if (IS_LIVE && REMOTE) setInterval(async () => {
+  if (parentOK) return;
+  try { const r = await fetch(REMOTE, { cache: "no-store" }); if (r.ok) accept(await r.json()); } catch (e) {}
 }, 30000);
 </script></body></html>
 """

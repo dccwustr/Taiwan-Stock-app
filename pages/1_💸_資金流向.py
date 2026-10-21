@@ -2,9 +2,9 @@
 """
 💸 台股即時資金流向 — 全上市櫃、各產業流入 / 流出
 資料：本機 flow_collector.py（盤中每 ~40 秒，內外盤法）→ data/flow.db
-      雲端則讀 GitHub flow-data 分支的快照（約 3–5 分鐘延遲）
+      雲端則讀 GitHub flow-data 分支的快照（約 30–60 秒延遲）
 """
-import sys
+import html, json, sys
 from pathlib import Path
 
 import pandas as pd
@@ -33,7 +33,7 @@ st.markdown(f"""
 
 
 # ── 資料 ────────────────────────────────────────────────────────────────────
-@st.cache_data(ttl=10, show_spinner=False)
+@st.cache_data(ttl=5, show_spinner=False)
 def load_local():
     if not fc.DB_PATH.exists():
         return None
@@ -46,13 +46,9 @@ def load_local():
         return None
 
 
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=10, show_spinner=False)
 def load_remote():
-    try:
-        r = requests.get(fc.REMOTE_SNAPSHOT_URL, timeout=10)
-        return r.json() if r.ok else None
-    except Exception:
-        return None
+    return fc.fetch_remote_snapshot()
 
 
 def load():
@@ -168,7 +164,7 @@ st.markdown("## 💸 台股即時資金流向")
 
 snap = load()
 if not snap or not snap.get("minutes"):
-    st.info("今天還沒有盤中資料。開盤（09:00）後約 3–5 分鐘開始顯示，盤中每 3 分鐘更新。")
+    st.info("今天還沒有盤中資料。開盤（09:00）後約 1 分鐘開始顯示，盤中約每 30 秒更新。")
     st.stop()
 
 if snap.get("source") == "demo":
@@ -176,15 +172,19 @@ if snap.get("source") == "demo":
 
 live = market_open() and snap["date"] == fc.now_tw().strftime("%Y-%m-%d")
 
-# 動畫（自己每 30 秒抓新快照，放在 fragment 外面，才不會被重整打斷）
+# 動畫放在 fragment 外面才不會被重整打斷；新資料由下面 fragment 的隱藏元素提供
 flow_race.render(snap, live)
 
 
-@st.fragment(run_every=30 if live else None)
+@st.fragment(run_every=15 if live else None)
 def details():
     snap = load() or {}
     if not snap.get("minutes"):
         return
+    # 每 15 秒把最新快照放進隱藏元素，動畫元件每 2 秒讀一次（元件本身不重載，動畫不中斷）
+    lite = {k: snap.get(k) for k in ("date", "updated", "source", "minutes", "sectors")}
+    st.html(f'<div id="flow-live-data" style="display:none">'
+            f'{html.escape(json.dumps(lite, ensure_ascii=False))}</div>')
     _details(snap)
 
 

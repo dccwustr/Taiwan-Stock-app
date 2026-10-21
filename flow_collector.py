@@ -3,14 +3,14 @@
 """
 即時資金流向收集器（盤中執行）
 ────────────────────────────
-每 ~12 秒掃描全部上市＋上櫃股票（證交所 MIS 即時報價，每批 100 檔），
+每 ~25 秒掃描一輪（證交所 MIS 即時報價，每批 100 檔）：成交額前 500 檔每輪都掃，其餘輪流掃 1/6，
 依內外盤判斷每筆新增成交量是流入還是流出，按「分鐘 × 個股」累加寫入 data/flow.db。
-每 3 分鐘輸出 data/flow_snapshot.json 並推送到 GitHub flow-data 分支（給雲端 App 讀）。
+每 30 秒輸出 data/flow_snapshot.json 並推送到 GitHub flow-data 分支（給雲端 App 讀）。
 
 launchd: com.stock.flow_collector — 週一至五 08:55 啟動，13:35 自動結束。
 手動：python3 flow_collector.py [--once] [--no-push]
 """
-import argparse, json, logging, subprocess, sys, time, traceback
+import argparse, json, logging, subprocess, sys, threading, time, traceback
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -20,10 +20,12 @@ import flow_core as fc
 
 MIS_URL = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
 BATCH = 100            # MIS 單次上限約 100–150 檔
-GAP = 2.0              # 批次間隔（秒）— MIS 約限 3 次/5 秒，太快會被封 IP
-SWEEP_EVERY = 30       # 每輪掃描最短間隔（秒）
+GAP = 2.0              # 每次請求「開始」至少相隔幾秒 — MIS 約限 3 次/5 秒，太快會被封 IP
+SWEEP_EVERY = 20       # 每輪掃描最短間隔（秒）
 BLOCK_COOLDOWN = 120   # 被擋時暫停秒數（連續被擋會加倍，上限 900）
-PUBLISH_EVERY = 180    # 秒
+PUBLISH_EVERY = 15     # 秒（實際上 = 每輪掃完就推，約 20–35 秒）
+HOT_N = 500            # 成交額前 N 檔每輪都掃
+COLD_PARTS = 6         # 其餘股票分 6 組輪流掃（每組約每 3 分鐘一次）
 END_HHMM = "13:35"
 PUB_DIR = fc.BASE / ".flow_pub"   # flow-data 分支的 git worktree
 
@@ -53,6 +55,8 @@ class Collector:
     def __init__(self, universe: List[Dict]):
         self.meta = {s["code"]: s for s in universe}
         self.symbols = [f'{s["market"]}_{s["code"]}.tw' for s in universe]
+        self.n_sweep = 0
+        self.next_req = 0.0
         self.prev: Dict[str, Dict] = {}     # code → {v, z, ask, bid, sign}
         self.sess = requests.Session()
         self.sess.headers["User-Agent"] = "Mozilla/5.0"
@@ -70,12 +74,26 @@ class Collector:
         if self.prev:
             log.info("restored state for %d stocks", len(self.prev))
 
+    def targets(self) -> List[str]:
+        """熱門股每輪都掃，冷門股分組輪流；剛啟動還沒有成交資料時先掃全部"""
+        self.n_sweep += 1
+        if len(self.prev) < len(self.symbols) // 2:
+            return self.symbols
+        def turnover(sym):
+            p = self.prev.get(sym.split("_", 1)[1][:-3])
+            return (p["v"] or 0) * (p["z"] or 0) if p else 0
+        ranked = sorted(self.symbols, key=turnover, reverse=True)
+        return ranked[:HOT_N] + ranked[HOT_N:][self.n_sweep % COLD_PARTS::COLD_PARTS]
+
     def fetch(self) -> List[Dict]:
         out, dead = [], 0
-        for i in range(0, len(self.symbols), BATCH):
-            chunk = "|".join(self.symbols[i:i + BATCH])
+        syms = self.targets()
+        for i in range(0, len(syms), BATCH):
+            chunk = "|".join(syms[i:i + BATCH])
             ok = False
             for attempt in range(2):
+                time.sleep(max(0.0, self.next_req - time.time()))
+                self.next_req = time.time() + GAP
                 try:
                     r = self.sess.get(MIS_URL, params={"ex_ch": chunk, "json": 1, "delay": 0}, timeout=15)
                     out.extend(json.loads(r.text.strip()).get("msgArray", []))
@@ -93,7 +111,6 @@ class Collector:
                 self.sess = requests.Session()
                 self.sess.headers["User-Agent"] = "Mozilla/5.0"
                 return out
-            time.sleep(GAP)
         self.cooldown = 0
         return out
 
@@ -191,12 +208,26 @@ def publish(snap: Dict) -> None:
         log.error("publish error\n%s", traceback.format_exc())
 
 
-def export(con, push: bool) -> None:
+_pub_thread: Optional[threading.Thread] = None
+
+
+def export(con, push: bool, wait: bool = False) -> None:
+    global _pub_thread
     snap = fc.build_snapshot(con)
-    if snap:
-        fc.write_snapshot(snap)
-        if push:
-            publish(snap)
+    if not snap:
+        return
+    fc.write_snapshot(snap)
+    if not push:
+        return
+    # 推送放背景執行，不拖慢掃描；上一次還沒推完就跳過這次
+    if _pub_thread and _pub_thread.is_alive():
+        if not wait:
+            return
+        _pub_thread.join()
+    _pub_thread = threading.Thread(target=publish, args=(snap,), daemon=True)
+    _pub_thread.start()
+    if wait:
+        _pub_thread.join()
 
 
 def main():
@@ -229,17 +260,18 @@ def main():
             empty_sweeps = empty_sweeps + 1 if n == 0 else 0
         if args.once:
             log.info("sweep: %d stocks in %.1fs", n, time.time() - t0)
-            export(col.con, push=not args.no_push)
+            export(col.con, push=not args.no_push, wait=True)
             break
         # 休市日：開盤後 MIS 資料日期不是今天 → 連續空掃 → 結束
         if empty_sweeps >= 20 and fc.now_tw().strftime("%H:%M") > "09:10":
             log.warning("no data for today after 09:10 — market holiday? exit")
             break
         if time.time() - last_pub > PUBLISH_EVERY and n:
+            log.info("sweep: %d stocks in %.1fs", n, time.time() - t0)
             export(col.con, push=not args.no_push)
             last_pub = time.time()
         if fc.now_tw().strftime("%H:%M") >= END_HHMM:
-            export(col.con, push=not args.no_push)
+            export(col.con, push=not args.no_push, wait=True)
             log.info("market closed — final snapshot written, exit")
             break
         time.sleep(max(0.0, SWEEP_EVERY - (time.time() - t0)))

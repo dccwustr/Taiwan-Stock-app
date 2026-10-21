@@ -10,7 +10,7 @@
   成交價 ≤ 前一刻委買價（內盤，賣方殺價）→ 資金流出  −成交金額
   介於中間 → 與前一筆成交價比較（tick rule）
 """
-import json, os, sqlite3, time
+import json, os, re, sqlite3, time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -28,6 +28,25 @@ SNAPSHOT_PATH = DATA / "flow_snapshot.json"
 REMOTE_SNAPSHOT_URL = (
     "https://raw.githubusercontent.com/dccwustr/Taiwan-Stock-app/flow-data/flow_snapshot.json"
 )
+REPO_GIT = "https://github.com/dccwustr/Taiwan-Stock-app.git"
+
+
+def fetch_remote_snapshot() -> Optional[Dict]:
+    """最新快照。raw 分支網址有 5 分鐘 CDN 快取（加 ?t= 也沒用），
+    所以先用 git 的 info/refs 查 flow-data 最新 commit，再用 commit 網址抓（每次都是新檔）"""
+    url = REMOTE_SNAPSHOT_URL
+    try:
+        r = requests.get(REPO_GIT + "/info/refs", params={"service": "git-upload-pack"}, timeout=10)
+        m = re.search(r"([0-9a-f]{40}) refs/heads/flow-data\b", r.text)
+        if m:
+            url = f"https://raw.githubusercontent.com/dccwustr/Taiwan-Stock-app/{m.group(1)}/flow_snapshot.json"
+    except Exception:
+        pass
+    try:
+        r = requests.get(url, timeout=10)
+        return r.json() if r.ok else None
+    except Exception:
+        return None
 
 # 證交所 / 櫃買 官方產業別代碼
 INDUSTRY = {
