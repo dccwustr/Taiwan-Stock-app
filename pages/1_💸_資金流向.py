@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 💸 台股即時資金流向 — 全上市櫃、各產業流入 / 流出
-資料：本機 flow_collector.py（盤中每 ~40 秒，內外盤法）→ data/flow.db
+資料：本機 flow_collector.py（盤中每 ~20 秒，內外盤法）→ data/flow.db
       雲端則讀 GitHub flow-data 分支的快照（約 30–60 秒延遲）
 """
 import html, json, sys
@@ -191,7 +191,13 @@ def details():
 def _details(snap):
     minutes = snap["minutes"]
     c1, c2, c3 = st.columns([3, 2, 2])
-    win = c1.select_slider("時間區間", options=minutes, value=(minutes[0], minutes[-1]))
+    # 盤中每分鐘 options 都會變長，Streamlit 會把元件當成新的而重設 → 自己記住使用者的選擇
+    # （右端選在最新一分鐘 = 跟著最新走）
+    a, b, follow = st.session_state.get("flow_win", (minutes[0], minutes[-1], True))
+    a = a if a in minutes else minutes[0]
+    b = minutes[-1] if follow or b not in minutes else b
+    win = c1.select_slider("時間區間", options=minutes, value=(a, b))
+    st.session_state["flow_win"] = (win[0], win[1], win[1] == minutes[-1])
     bucket = c2.selectbox("熱圖時段", [5, 10, 15, 30], index=2, format_func=lambda m: f"每 {m} 分鐘")
     scope = c3.selectbox("顯示產業", ["全部產業", "前後各 10 名"], index=0)
 
@@ -221,12 +227,12 @@ def _details(snap):
     st.write("")
     h = max(420, 22 * len(sectors) + 40)
     st.markdown("#### 產業淨流入排行")
-    st.plotly_chart(sector_bar(sec, h), use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(sector_bar(sec, h), config={"displayModeBar": False})
 
     st.markdown("#### 產業 × 時段 熱圖")
     st.caption("紅 = 該時段資金淨流入，綠 = 淨流出。由上往下依區間淨額排序。")
     st.plotly_chart(rotation_heatmap(snap, sel_idx, sectors, bucket, max(420, 20 * len(sectors) + 60)),
-                    use_container_width=True, config={"displayModeBar": False})
+                    config={"displayModeBar": False})
 
     # ── 個股 ────────────────────────────────────────────────────────────────────
     stocks = pd.DataFrame(snap["stocks"])
@@ -235,17 +241,20 @@ def _details(snap):
     t1, t2, t3 = st.tabs(["🔴 流入前 15", "🟢 流出前 15", "🔍 依產業查看"])
     with t1:
         st.dataframe(stock_table(stocks.nlargest(15, "net")), hide_index=True,
-                     use_container_width=True, column_config=TABLE_CFG)
+                     column_config=TABLE_CFG)
     with t2:
         st.dataframe(stock_table(stocks.nsmallest(15, "net")), hide_index=True,
-                     use_container_width=True, column_config=TABLE_CFG)
+                     column_config=TABLE_CFG)
     with t3:
-        pick = st.selectbox("產業", sec.sort_values("net", ascending=False)["ind"].tolist())
+        opts = sec.sort_values("net", ascending=False)["ind"].tolist()   # 排名會變 → 同樣要記住選擇
+        prev = st.session_state.get("flow_pick")
+        pick = st.selectbox("產業", opts, index=opts.index(prev) if prev in opts else 0)
+        st.session_state["flow_pick"] = pick
         st.dataframe(stock_table(stocks[stocks["ind"] == pick].sort_values("net", ascending=False)),
-                     hide_index=True, use_container_width=True, column_config=TABLE_CFG)
+                     hide_index=True, column_config=TABLE_CFG)
 
     st.caption("說明：成交價在前一刻委賣價以上 = 主動買進（流入），在委買價以下 = 主動賣出（流出）。"
-               "每 ~40 秒掃描一次，同一段時間內多筆成交會合併判斷，數字為估算、看方向比看絕對金額準。"
+               "每 ~20 秒掃描一次，同一段時間內多筆成交會合併判斷，數字為估算、看方向比看絕對金額準。"
                "這是盤中籌碼溫度計，不是買賣訊號——零股小資請搭配精選頁的綜合評分。")
 
 

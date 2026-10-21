@@ -86,6 +86,7 @@ canvas { display:block; width:100%; }
 <script>
 const SNAP = __SNAP__, IS_LIVE = __LIVE__, REMOTE = __REMOTE__, ELEC = new Set(__ELEC__);
 const RED = "#ff4d5e", GREEN = "#2fd38a", TOPN = 8, ROW_H = 34, GAP_H = 18;
+const GAP_Y = 4 + TOPN * ROW_H + GAP_H / 2 - ROW_H / 2;   // 兩組中間的空隙
 const $ = id => document.getElementById(id);
 const toM = s => +s.slice(0, 2) * 60 + +s.slice(3, 5);
 const hhmm = m => { m = Math.floor(m); return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
@@ -139,8 +140,17 @@ function resize() {
 }
 window.addEventListener("resize", resize); resize();
 
+let order = [];
 function layoutTargets(vals) {
-  const ranked = Object.entries(vals).sort((a, b) => b[1] - a[1]);
+  // 黏著排序：差距小於比例尺 3% 不換位，數字很接近的產業才不會一直來回洗牌
+  const eps = 0.03 * scale;
+  order = order.filter(s => s in vals).concat(Object.keys(vals).filter(s => !order.includes(s)));
+  for (let swapped = true, n = 0; swapped && n < order.length; n++) {
+    swapped = false;
+    for (let i = 0; i < order.length - 1; i++)
+      if (vals[order[i + 1]] > vals[order[i]] + eps) { [order[i], order[i + 1]] = [order[i + 1], order[i]]; swapped = true; }
+  }
+  const ranked = order.map(s => [s, vals[s]]);
   const pos = ranked.filter(([, v]) => v > 0.005).slice(0, TOPN);
   const neg = ranked.filter(([, v]) => v < -0.005).slice(-TOPN);
   const tgt = {};
@@ -169,9 +179,10 @@ function draw(dt) {
   for (const s of D.names) {
     let r = rows[s];
     const inSet = s in tgt;
-    if (!r) { if (!inSet) continue; r = rows[s] = { y: tgt[s], a: 0, v: vals[s], prev: vals[s], rate: 0, parts: [] }; }
-    if (inSet) r.y += (tgt[s] - r.y) * (k || Math.min(1, dt * 6));
-    r.a += ((inSet ? 1 : 0) - r.a) * (k || Math.min(1, dt * 5));
+    // 進出前 8 名的列都經過流入／流出之間的空隙，不會跟正在補位的列疊在一起
+    if (!r) { if (!inSet) continue; r = rows[s] = { y: k ? tgt[s] : GAP_Y, a: 0, v: vals[s], prev: vals[s], rate: 0, parts: [] }; }
+    r.y += ((inSet ? tgt[s] : GAP_Y) - r.y) * (k || Math.min(1, dt * 10));
+    r.a += ((inSet ? 1 : 0) - r.a) * (k || Math.min(1, dt * (inSet ? 5 : 12)));
     r.v = vals[s];
     // 流速：每「市場分鐘」的淨流量（億/分），決定粒子密度與速度
     const dm = Math.max(1e-6, r.dtm || 0);
@@ -189,8 +200,14 @@ function draw(dt) {
 
     // 名稱 + 色點
     ctx.fillStyle = dotColor(s); ctx.beginPath(); ctx.arc(nameX + 4, y, 3.2, 0, 7); ctx.fill();
+    // 換位途中文字變淡，兩列交錯時不會字疊字
+    const travel = Math.min(1, Math.abs((inSet ? tgt[s] : GAP_Y) - r.y) / (ROW_H * 0.5));
+    const ta = a * (1 - 0.8 * travel);
+    r.ta = ta;
+    ctx.globalAlpha = ta;
     ctx.fillStyle = "#e9ecf2"; ctx.font = (narrow ? "13px" : "15px") + ' -apple-system,"PingFang TC","Noto Sans TC",sans-serif';
     ctx.textBaseline = "middle"; ctx.textAlign = "left"; ctx.fillText(s, nameX + 14, y + 1);
+    ctx.globalAlpha = a;
 
     // 光條：中線 → 頭，漸層
     if (len > 1) {
@@ -223,6 +240,7 @@ function draw(dt) {
       ctx.fillStyle = col; ctx.beginPath(); ctx.arc(head, y, rad, 0, 7); ctx.fill();
     }
     // 數值
+    ctx.globalAlpha = ta;
     ctx.fillStyle = col; ctx.textAlign = "right";
     ctx.font = (narrow ? "12px" : "14px") + " ui-monospace,'SF Mono',Menlo,monospace";
     ctx.fillText(fmt(v), valX, y + 1);
@@ -234,32 +252,38 @@ function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.a
   ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 function hexA(h, a) { const n = parseInt(h.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
 
+// 只在內容真的變了才動 DOM（每秒 60 次重寫會讓手機發燙）
+const shown = {};
+function put(id, v, html) { if (shown[id] === v) return; shown[id] = v; html ? $(id).innerHTML = v : $(id).textContent = v; }
 function kpis(vals) {
   const e = Object.entries(vals); if (!e.length) return;
   const tot = e.reduce((s, [, v]) => s + v, 0);
   const top = e.reduce((a, b) => b[1] > a[1] ? b : a), bot = e.reduce((a, b) => b[1] < a[1] ? b : a);
-  const k = $("kTot"); k.textContent = (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(1) + " 億"; k.style.color = tot >= 0 ? RED : GREEN;
-  $("kTopN").innerHTML = `<span class="dot" style="background:${dotColor(top[0])}"></span>${top[0]}`;
-  $("kTopV").textContent = fmt(top[1]); $("kTopV").style.color = RED;
-  $("kBotN").innerHTML = `<span class="dot" style="background:${dotColor(bot[0])}"></span>${bot[0]}`;
-  $("kBotV").textContent = fmt(bot[1]); $("kBotV").style.color = GREEN;
+  put("kTot", (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(1) + " 億"); $("kTot").style.color = tot >= 0 ? RED : GREEN;
+  put("kTopN", `<span class="dot" style="background:${dotColor(top[0])}"></span>${top[0]}`, true);
+  put("kTopV", fmt(top[1])); $("kTopV").style.color = RED;
+  put("kBotN", `<span class="dot" style="background:${dotColor(bot[0])}"></span>${bot[0]}`, true);
+  put("kBotV", fmt(bot[1])); $("kBotV").style.color = GREEN;
 }
 
 function ui() {
   const a = D.mins[0], b = Math.max(last(), a + 1);
   const p = Math.max(0, Math.min(1, (t - a) / (b - a))) * 100;
   $("fill").style.width = p + "%"; $("knob").style.left = p + "%";
-  $("t1").textContent = hhmm(b); $("clock").textContent = hhmm(t);
+  put("t1", hhmm(b)); put("clock", hhmm(t));
   const lv = $("live");
   lv.className = "live" + (mode === "live" ? " on" : "");
-  lv.textContent = mode === "live" ? "LIVE" : (playing ? "回放 " + speed + "×" : "暫停");
-  $("play").textContent = playing || mode === "live" ? "❚❚" : "▶";
+  put("live", mode === "live" ? "LIVE" : (playing ? "回放 " + speed + "×" : "暫停"));
+  put("play", playing || mode === "live" ? "❚❚" : "▶");
   $("goLive").style.display = IS_LIVE && mode !== "live" ? "" : "none";
-  $("note").textContent = mode === "live" ? "更新 " + (D.snap.updated || "—") : "";
+  put("note", mode === "live" ? "更新 " + (D.snap.updated || "—") : "");
 }
 
 // ── 迴圈 ────────────────────────────────────────────────────────────────
 let lastTs = performance.now();
+// 捲到下面看表格時動畫不在畫面上 → 時間照走，但不畫（省電）
+let onScreen = true;
+if ("IntersectionObserver" in window) new IntersectionObserver(e => { onScreen = e[0].isIntersecting; }).observe(document.body);
 function frame(ts) {
   const dt = Math.min(0.1, (ts - lastTs) / 1000); lastTs = ts;
   const t0 = t;
@@ -270,7 +294,7 @@ function frame(ts) {
     t += (liveTarget - t) * Math.min(1, dt * 0.8);       // 新資料進來 → 慢慢滑過去
   }
   for (const s in rows) rows[s].dtm = (rows[s].dtm || 0) + (t - t0);
-  kpis(draw(dt)); ui();
+  if (onScreen) { kpis(draw(dt)); ui(); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
