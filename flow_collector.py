@@ -20,7 +20,9 @@ import flow_core as fc
 
 MIS_URL = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
 BATCH = 100            # MIS 單次上限約 100–150 檔
-GAP = 0.3              # 批次間隔（秒），避免被證交所擋
+GAP = 2.0              # 批次間隔（秒）— MIS 約限 3 次/5 秒，太快會被封 IP
+SWEEP_EVERY = 30       # 每輪掃描最短間隔（秒）
+BLOCK_COOLDOWN = 120   # 被擋時暫停秒數（連續被擋會加倍，上限 900）
 PUBLISH_EVERY = 180    # 秒
 END_HHMM = "13:35"
 PUB_DIR = fc.BASE / ".flow_pub"   # flow-data 分支的 git worktree
@@ -56,6 +58,7 @@ class Collector:
         self.sess.headers["User-Agent"] = "Mozilla/5.0"
         self.today = fc.now_tw().strftime("%Y%m%d")
         self.date = fc.now_tw().strftime("%Y-%m-%d")
+        self.cooldown = 0
         self.con = fc.connect()
         self._restore_state()
 
@@ -68,18 +71,30 @@ class Collector:
             log.info("restored state for %d stocks", len(self.prev))
 
     def fetch(self) -> List[Dict]:
-        out = []
+        out, dead = [], 0
         for i in range(0, len(self.symbols), BATCH):
             chunk = "|".join(self.symbols[i:i + BATCH])
-            for attempt in range(3):
+            ok = False
+            for attempt in range(2):
                 try:
                     r = self.sess.get(MIS_URL, params={"ex_ch": chunk, "json": 1, "delay": 0}, timeout=15)
                     out.extend(json.loads(r.text.strip()).get("msgArray", []))
+                    ok = True
                     break
                 except Exception as e:
                     log.warning("batch %d attempt %d failed: %s", i, attempt, e)
-                    time.sleep(2 + attempt * 3)
+                    time.sleep(5)
+            dead = 0 if ok else dead + 1
+            if dead >= 2:
+                # 連續兩批都失敗 → 多半是被證交所暫時封鎖，整輪放棄並冷卻
+                self.cooldown = min(900, self.cooldown * 2) if self.cooldown else BLOCK_COOLDOWN
+                log.error("MIS blocked/unreachable — cooling down %ds", self.cooldown)
+                time.sleep(self.cooldown)
+                self.sess = requests.Session()
+                self.sess.headers["User-Agent"] = "Mozilla/5.0"
+                return out
             time.sleep(GAP)
+        self.cooldown = 0
         return out
 
     def sweep(self) -> int:
@@ -210,7 +225,8 @@ def main():
         except Exception:
             log.error("sweep error\n%s", traceback.format_exc())
             n = 0
-        empty_sweeps = empty_sweeps + 1 if n == 0 else 0
+        if not col.cooldown:   # 被封鎖造成的空掃不算休市
+            empty_sweeps = empty_sweeps + 1 if n == 0 else 0
         if args.once:
             log.info("sweep: %d stocks in %.1fs", n, time.time() - t0)
             export(col.con, push=not args.no_push)
@@ -226,7 +242,7 @@ def main():
             export(col.con, push=not args.no_push)
             log.info("market closed — final snapshot written, exit")
             break
-        time.sleep(max(0.0, 5 - (time.time() - t0)))
+        time.sleep(max(0.0, SWEEP_EVERY - (time.time() - t0)))
 
 
 if __name__ == "__main__":
