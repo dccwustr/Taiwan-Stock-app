@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 💸 台股即時資金流向 — 全上市櫃、各產業流入 / 流出
-資料：本機 flow_collector.py（盤中每 ~12 秒，內外盤法）→ data/flow.db
+資料：本機 flow_collector.py（盤中每 ~40 秒，內外盤法）→ data/flow.db
       雲端則讀 GitHub flow-data 分支的快照（約 3–5 分鐘延遲）
 """
-import sys, time
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -14,6 +14,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import flow_core as fc  # noqa: E402
+import flow_race  # noqa: E402
 
 st.set_page_config(page_title="即時資金流向", page_icon="💸", layout="wide")
 
@@ -104,54 +105,6 @@ def sector_bar(df: pd.DataFrame, height: int):
     return base_layout(fig, height)
 
 
-def sector_race(snap, sel_idx, sectors, height):
-    """▶ 播放：從開盤到現在，各產業累積淨流入變化（像影片那樣看資金輪動）"""
-    mins = [snap["minutes"][i] for i in sel_idx]
-    step = max(1, len(mins) // 60)
-    cum = {s: 0.0 for s in sectors}
-    frames, keep = [], set(range(0, len(sel_idx), step)) | {len(sel_idx) - 1}
-    for k, i in enumerate(sel_idx):
-        for s in sectors:
-            v = snap["sectors"][s]
-            cum[s] += v["in"][i] - v["out"][i]
-        if k in keep:
-            frames.append((mins[k], dict(cum)))
-    # 固定排序（以最後時點），讓每條 bar 在動畫中保持同一位置，看長短變化
-    order = sorted(sectors, key=lambda s: frames[-1][1][s])
-    xmax = max(abs(v) for _, c in frames for v in c.values()) / 100 * 1.25 or 1
-
-    def bar(c):
-        vals = [c[s] / 100 for s in order]
-        return go.Bar(x=vals, y=order, orientation="h",
-                      marker=dict(color=[RED if v >= 0 else GREEN for v in vals], cornerradius=4),
-                      text=[f"{v:+,.1f}" for v in vals], textposition="outside",
-                      textfont=dict(color=INK, size=10), cliponaxis=False,
-                      hovertemplate="<b>%{y}</b> %{x:+,.2f} 億<extra></extra>")
-
-    fig = go.Figure(data=[bar(frames[-1][1])],
-                    frames=[go.Frame(data=[bar(c)], name=m) for m, c in frames])
-    fig.update_layout(
-        xaxis=dict(range=[-xmax, xmax], ticksuffix=" 億"),
-        updatemenus=[dict(type="buttons", x=0, y=0, xanchor="left", yanchor="top", direction="left",
-                          pad=dict(t=34), showactive=False,
-                          bgcolor=INK, bordercolor=GRID, font=dict(color=BG),
-                          buttons=[dict(label="▶ 播放", method="animate",
-                                        args=[None, dict(frame=dict(duration=180, redraw=True),
-                                                         transition=dict(duration=120), fromcurrent=False)]),
-                                   dict(label="❚❚", method="animate",
-                                        args=[[None], dict(mode="immediate", frame=dict(duration=0))])])],
-        sliders=[dict(active=len(frames) - 1, x=0.16, len=0.84, y=0, yanchor="top", pad=dict(t=20),
-                      currentvalue=dict(prefix="時間 ", font=dict(color=INK)),
-                      font=dict(color=MUTED), bgcolor=PANEL, bordercolor=GRID,
-                      steps=[dict(label=m, method="animate",
-                                  args=[[m], dict(mode="immediate", frame=dict(duration=0, redraw=True))])
-                             for m, _ in frames])],
-    )
-    fig = base_layout(fig, height)
-    fig.update_layout(margin=dict(l=8, r=8, t=8, b=96))
-    return fig
-
-
 def rotation_heatmap(snap, sel_idx, sectors, bucket, height):
     """產業 × 時段 淨流入熱圖：一眼看出資金何時從哪裡移到哪裡"""
     mins = [snap["minutes"][i] for i in sel_idx]
@@ -221,71 +174,79 @@ if not snap or not snap.get("minutes"):
 if snap.get("source") == "demo":
     st.warning("⚠️ 示範資料：股價、成交量、產業為今日真實收盤資料，但盤中流入/流出分配是模擬的，只用來預覽版面。")
 
-minutes = snap["minutes"]
-c1, c2, c3 = st.columns([3, 2, 2])
-win = c1.select_slider("時間區間", options=minutes, value=(minutes[0], minutes[-1]))
-bucket = c2.selectbox("熱圖時段", [5, 10, 15, 30], index=2, format_func=lambda m: f"每 {m} 分鐘")
-scope = c3.selectbox("顯示產業", ["全部產業", "前後各 10 名"], index=0)
-
-sel_idx = [i for i, m in enumerate(minutes) if win[0] <= m <= win[1]]
-sec_rows = []
-for s, v in snap["sectors"].items():
-    i_ = sum(v["in"][i] for i in sel_idx)
-    o_ = sum(v["out"][i] for i in sel_idx)
-    if i_ or o_:
-        sec_rows.append({"ind": s, "in": i_, "out": o_, "net": i_ - o_})
-sec = pd.DataFrame(sec_rows)
-if scope != "全部產業" and len(sec) > 20:
-    sec = pd.concat([sec.nlargest(10, "net"), sec.nsmallest(10, "net")]).drop_duplicates("ind")
-sectors = list(sec["ind"])
-
-src = "盤中即時（內外盤）" if snap.get("source") == "mis" else "1 分 K 估算"
 live = market_open() and snap["date"] == fc.now_tw().strftime("%Y-%m-%d")
-tot_in, tot_out = sec["in"].sum(), sec["out"].sum()
-net = tot_in - tot_out
-k1, k2, k3, k4 = st.columns(4)
-tile(k1, f"{snap['date']}　{win[0]} → {win[1]}", "🔴 盤中" if live else "收盤",
-     f"更新 {snap.get('updated') or '—'} · {src}")
-tile(k2, "主動買進（流入）", f"{tot_in / 100:,.0f} 億", "成交在委賣價（外盤）", RED)
-tile(k3, "主動賣出（流出）", f"{tot_out / 100:,.0f} 億", "成交在委買價（內盤）", GREEN)
-tile(k4, "全市場淨額", yi(net), f"流入佔 {tot_in / max(tot_in + tot_out, 1):.1%}", RED if net >= 0 else GREEN)
 
-st.write("")
-h = max(420, 22 * len(sectors) + 40)
-left, right = st.columns([1, 1])
-with left:
+# 動畫（自己每 30 秒抓新快照，放在 fragment 外面，才不會被重整打斷）
+flow_race.render(snap, live)
+
+
+@st.fragment(run_every=30 if live else None)
+def details():
+    snap = load() or {}
+    if not snap.get("minutes"):
+        return
+    _details(snap)
+
+
+def _details(snap):
+    minutes = snap["minutes"]
+    c1, c2, c3 = st.columns([3, 2, 2])
+    win = c1.select_slider("時間區間", options=minutes, value=(minutes[0], minutes[-1]))
+    bucket = c2.selectbox("熱圖時段", [5, 10, 15, 30], index=2, format_func=lambda m: f"每 {m} 分鐘")
+    scope = c3.selectbox("顯示產業", ["全部產業", "前後各 10 名"], index=0)
+
+    sel_idx = [i for i, m in enumerate(minutes) if win[0] <= m <= win[1]]
+    sec_rows = []
+    for s, v in snap["sectors"].items():
+        i_ = sum(v["in"][i] for i in sel_idx)
+        o_ = sum(v["out"][i] for i in sel_idx)
+        if i_ or o_:
+            sec_rows.append({"ind": s, "in": i_, "out": o_, "net": i_ - o_})
+    sec = pd.DataFrame(sec_rows)
+    if scope != "全部產業" and len(sec) > 20:
+        sec = pd.concat([sec.nlargest(10, "net"), sec.nsmallest(10, "net")]).drop_duplicates("ind")
+    sectors = list(sec["ind"])
+
+    src = "盤中即時（內外盤）" if snap.get("source") == "mis" else "1 分 K 估算"
+    live = market_open() and snap["date"] == fc.now_tw().strftime("%Y-%m-%d")
+    tot_in, tot_out = sec["in"].sum(), sec["out"].sum()
+    net = tot_in - tot_out
+    k1, k2, k3, k4 = st.columns(4)
+    tile(k1, f"{snap['date']}　{win[0]} → {win[1]}", "🔴 盤中" if live else "收盤",
+         f"更新 {snap.get('updated') or '—'} · {src}")
+    tile(k2, "主動買進（流入）", f"{tot_in / 100:,.0f} 億", "成交在委賣價（外盤）", RED)
+    tile(k3, "主動賣出（流出）", f"{tot_out / 100:,.0f} 億", "成交在委買價（內盤）", GREEN)
+    tile(k4, "全市場淨額", yi(net), f"流入佔 {tot_in / max(tot_in + tot_out, 1):.1%}", RED if net >= 0 else GREEN)
+
+    st.write("")
+    h = max(420, 22 * len(sectors) + 40)
     st.markdown("#### 產業淨流入排行")
     st.plotly_chart(sector_bar(sec, h), use_container_width=True, config={"displayModeBar": False})
-with right:
-    st.markdown("#### ▶ 資金輪動播放")
-    st.plotly_chart(sector_race(snap, sel_idx, sectors, h), use_container_width=True,
-                    config={"displayModeBar": False})
 
-st.markdown("#### 產業 × 時段 熱圖")
-st.caption("紅 = 該時段資金淨流入，綠 = 淨流出。由上往下依區間淨額排序。")
-st.plotly_chart(rotation_heatmap(snap, sel_idx, sectors, bucket, max(420, 20 * len(sectors) + 60)),
-                use_container_width=True, config={"displayModeBar": False})
+    st.markdown("#### 產業 × 時段 熱圖")
+    st.caption("紅 = 該時段資金淨流入，綠 = 淨流出。由上往下依區間淨額排序。")
+    st.plotly_chart(rotation_heatmap(snap, sel_idx, sectors, bucket, max(420, 20 * len(sectors) + 60)),
+                    use_container_width=True, config={"displayModeBar": False})
 
-# ── 個股 ────────────────────────────────────────────────────────────────────
-stocks = pd.DataFrame(snap["stocks"])
-stocks["net"] = stocks["in"] - stocks["out"]
-st.markdown("#### 個股（全日累計）")
-t1, t2, t3 = st.tabs(["🔴 流入前 15", "🟢 流出前 15", "🔍 依產業查看"])
-with t1:
-    st.dataframe(stock_table(stocks.nlargest(15, "net")), hide_index=True,
-                 use_container_width=True, column_config=TABLE_CFG)
-with t2:
-    st.dataframe(stock_table(stocks.nsmallest(15, "net")), hide_index=True,
-                 use_container_width=True, column_config=TABLE_CFG)
-with t3:
-    pick = st.selectbox("產業", sec.sort_values("net", ascending=False)["ind"].tolist())
-    st.dataframe(stock_table(stocks[stocks["ind"] == pick].sort_values("net", ascending=False)),
-                 hide_index=True, use_container_width=True, column_config=TABLE_CFG)
+    # ── 個股 ────────────────────────────────────────────────────────────────────
+    stocks = pd.DataFrame(snap["stocks"])
+    stocks["net"] = stocks["in"] - stocks["out"]
+    st.markdown("#### 個股（全日累計）")
+    t1, t2, t3 = st.tabs(["🔴 流入前 15", "🟢 流出前 15", "🔍 依產業查看"])
+    with t1:
+        st.dataframe(stock_table(stocks.nlargest(15, "net")), hide_index=True,
+                     use_container_width=True, column_config=TABLE_CFG)
+    with t2:
+        st.dataframe(stock_table(stocks.nsmallest(15, "net")), hide_index=True,
+                     use_container_width=True, column_config=TABLE_CFG)
+    with t3:
+        pick = st.selectbox("產業", sec.sort_values("net", ascending=False)["ind"].tolist())
+        st.dataframe(stock_table(stocks[stocks["ind"] == pick].sort_values("net", ascending=False)),
+                     hide_index=True, use_container_width=True, column_config=TABLE_CFG)
 
-st.caption("說明：成交價在前一刻委賣價以上 = 主動買進（流入），在委買價以下 = 主動賣出（流出）。"
-           "每 ~12 秒掃描一次，同一段時間內多筆成交會合併判斷，數字為估算、看方向比看絕對金額準。"
-           "這是盤中籌碼溫度計，不是買賣訊號——零股小資請搭配精選頁的綜合評分。")
+    st.caption("說明：成交價在前一刻委賣價以上 = 主動買進（流入），在委買價以下 = 主動賣出（流出）。"
+               "每 ~40 秒掃描一次，同一段時間內多筆成交會合併判斷，數字為估算、看方向比看絕對金額準。"
+               "這是盤中籌碼溫度計，不是買賣訊號——零股小資請搭配精選頁的綜合評分。")
 
-if live:   # 盤中每 30 秒自動更新
-    time.sleep(30)
-    st.rerun()
+
+details()
