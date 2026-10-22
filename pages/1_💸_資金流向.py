@@ -239,7 +239,7 @@ def details():
     if not snap.get("minutes"):
         return
     # 每 15 秒把最新快照放進隱藏元素，動畫元件每 2 秒讀一次（元件本身不重載，動畫不中斷）
-    lite = {k: snap.get(k) for k in ("date", "updated", "source", "minutes", "sectors")}
+    lite = flow_race.build_lite(snap)
     st.html(f'<div id="flow-live-data" style="display:none">'
             f'{html.escape(json.dumps(lite, ensure_ascii=False))}</div>')
     _details(snap)

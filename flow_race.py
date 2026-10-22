@@ -57,6 +57,18 @@ canvas { display:block; width:100%; }
 .ctrl button.sel { border-color:var(--clock); color:var(--clock); }
 .ctrl .sp { flex:1; }
 .note { color:var(--muted); font-size:11px; }
+#cvw { position:relative; }
+#cv { cursor:pointer; }
+#pan { position:absolute; left:10px; right:10px; display:none; z-index:5; background:rgba(15,19,27,.97);
+  border:1px solid var(--line); border-radius:10px; padding:8px 12px 6px; box-shadow:0 10px 28px rgba(0,0,0,.55); }
+#pan .ph { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:12px; margin-bottom:4px; }
+#pan .ph b { color:var(--ink); font-size:13px; }
+#pan .px { cursor:pointer; padding:0 4px; font-size:14px; }
+#pan .pr { display:grid; grid-template-columns:18px 1fr 64px 86px; gap:6px; align-items:center; padding:4px 0;
+  border-top:1px solid var(--line); font-size:13px; }
+#pan .pr .c { color:var(--muted); font-size:11px; margin-left:4px; }
+#pan .pr .n { text-align:right; font-weight:600; }
+#pan .pe { color:var(--muted); font-size:12px; padding:8px 0; }
 @media (max-width:520px) { h1 { font-size:21px; } .clock { font-size:30px; } .kpi .v { font-size:20px; }
   .kpi { padding:8px 10px; } .kpis { gap:6px; } }
 </style></head><body><div class="wrap">
@@ -70,7 +82,7 @@ canvas { display:block; width:100%; }
   <div class="kpi"><div class="l">失血最多</div><div class="n" id="kBotN">—</div><div class="s mono" id="kBotV"></div></div>
 </div>
 <div class="legend"><span style="color:var(--green)">流出</span><span style="color:var(--red)">流入</span></div>
-<canvas id="cv"></canvas>
+<div id="cvw"><canvas id="cv"></canvas><div id="pan"></div></div>
 <div class="tl">
   <div class="track" id="track"><div class="rail"></div><div class="fill" id="fill"></div><div class="knob" id="knob"></div></div>
   <div class="ends mono"><span id="t0"></span><span id="t1"></span></div>
@@ -124,7 +136,7 @@ const last = () => D.mins[D.mins.length - 1];
 let t = D.mins[0], playing = true, speed = 5, mode = "replay";   // replay | live
 let liveTarget = last();
 const rows = {};          // s → {y, a, v, rate, parts:[]}
-let scale = 1, tgt = null, tgtAge = 9, settle = false;
+let scale = 1, tgt = null, tgtAge = 9, settle = false, sel = null, selTop = 0, lastVals = {};
 
 $("sub").textContent = SNAP.date.replace(/-/g, "/") + " " + hhmm(D.mins[0]) + "–" + hhmm(last()) + " · 全天的主動買賣淨額";
 $("t0").textContent = hhmm(D.mins[0]);
@@ -195,6 +207,7 @@ function draw(dt) {
     const head = cx + dir * len;
     ctx.globalAlpha = a;
 
+    if (s === sel) { ctx.fillStyle = "rgba(217,242,74,0.07)"; roundRect(2, r.y + 2, W - 4, ROW_H - 4, 8); ctx.fill(); }
     // 第一名：淡色底
     if (tgt[s] === 4 && v > 0) { ctx.fillStyle = "rgba(255,255,255,0.035)"; roundRect(2, r.y + 2, W - 4, ROW_H - 4, 8); ctx.fill(); }
 
@@ -204,9 +217,12 @@ function draw(dt) {
     const travel = Math.min(1, Math.abs((inSet ? tgt[s] : GAP_Y) - r.y) / (ROW_H * 0.5));
     const ta = a * (1 - 0.8 * travel);
     r.ta = ta;
+    if (s === sel) selTop = r.y + ROW_H;
     ctx.globalAlpha = ta;
     ctx.fillStyle = "#e9ecf2"; ctx.font = (narrow ? "13px" : "15px") + ' -apple-system,"PingFang TC","Noto Sans TC",sans-serif';
     ctx.textBaseline = "middle"; ctx.textAlign = "left"; ctx.fillText(s, nameX + 14, y + 1);
+    { const tw = ctx.measureText(s).width; ctx.globalAlpha = ta * (s === sel ? 0.9 : 0.35);
+      ctx.fillStyle = s === sel ? "#d9f24a" : "#e9ecf2"; ctx.fillText(s === sel ? "▾" : "▸", nameX + 20 + tw, y + 1); }
     ctx.globalAlpha = a;
 
     // 光條：中線 → 頭，漸層
@@ -279,6 +295,55 @@ function ui() {
   put("note", mode === "live" ? "更新 " + (D.snap.updated || "—") : "");
 }
 
+// ── 點產業列 → 下拉面板：該產業前 5 檔個股 ───────────────────────────────
+const esc = x => String(x).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function topStocks(ind, dir) {
+  const sn = D.snap, atEnd = t >= last() - 0.5;
+  if (atEnd && sn.itop && sn.itop[ind]) return { rows: sn.itop[ind][dir > 0 ? "i" : "o"], exact: true };
+  // 回放到過去某時刻：用個股 5 分鐘分桶累計（只含當日最活躍的股票）
+  const sf = sn.sf || {}, meta = sn.meta || {}, bk = (sn.buckets || []).map(toM), out = [];
+  for (const code in sf) {
+    const m = meta[code]; if (!m || m[1] !== ind) continue;
+    let net = 0; const v = sf[code];
+    for (let i = 0; i < bk.length; i++) if (bk[i] <= t) net += ((v.in[i] || 0) - (v.out[i] || 0)) / 100;
+    if (dir > 0 ? net > 0 : net < 0) out.push([code, m[0], +net.toFixed(2), m[2], m[3]]);
+  }
+  out.sort((a, b) => dir > 0 ? b[2] - a[2] : a[2] - b[2]);
+  return { rows: out.slice(0, 5), exact: false };
+}
+let panKey = "";
+function panel() {
+  const pan = $("pan");
+  if (!sel || !(sel in rows) || !(sel in lastVals)) { pan.style.display = "none"; panKey = ""; return; }
+  const v = lastVals[sel], dir = v >= 0 ? 1 : -1, col = dir > 0 ? RED : GREEN;
+  const { rows: tp, exact } = topStocks(sel, dir);
+  const key = sel + dir + hhmm(t) + JSON.stringify(tp);
+  if (key !== panKey) {
+    panKey = key;
+    let h = `<div class="ph"><span><b>${esc(sel)}</b> · ${dir > 0 ? "流入" : "流出"}前 5 檔 · ${hhmm(t)}` +
+            `${exact ? "" : "（估算）"}</span><span class="px" id="px">✕</span></div>`;
+    if (!tp.length) h += `<div class="pe">這個時間點還沒有明顯的${dir > 0 ? "流入" : "流出"}個股</div>`;
+    tp.forEach((r, i) => {
+      const chg = r[3] == null ? "" : (r[3] >= 0 ? "+" : "") + r[3].toFixed(2) + "%";
+      h += `<div class="pr mono"><span style="color:var(--muted)">${i + 1}</span>` +
+           `<span>${esc(r[1])}<span class="c">${esc(r[0])}</span></span>` +
+           `<span style="color:${r[3] >= 0 ? RED : GREEN};text-align:right">${chg}</span>` +
+           `<span class="n" style="color:${col}">${fmt(r[2])}</span></div>`;
+    });
+    pan.innerHTML = h;
+    const x = $("px"); if (x) x.onclick = e => { e.stopPropagation(); sel = null; };
+  }
+  pan.style.display = "block";
+  pan.style.top = Math.max(0, Math.min(selTop, H - pan.offsetHeight)) + "px";
+}
+cv.addEventListener("click", e => {
+  const y = e.clientY - cv.getBoundingClientRect().top;
+  let hit = null;
+  for (const s in rows) { const r = rows[s]; if (r.a > 0.3 && y >= r.y && y < r.y + ROW_H) hit = s; }
+  sel = hit && hit !== sel ? hit : null;
+  panKey = "";
+});
+
 // ── 迴圈 ────────────────────────────────────────────────────────────────
 let lastTs = performance.now();
 // 捲到下面看表格時動畫不在畫面上 → 時間照走，但不畫（省電）
@@ -294,7 +359,7 @@ function frame(ts) {
     t += (liveTarget - t) * Math.min(1, dt * 0.8);       // 新資料進來 → 慢慢滑過去
   }
   for (const s in rows) rows[s].dtm = (rows[s].dtm || 0) + (t - t0);
-  if (onScreen) { kpis(draw(dt)); ui(); }
+  if (onScreen) { lastVals = draw(dt); kpis(lastVals); ui(); panel(); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -346,8 +411,25 @@ if (IS_LIVE && REMOTE) setInterval(async () => {
 """
 
 
+def build_lite(snap: Dict) -> Dict:
+    """動畫元件需要的資料：產業分鐘流量 + 每產業前 5 檔個股（全日精確）+ 個股分桶（回放用）"""
+    stocks = snap.get("stocks") or []
+    by: Dict[str, list] = {}
+    for x in stocks:
+        by.setdefault(x["ind"], []).append(
+            [x["code"], x["name"], round((x["in"] - x["out"]) / 100, 2), x.get("chg"), x.get("price")])
+    itop = {ind: {"i": sorted([r for r in L if r[2] > 0], key=lambda r: -r[2])[:5],
+                  "o": sorted([r for r in L if r[2] < 0], key=lambda r: r[2])[:5]}
+            for ind, L in by.items()}
+    sf = snap.get("stock_flow") or {}
+    meta = {x["code"]: [x["name"], x["ind"], x.get("chg"), x.get("price")] for x in stocks if x["code"] in sf}
+    out = {k: snap.get(k) for k in ("date", "updated", "source", "minutes", "sectors")}
+    out.update(itop=itop, buckets=snap.get("buckets") or [], sf=sf, meta=meta)
+    return out
+
+
 def render(snap: Dict, live: bool, height: int = 940) -> None:
-    lite = {k: snap[k] for k in ("date", "updated", "source", "minutes", "sectors")}
+    lite = build_lite(snap)
     html = (_HTML.replace("__SNAP__", json.dumps(lite, ensure_ascii=False))
                  .replace("__LIVE__", "true" if live else "false")
                  .replace("__REMOTE__", json.dumps(fc.REMOTE_SNAPSHOT_URL))
