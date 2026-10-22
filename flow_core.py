@@ -180,10 +180,52 @@ def build_snapshot(con: sqlite3.Connection, date: Optional[str] = None) -> Optio
             "vol": vol, "in": round(i / 1e6, 2), "out": round(o / 1e6, 2),
         })
     upd = con.execute("SELECT MAX(updated), MIN(source) FROM stock_state WHERE date = ?", (date,)).fetchone()
+    buckets, stock_flow = build_stock_buckets(con, date, stocks)
     return {
         "date": date, "updated": upd[0], "source": upd[1],
         "minutes": minutes, "sectors": sectors, "stocks": stocks,
+        "buckets": buckets, "stock_flow": stock_flow,
     }
+
+
+BUCKET_MIN = 5          # 個股時段資料的分桶（分鐘）
+BUCKET_TOP_GROSS = 200  # 成交額最大的前 N 檔
+BUCKET_TOP_NET = 60     # 全日淨流入 / 淨流出各前 N 檔
+
+
+def bucket_of(minute: str) -> str:
+    """'09:17' → '09:15'"""
+    h, m = int(minute[:2]), int(minute[3:5])
+    return f"{h:02d}:{(m // BUCKET_MIN) * BUCKET_MIN:02d}"
+
+
+def build_stock_buckets(con: sqlite3.Connection, date: str, stocks: List[Dict]):
+    """個股 × 5 分鐘 的流入/流出（百萬元），讓個股排行能跟著時間區間走。
+    只留活躍的少數幾檔，快照才不會爆量：成交額前 200 ∪ 淨流入前 60 ∪ 淨流出前 60。"""
+    if not stocks:
+        return [], {}
+    by_gross = sorted(stocks, key=lambda x: x["in"] + x["out"], reverse=True)[:BUCKET_TOP_GROSS]
+    by_net = sorted(stocks, key=lambda x: x["in"] - x["out"])
+    keep = {x["code"] for x in by_gross + by_net[:BUCKET_TOP_NET] + by_net[-BUCKET_TOP_NET:]}
+    rows = con.execute("SELECT minute, code, inflow, outflow FROM minute_flow WHERE date = ?", (date,)).fetchall()
+    acc: Dict[str, Dict[str, List[float]]] = {}
+    bset = set()
+    tmp: Dict[tuple, List[float]] = {}
+    for minute, code, i, o in rows:
+        if code not in keep:
+            continue
+        b = bucket_of(minute)
+        bset.add(b)
+        v = tmp.setdefault((code, b), [0.0, 0.0])
+        v[0] += i or 0.0
+        v[1] += o or 0.0
+    buckets = sorted(bset)
+    bidx = {b: k for k, b in enumerate(buckets)}
+    for (code, b), (i, o) in tmp.items():
+        s = acc.setdefault(code, {"in": [0.0] * len(buckets), "out": [0.0] * len(buckets)})
+        s["in"][bidx[b]] = round(i / 1e6, 2)
+        s["out"][bidx[b]] = round(o / 1e6, 2)
+    return buckets, acc
 
 
 def write_snapshot(snap: Dict) -> Path:

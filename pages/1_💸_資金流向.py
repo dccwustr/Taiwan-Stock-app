@@ -144,6 +144,24 @@ def stock_table(rows: pd.DataFrame) -> pd.DataFrame:
         columns={"ind": "產業", "price": "股價", "chg": "漲跌%"})
 
 
+def stocks_in_window(snap, stocks: pd.DataFrame, win) -> pd.DataFrame:
+    """個股在所選時間區間的 in/out/net（百萬）。全日用精確值；其餘用 5 分鐘分桶加總。
+    舊快照沒有分桶資料時退回全日累計。"""
+    st_ = stocks.copy()
+    minutes = snap["minutes"]
+    sf, bks = snap.get("stock_flow"), snap.get("buckets")
+    if not (win[0] == minutes[0] and win[1] == minutes[-1]) and sf and bks:
+        lo, hi = fc.bucket_of(win[0]), win[1]
+        idx = [i for i, b in enumerate(bks) if lo <= b <= hi]
+        rows = []
+        for code, v in sf.items():
+            rows.append((code, sum(v["in"][i] for i in idx), sum(v["out"][i] for i in idx)))
+        w = pd.DataFrame(rows, columns=["code", "in", "out"])
+        st_ = st_.drop(columns=["in", "out"]).merge(w, on="code", how="inner")
+    st_["net"] = st_["in"] - st_["out"]
+    return st_
+
+
 TABLE_CFG = {
     "股價": st.column_config.NumberColumn(format="%.2f"),
     "漲跌%": st.column_config.NumberColumn(format="%+.2f%%"),
@@ -235,23 +253,25 @@ def _details(snap):
                     config={"displayModeBar": False})
 
     # ── 個股 ────────────────────────────────────────────────────────────────────
+    st.markdown("#### 個股資金流向")
     stocks = pd.DataFrame(snap["stocks"])
-    stocks["net"] = stocks["in"] - stocks["out"]
-    st.markdown("#### 個股（全日累計）")
-    t1, t2, t3 = st.tabs(["🔴 流入前 15", "🟢 流出前 15", "🔍 依產業查看"])
-    with t1:
-        st.dataframe(stock_table(stocks.nlargest(15, "net")), hide_index=True,
-                     column_config=TABLE_CFG)
-    with t2:
-        st.dataframe(stock_table(stocks.nsmallest(15, "net")), hide_index=True,
-                     column_config=TABLE_CFG)
-    with t3:
-        opts = sec.sort_values("net", ascending=False)["ind"].tolist()   # 排名會變 → 同樣要記住選擇
-        prev = st.session_state.get("flow_pick")
-        pick = st.selectbox("產業", opts, index=opts.index(prev) if prev in opts else 0)
-        st.session_state["flow_pick"] = pick
-        st.dataframe(stock_table(stocks[stocks["ind"] == pick].sort_values("net", ascending=False)),
-                     hide_index=True, column_config=TABLE_CFG)
+    sel = stocks_in_window(snap, stocks, win)
+    full_day = win[0] == minutes[0] and win[1] == minutes[-1]
+    d1, d2, d3 = st.columns([2, 2, 1])
+    direction = d1.selectbox("方向", ["🔴 資金流入最多", "🟢 資金流出最多"], key="flow_dir")
+    ind_opts = ["全部產業"] + sorted(sel["ind"].dropna().unique())
+    ind_pick = d2.selectbox("產業", ind_opts, key="flow_ind")
+    topn = d3.selectbox("前 N 名", [10, 15, 30], index=1, key="flow_topn")
+    if ind_pick != "全部產業":
+        sel = sel[sel["ind"] == ind_pick]
+    sel = sel[(sel["in"] > 0) | (sel["out"] > 0)]
+    sel = sel.nlargest(topn, "net") if direction.startswith("🔴") else sel.nsmallest(topn, "net")
+    st.caption(f"區間 {win[0]} → {win[1]}" + ("（全日，精確值）" if full_day else
+               f"（以 {fc.BUCKET_MIN} 分鐘為單位估算，僅含當日成交最活躍的股票）"))
+    if sel.empty:
+        st.info("這個區間／產業沒有資料。")
+    else:
+        st.dataframe(stock_table(sel), hide_index=True, column_config=TABLE_CFG)
 
     st.caption("說明：成交價在前一刻委賣價以上 = 主動買進（流入），在委買價以下 = 主動賣出（流出）。"
                "每 ~20 秒掃描一次，同一段時間內多筆成交會合併判斷，數字為估算、看方向比看絕對金額準。"
