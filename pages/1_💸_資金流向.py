@@ -5,6 +5,7 @@
       雲端則讀 GitHub flow-data 分支的快照（約 30–60 秒延遲）
 """
 import html, json, sys
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -133,14 +134,21 @@ def rotation_heatmap(snap, sel_idx, sectors, bucket, height):
     return fig
 
 
-def stock_table(rows: pd.DataFrame) -> pd.DataFrame:
+def stock_table(rows: pd.DataFrame, hist: dict = None) -> pd.DataFrame:
     t = rows.copy()
+    if hist is not None:
+        prev, prev_rank = hist.get("prev", {}), hist.get("prev_rank", {})
+        t["本輪變化(億)"] = [(n - prev[c]) / 100 if c in prev else None for c, n in zip(t["code"], t["net"])]
+        t["排名"] = [_rank_move(prev_rank.get(c), k) for k, c in enumerate(t["code"], 1)]
     t["淨額(億)"] = (t["in"] - t["out"]) / 100
     t["流入(億)"] = t["in"] / 100
     t["流出(億)"] = t["out"] / 100
     t["NT$10,000 可買"] = t["price"].apply(lambda p: "—" if not p else (f"{int(10000 // p):,} 股" if p <= 10000 else f"不足 1 股（需 NT${p:,.0f}）"))
     t["股票"] = t["code"] + " " + t["name"]
-    return t[["股票", "ind", "price", "chg", "淨額(億)", "流入(億)", "流出(億)", "NT$10,000 可買"]].rename(
+    cols = ["股票", "ind", "price", "chg", "淨額(億)", "流入(億)", "流出(億)", "NT$10,000 可買"]
+    if hist is not None:
+        cols = ["排名", "股票", "ind", "price", "chg", "淨額(億)", "本輪變化(億)", "流入(億)", "流出(億)", "NT$10,000 可買"]
+    return t[cols].rename(
         columns={"ind": "產業", "price": "股價", "chg": "漲跌%"})
 
 
@@ -162,12 +170,43 @@ def stocks_in_window(snap, stocks: pd.DataFrame, win) -> pd.DataFrame:
     return st_
 
 
+def _rank_move(old, new) -> str:
+    if old is None:
+        return f"{new} 🆕"
+    d = old - new
+    return f"{new} ▲{d}" if d > 0 else f"{new} ▼{-d}" if d < 0 else f"{new} ―"
+
+
+def update_hist(snap, stocks: pd.DataFrame) -> dict:
+    """記住上一輪（快照更新前）的全日淨額，用來顯示『本輪變化』與排名升降"""
+    key = (snap["date"], snap.get("updated"))
+    h = st.session_state.get("flow_hist")
+    if h and h["key"] == key:
+        return h
+    net = dict(zip(stocks["code"], stocks["in"] - stocks["out"]))
+    if h and h["key"][0] == snap["date"]:
+        h = {"key": key, "cur": net, "prev": h["cur"], "prev_rank": h["cur_rank"], "cur_rank": {}}
+    else:
+        h = {"key": key, "cur": net, "prev": {}, "prev_rank": {}, "cur_rank": {}}
+    st.session_state["flow_hist"] = h
+    return h
+
+
+def secs_ago(snap) -> str:
+    try:
+        t = datetime.strptime(f"{snap['date']} {snap['updated']}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=fc.TW)
+        return f"{max(0, int((fc.now_tw() - t).total_seconds()))} 秒前"
+    except Exception:
+        return "—"
+
+
 TABLE_CFG = {
     "股價": st.column_config.NumberColumn(format="%.2f"),
     "漲跌%": st.column_config.NumberColumn(format="%+.2f%%"),
     "淨額(億)": st.column_config.NumberColumn(format="%+.2f"),
     "流入(億)": st.column_config.NumberColumn(format="%.2f"),
     "流出(億)": st.column_config.NumberColumn(format="%.2f"),
+    "本輪變化(億)": st.column_config.NumberColumn(format="%+.2f"),
 }
 
 
@@ -237,7 +276,7 @@ def _details(snap):
     net = tot_in - tot_out
     k1, k2, k3, k4 = st.columns(4)
     tile(k1, f"{snap['date']}　{win[0]} → {win[1]}", "🔴 盤中" if live else "收盤",
-         f"更新 {snap.get('updated') or '—'} · {src}")
+         f"更新 {snap.get('updated') or '—'}（{secs_ago(snap)}）· {src}")
     tile(k2, "主動買進（流入）", f"{tot_in / 100:,.0f} 億", "成交在委賣價（外盤）", RED)
     tile(k3, "主動賣出（流出）", f"{tot_out / 100:,.0f} 億", "成交在委買價（內盤）", GREEN)
     tile(k4, "全市場淨額", yi(net), f"流入佔 {tot_in / max(tot_in + tot_out, 1):.1%}", RED if net >= 0 else GREEN)
@@ -271,7 +310,12 @@ def _details(snap):
     if sel.empty:
         st.info("這個區間／產業沒有資料。")
     else:
-        st.dataframe(stock_table(sel), hide_index=True, column_config=TABLE_CFG)
+        hist = update_hist(snap, stocks) if live else None
+        if hist is not None:
+            hist["cur_rank"] = {c: k for k, c in enumerate(sel["code"], 1)}
+            st.caption("🔴 即時更新中（約每 15–30 秒）。『本輪變化』= 上一輪更新後這檔新增的淨流入；"
+                       "排名箭頭 = 相對上一輪的名次升降。")
+        st.dataframe(stock_table(sel, hist), hide_index=True, column_config=TABLE_CFG)
 
     st.caption("說明：成交價在前一刻委賣價以上 = 主動買進（流入），在委買價以下 = 主動賣出（流出）。"
                "每 ~20 秒掃描一次，同一段時間內多筆成交會合併判斷，數字為估算、看方向比看絕對金額準。"
