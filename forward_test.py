@@ -83,6 +83,8 @@ def run():
                                 float(p["stop_loss"] or 0), float(p["target_price"] or 0))
         rows.append(r)
 
+    if not rows:
+        sys.exit("no price data downloaded (rate limited?) — keeping existing output")
     with open(OUT_PATH, "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
