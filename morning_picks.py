@@ -32,6 +32,11 @@ from widget import (
 TST = timezone(timedelta(hours=8))
 
 
+def _pct_vs(last, ma) -> float:
+    """TAIEX % distance from a moving average; 0.0 when either is missing."""
+    return round((last / ma - 1) * 100, 2) if last and ma else 0.0
+
+
 def run_morning_analysis(verbose: bool = True) -> dict:
     tw_now = datetime.now(tz=TST)
 
@@ -181,8 +186,8 @@ def run_morning_analysis(verbose: bool = True) -> dict:
             "label":   mkt_dir.get("label",  ""),
             "penalty": mkt_dir.get("penalty", 0),
             "stage":   mkt_dir.get("stage",  ""),
-            "taiex_vs_ma50":  mkt_dir.get("taiex_vs_ma50",  0.0),
-            "taiex_vs_ma200": mkt_dir.get("taiex_vs_ma200", 0.0),
+            "taiex_vs_ma50":  _pct_vs(mkt_dir.get("last"), mkt_dir.get("ma50")),
+            "taiex_vs_ma200": _pct_vs(mkt_dir.get("last"), mkt_dir.get("ma200")),
         },
         "top_picks":       scored[:10],
         "total_scored":    len(scored),
@@ -208,6 +213,12 @@ if __name__ == "__main__":
 
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
+
+    try:
+        from pick_log import append_picks
+        print(f"📒 精選紀錄 +{append_picks(result)} 筆 → data/pick_log.csv")
+    except Exception as e:  # logging must never break the daily report
+        print(f"⚠️ 精選紀錄失敗: {e}", file=sys.stderr)
 
     print(f"\n✅ 報告已儲存至 {out_path}")
     print(f"   生成時間: {result['generated_at']}")
