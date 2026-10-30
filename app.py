@@ -123,6 +123,7 @@ try:
         build_longterm_plan,
         calc_support_resistance,
     )
+    from dip_watch import market_drop
 except Exception as _widget_err:
     import traceback as _tb
     st.error(f"⚠️ 模組載入失敗 [{type(_widget_err).__name__}]: {_widget_err}")
@@ -3164,6 +3165,21 @@ with _ref_col:
     if st.button("↻", key="top_refresh", help="重新整理", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
+
+
+# ── 大盤急跌日 banner — 只提醒，反彈候補仍在前向測試中，不列入推薦 ─────────────
+_drop = market_drop(taiex_close)
+if _drop["alert"]:
+    st.markdown(
+        f'<div style="border:1px solid #b8860b;background:rgba(184,134,11,0.12);'
+        f'border-radius:8px;padding:10px 14px;margin:6px 0 10px;font-size:13px;color:#f0f0f0">'
+        f'<b style="color:#ffc107">⚠️ 大盤急跌日</b>　加權指數 '
+        f'<b style="color:{"#ef5350" if _drop["chg1d"] > 0 else "#00c853"}">{_drop["chg1d"]:+.2f}%</b>'
+        f'　距 20 日高點 <b style="color:#00c853">{_drop["drawdown"]:+.2f}%</b><br>'
+        f'<span style="color:#aaa">跌深不等於會反彈。反彈候補目前只記錄、尚在前向測試，不列入推薦。'
+        f'若要進場：分批、小額、只挑月營收仍成長的股票。</span></div>',
+        unsafe_allow_html=True,
+    )
 
 
 # ── Main view: Search history ────────────────────────────────────────────────

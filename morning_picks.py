@@ -194,6 +194,17 @@ def run_morning_analysis(verbose: bool = True) -> dict:
         "top_headlines":   headlines[:5],
     }
 
+    # ── 7. 大盤急跌日 → 反彈候補只記錄、不進精選 ─────────────────────────────
+    try:
+        from dip_watch import log_dip_candidates, market_drop
+        _drop = market_drop(taiex_close)
+        output["market_direction"]["taiex_chg1d"] = _drop["chg1d"]
+        output["market_direction"]["taiex_drawdown"] = _drop["drawdown"]
+        _n = log_dip_candidates(output, scored, prices, taiex_close)
+        log(f"  → 大盤 {_drop['chg1d']}% / 距20日高 {_drop['drawdown']}% | 反彈候補紀錄 +{_n} 筆")
+    except Exception as e:  # logging must never break the daily report
+        log(f"  ⚠️ 反彈候補紀錄失敗: {e}")
+
     log(f"=== 分析完成 ===")
     return output
 

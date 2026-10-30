@@ -10,6 +10,7 @@
 尚未走滿的天數留空，不計入統計。
 
   python forward_test.py        # 輸出 data/forward_test.csv 並印出摘要
+  python forward_test.py --dip  # 大盤急跌日的反彈候補 → data/dip_forward_test.csv
 """
 import csv, os, sys, warnings
 from collections import defaultdict
@@ -58,10 +59,10 @@ def _outcome(df, date, stop, target):
     return "open" if len(fwd) < 20 else "neither"
 
 
-def run():
-    if not os.path.exists(LOG_PATH):
-        sys.exit("no data/pick_log.csv — run pick_log.py first")
-    with open(LOG_PATH, encoding="utf-8", newline="") as f:
+def run(log_path=LOG_PATH, out_path=OUT_PATH):
+    if not os.path.exists(log_path):
+        sys.exit(f"no {log_path} — nothing logged yet")
+    with open(log_path, encoding="utf-8", newline="") as f:
         picks = list(csv.DictReader(f))
     start = min(p["date"] for p in picks)
     px = _download({p["ticker"] for p in picks} | {"^TWII"}, start)
@@ -85,11 +86,11 @@ def run():
 
     if not rows:
         sys.exit("no price data downloaded (rate limited?) — keeping existing output")
-    with open(OUT_PATH, "w", encoding="utf-8", newline="") as f:
+    with open(out_path, "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
         w.writerows(rows)
-    summarize(rows)
+    summarize(rows, out_path)
 
 
 def _ret_base(mkt, date):
@@ -106,7 +107,7 @@ def _stats(label, rows, key):
     return f"  {label:<12} n={len(v):<4} avg={sum(v)/len(v):+6.2f}%  win={win:4.0f}%"
 
 
-def summarize(rows):
+def summarize(rows, out_path=OUT_PATH):
     print(f"\n=== 前向測試 ({len(rows)} 筆精選, "
           f"{len({r['date'] for r in rows})} 個交易日) ===")
     for n in (5, 20):
@@ -126,8 +127,11 @@ def summarize(rows):
         oc[r["outcome"]] += 1
     print(f"\n20日內先碰: 目標 {oc['target']} / 停損 {oc['stop']} / "
           f"皆未碰 {oc['neither']} / 未走完 {oc['open']}")
-    print(f"明細: {OUT_PATH}\n")
+    print(f"明細: {out_path}\n")
 
 
 if __name__ == "__main__":
-    run()
+    if "--dip" in sys.argv:
+        run(os.path.join("data", "dip_log.csv"), os.path.join("data", "dip_forward_test.csv"))
+    else:
+        run()

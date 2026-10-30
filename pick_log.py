@@ -17,30 +17,30 @@ FIELDS = [
 ]
 
 
-def _rows(result: dict) -> list:
+def _rows(result: dict, fields: list = FIELDS) -> list:
     mkt = result.get("market_direction", {})
     rows = []
     for rank, pk in enumerate(result.get("top_picks", []), 1):
-        row = {k: pk.get(k, "") for k in FIELDS}
+        row = {k: pk.get(k, "") for k in fields}
         row.update(date=result["date"], rank=rank,
                    mkt_label=mkt.get("label", ""), mkt_penalty=mkt.get("penalty", ""))
         rows.append(row)
     return rows
 
 
-def append_picks(result: dict, path: str = LOG_PATH) -> int:
+def append_picks(result: dict, path: str = LOG_PATH, fields: list = FIELDS) -> int:
     """Append result's picks not already logged. Returns number of rows added."""
     existing = set()
     if os.path.exists(path):
         with open(path, encoding="utf-8", newline="") as f:
             existing = {(r["date"], r["ticker"]) for r in csv.DictReader(f)}
-    new = [r for r in _rows(result) if (r["date"], r["ticker"]) not in existing]
+    new = [r for r in _rows(result, fields) if (r["date"], r["ticker"]) not in existing]
     if not new:
         return 0
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     write_header = not os.path.exists(path)
     with open(path, "a", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=FIELDS)
+        w = csv.DictWriter(f, fieldnames=fields)
         if write_header:
             w.writeheader()
         w.writerows(new)
