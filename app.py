@@ -110,7 +110,7 @@ try:
         # ── 早盤情報系統 ─────────────────────────────────────────────────────────
         fetch_technews_rss, fetch_google_news_tw_orders,
         fetch_yahoo_tw_news, fetch_ltn_news,
-        detect_order_signals,
+        detect_order_signals, classify_news_horizon, analyze_portfolio_risk,
         fetch_twse_foreign_multi_day, calc_foreign_streak,
         # ── 三大法人 + 相對強度 (RS) ──────────────────────────────────────────────
         fetch_twse_three_investors, calc_three_investors_bonus,
@@ -956,7 +956,7 @@ with st.sidebar:
     qc1, qc2 = st.columns([3, 1])
     query_input = qc1.text_input("q", placeholder="查詢代號，如 2454",
                                   label_visibility="collapsed", key="query_input")
-    if qc2.button("Go", use_container_width=True):
+    if qc2.button("Go", width="stretch"):
         raw = query_input.strip().upper()
         if raw:
             # Strip any existing suffix so "6207.TWO" or "6207.TW" both normalise to "6207.TW"
@@ -978,7 +978,7 @@ with st.sidebar:
 
     _vm_search_active = st.session_state.view_mode == "search"
     if st.button("搜尋記錄  ✓" if _vm_search_active else "搜尋記錄",
-                 use_container_width=True,
+                 width="stretch",
                  type="primary" if _vm_search_active else "secondary",
                  key="nav_search_inline"):
         st.session_state.view_mode = "search"
@@ -997,7 +997,7 @@ with st.sidebar:
     ]):
         _active = vm == _vk
         if _col.button(_vl + (" ✓" if _active else ""), key=f"nav_{_vk}",
-                       type="primary" if _active else "secondary", use_container_width=True):
+                       type="primary" if _active else "secondary", width="stretch"):
             st.session_state.view_mode = _vk
             st.session_state._close_sidebar = True
             st.rerun()
@@ -1007,7 +1007,7 @@ with st.sidebar:
     ]):
         _active = vm == _vk
         if _col.button(_vl + (" ✓" if _active else ""), key=f"nav_{_vk}",
-                       type="primary" if _active else "secondary", use_container_width=True):
+                       type="primary" if _active else "secondary", width="stretch"):
             st.session_state.view_mode = _vk
             st.session_state._close_sidebar = True
             st.rerun()
@@ -1034,7 +1034,7 @@ with st.sidebar:
     elif _np == "denied":
         st.caption("🔕 推播已封鎖，請在瀏覽器網址列 → 網站設定 → 允許通知")
     elif _np in (0, "default", None):
-        if st.button("🔔 開啟重大新聞推播", use_container_width=True, help="戰爭・崩盤・聯準會緊急決議 自動通知"):
+        if st.button("🔔 開啟重大新聞推播", width="stretch", help="戰爭・崩盤・聯準會緊急決議 自動通知"):
             st_javascript("await Notification.requestPermission()")
             st.rerun()
 
@@ -1302,7 +1302,7 @@ def render_holding_card(h, container=None):
             new_cost   = e2.number_input("買進均價", min_value=0.0,
                                          value=float(saved.get("cost", 0)),
                                          step=0.1, key=f"co_{ticker}")
-            if st.button("💾 儲存", key=f"save_{ticker}", use_container_width=True):
+            if st.button("💾 儲存", key=f"save_{ticker}", width="stretch"):
                 st.session_state.custom_holdings[ticker] = {"shares": new_shares, "cost": new_cost}
                 st.session_state[edit_key] = False
                 st.session_state._needs_save = True
@@ -1343,7 +1343,7 @@ def render_holding_card(h, container=None):
             st.caption("資料不足，無法分析")
 
         st.divider()
-        if st.button("🗑 已賣出，移除此股", key=f"del_{ticker}", use_container_width=True):
+        if st.button("🗑 已賣出，移除此股", key=f"del_{ticker}", width="stretch"):
             st.session_state.custom_holdings.pop(ticker, None)
             st.session_state.hidden_holdings.add(ticker)
             st.session_state._needs_save = True
@@ -1641,6 +1641,7 @@ def _build_fund_row(p: dict) -> str:
         return ""
     inner = "".join(tags)
     return f'<div class="fund-row">{inner}</div>'
+
 
 # ── 大師鏡頭 (data/master_lenses.json, 每週由 GitHub Action 更新) ──────────────
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -2402,7 +2403,7 @@ def _build_kbar_fi_row(sres: dict) -> str:
     )
 
 
-def _build_signal_badge(p: dict) -> str:
+def _build_signal_badge(p: dict, show_rr: bool = True) -> str:
     """交易訊號徽章：BUY / HOLD / SELL + 勝率統計一覽"""
     sig   = p.get("signal", "HOLD")
     conf  = p.get("signal_conf", 50)
@@ -2422,6 +2423,19 @@ def _build_signal_badge(p: dict) -> str:
     reasons = p.get("signal_reasons") or []
     reason_html = "　".join(
         f'<span style="color:#ccc">{r}</span>' for r in reasons[:3]
+    )
+
+    # 週線方向 + 風險報酬比
+    wk_lbl = p.get("weekly_label", "")
+    wk_col = {"up": "#69f0ae", "down": "#ef5350", "flat": "#ffd54f"}.get(p.get("weekly_trend"), "#888")
+    rr     = p.get("rr_ratio", 0) or 0
+    rr_col = "#69f0ae" if rr >= 2 else ("#ffd54f" if rr >= 1.5 else "#ef5350")
+    rr_tip = "" if rr >= 1.5 else "（報酬不夠覆蓋風險）"
+    tf_html = (
+        f'<div style="display:flex;gap:14px;margin-top:4px;flex-wrap:wrap;font-size:11px">'
+        + (f'<span style="color:{wk_col}">📅 {wk_lbl}</span>' if wk_lbl else "")
+        + (f'<span style="color:{rr_col}">⚖️ 風險報酬比 1:{rr:.1f}{rr_tip}</span>' if show_rr and rr > 0 else "")
+        + '</div>'
     )
 
     stats_html = ""
@@ -2446,6 +2460,7 @@ def _build_signal_badge(p: dict) -> str:
         f'<span style="color:#888;font-size:11px">訊號強度 {conf}%</span>'
         f'</div>'
         f'<div style="font-size:11px;margin-top:3px">{reason_html}</div>'
+        f'{tf_html}'
         f'{stats_html}'
         f'</div>'
     )
@@ -2583,7 +2598,7 @@ def render_query_card(ticker, sres, live_d, key_sfx, flow: dict = None):
     _, _sc = st.columns([10, 1])
     with _sc:
         st.markdown('<span class="star-sentinel"></span>', unsafe_allow_html=True)
-        _clicked = st.button(_star, key=f"star_{key_sfx}", use_container_width=True, help="追蹤")
+        _clicked = st.button(_star, key=f"star_{key_sfx}", width="stretch", help="追蹤")
 
     st.markdown(
         f'<div style="margin-top:-3rem;pointer-events:none">'
@@ -2667,7 +2682,7 @@ def render_query_card(ticker, sres, live_d, key_sfx, flow: dict = None):
                 f'→ 側邊欄「📡」查看即時動態</div>',
                 unsafe_allow_html=True
             )
-            if st.button("取消 RSI 監控", key=f"rsi_cancel_{_tkey}", use_container_width=True):
+            if st.button("取消 RSI 監控", key=f"rsi_cancel_{_tkey}", width="stretch"):
                 st.session_state.rsi_thresholds.pop(ticker, None)
                 st.session_state._needs_save = True
                 st.rerun()
@@ -2700,7 +2715,7 @@ def render_query_card(ticker, sres, live_d, key_sfx, flow: dict = None):
                 index=0 if _def_dir == "below" else 1,
                 key=f"rsi_dir_{_tkey}", label_visibility="collapsed"
             )
-            if _sc3.button("📡 開始監控", key=f"rsi_set_{_tkey}", use_container_width=True):
+            if _sc3.button("📡 開始監控", key=f"rsi_set_{_tkey}", width="stretch"):
                 st.session_state.rsi_thresholds[ticker] = {
                     "target":    float(_rsi_tgt),
                     "direction": _rsi_dir,
@@ -3234,10 +3249,9 @@ with _mi_col:
         )
 with _ref_col:
     st.markdown('<span class="refresh-sentinel"></span>', unsafe_allow_html=True)
-    if st.button("↻", key="top_refresh", help="重新整理", use_container_width=True):
+    if st.button("↻", key="top_refresh", help="重新整理", width="stretch"):
         st.cache_data.clear()
         st.rerun()
-
 
 # ── 大盤急跌日 banner — 只提醒，反彈候補仍在前向測試中，不列入推薦 ─────────────
 _drop = market_drop(taiex_close)
@@ -3285,7 +3299,7 @@ if st.session_state.view_mode == "search":
                     f'{_hint_html}</div>',
                     unsafe_allow_html=True
                 )
-    if _recent and st.button("🗑 清除搜尋記錄", use_container_width=True):
+    if _recent and st.button("🗑 清除搜尋記錄", width="stretch"):
         st.session_state.recent_searches = []
         st.session_state.search_ticker   = None
         st.rerun()
@@ -3413,7 +3427,7 @@ def render_category_cards(picks, prices, show_chart):
         _, _sc2 = st.columns([10, 1])
         with _sc2:
             st.markdown('<span class="star-sentinel"></span>', unsafe_allow_html=True)
-            _star_clicked = st.button(_star, key=f"star_cat_{p['ticker']}", use_container_width=True, help="追蹤")
+            _star_clicked = st.button(_star, key=f"star_cat_{p['ticker']}", width="stretch", help="追蹤")
 
         # Score label
         _score_html = f'<div style="font-size:11px;color:#555;margin-top:3px">類別評分 {sc}/100</div>'
@@ -3526,7 +3540,7 @@ def render_category_cards(picks, prices, show_chart):
                 )
                 _fig.update_xaxes(gridcolor="#1a1a2e", showgrid=True)
                 _fig.update_yaxes(gridcolor="#1a1a2e", showgrid=True)
-                st.plotly_chart(_fig, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(_fig, config={"displayModeBar": False})
 
 # ── Future Giants fragment (defined before routing so it's always callable) ───
 @st.fragment(run_every="300s")
@@ -3782,6 +3796,39 @@ if st.session_state.view_mode == "holdings":
     elif holdings_info:
         st.info("💡 點選下方「＋ 新增 / 編輯持股」輸入買進均價和股數，即可看到完整損益總覽")
 
+    # ── 持股風險健檢：集中度 / 隱藏連動 / 再平衡 / 大盤 −20% 壓力測試 ────────
+    _risk_pos = [
+        {"ticker": h["ticker"], "name": h["name"], "value": h["price"] * h["shares"]}
+        for h in holdings_info
+        if not h.get("error") and h.get("shares", 0) > 0 and h.get("price", 0) > 0
+    ]
+    if len(_risk_pos) >= 2:
+        _pr = analyze_portfolio_risk(_risk_pos, prices, taiex_close)
+        if _pr:
+            with st.expander("🩺 持股風險健檢", expanded=bool(_pr["issues"])):
+                _rc1, _rc2, _rc3 = st.columns(3)
+                _rc1.metric("持股市值", f"NT${_pr['total']:,.0f}")
+                _rc2.metric("組合 Beta", f"{_pr['beta']:.2f}" if _pr["beta"] is not None else "—",
+                            help="相對大盤的波動倍數；1.0 = 跟大盤同步")
+                _rc3.metric("大盤跌 20% 時", f"−NT${abs(_pr['stress_amt']):,.0f}", f"{_pr['stress_pct']:.1f}%",
+                            delta_color="off")
+                st.caption("占比：" + "　".join(
+                    f"{p['name']} {p['weight']:.0f}%" for p in _pr["positions"]))
+                if _pr["issues"]:
+                    st.markdown("**⚠️ 弱點**")
+                    for _t in _pr["issues"]:
+                        st.markdown(f"- {_t}")
+                    st.markdown("**🔁 再平衡建議**")
+                    for _t in _pr["actions"]:
+                        st.markdown(f"- {_t}")
+                else:
+                    st.success("持股分散良好：沒有過度集中或高度連動的部位")
+                st.markdown("**🛡️ 大盤下跌 20% 的應對**")
+                for _t in _pr["hedges"]:
+                    st.markdown(f"- {_t}")
+    elif _risk_pos:
+        st.caption("🩺 持股風險健檢需要至少 2 檔有股數的持股")
+
     st.divider()
     with st.expander("＋ 新增 / 編輯持股", expanded=False):
         st.caption("輸入股票代號（如 2454）、股數、買進均價")
@@ -3789,7 +3836,7 @@ if st.session_state.view_mode == "holdings":
         _h_code   = _hc1.text_input("代號",   placeholder="2454",  label_visibility="collapsed", key="hp_code")
         _h_shares = _hc2.text_input("股數",   placeholder="100",   label_visibility="collapsed", key="hp_shares")
         _h_cost   = _hc3.text_input("買進價", placeholder="850",   label_visibility="collapsed", key="hp_cost")
-        if st.button("新增", use_container_width=True, key="hp_add"):
+        if st.button("新增", width="stretch", key="hp_add"):
             _code = _h_code.strip().upper()
             if _code:
                 _hticker = _code + ".TW" if not _code.endswith(".TW") else _code
@@ -4192,7 +4239,7 @@ def render_stock_cards(picks, prices, show_chart):
         _, _sc = st.columns([10, 1])
         with _sc:
             st.markdown('<span class="star-sentinel"></span>', unsafe_allow_html=True)
-            _star_clicked = st.button(_star, key=f"star_pick_{p['ticker']}", use_container_width=True, help="追蹤")
+            _star_clicked = st.button(_star, key=f"star_pick_{p['ticker']}", width="stretch", help="追蹤")
 
         # Score delta vs previous slot
         _sdelta = p.get("score_delta")
@@ -4263,7 +4310,7 @@ def render_stock_cards(picks, prices, show_chart):
             + _build_lens_row(p)
             + _build_kbar_fi_row(p)
             + _build_flow_panel(_pick_flow, is_open)
-            + _build_signal_badge(p)
+            + _build_signal_badge(p, show_rr=False)
             + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
@@ -4375,7 +4422,7 @@ def render_stock_cards(picks, prices, show_chart):
                     yaxis=dict(gridcolor="#1a1a2e"),
                     yaxis2=dict(gridcolor="#1a1a2e"),
                 )
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(fig, config={"displayModeBar": False})
 
         if _star_clicked:
             if _in_w:
@@ -4462,7 +4509,7 @@ if backups:
         st.session_state.show_backups = False
 
     label = "▲ 收起備選股" if st.session_state.show_backups else "＋ 查看更多備選（觀察用）"
-    if st.button(label, use_container_width=True):
+    if st.button(label, width="stretch"):
         st.session_state.show_backups = not st.session_state.show_backups
         st.rerun()
 
@@ -4585,11 +4632,33 @@ with st.expander("🌱 長期潛力股・AI 論點分析（每日更新一次）
 
 # ── News (collapsed by default) ───────────────────────────────────────────────
 st.divider()
+_HZ_COLOR = {"short": "#ffb74d", "long": "#64b5f6", "both": "#ba68c8"}
+
+def _horizon_tag(hz: dict) -> str:
+    if not hz.get("horizon_label"):
+        return ""
+    c = _HZ_COLOR.get(hz["horizon"], "#888")
+    return (f'<span style="font-size:10px;color:{c};border:1px solid {c}66;'
+            f'border-radius:3px;padding:0 5px;margin-right:6px">{hz["horizon_label"]}</span>')
+
 with st.expander("📰 今日早盤新聞", expanded=False):
+    # 個股訊號 → 交易語言：短線 / 長線影響與操作方向
+    _sig_hz = [s for s in order_signals if s.get("horizon_label")]
+    if _sig_hz:
+        st.markdown("**📌 個股新聞 → 交易語言**")
+        for s in _sig_hz[:6]:
+            st.markdown(
+                f'<div class="news-line">{_horizon_tag(s)}'
+                f'<b>{s["ticker"].replace(".TW","")} {s["name"]}</b>　{s["headline"]}'
+                f'<div style="font-size:11px;color:#999;margin-top:2px">{s["horizon_note"]}</div></div>',
+                unsafe_allow_html=True,
+            )
+        st.divider()
     headlines = data["headlines"]
     if headlines:
         for h in headlines[:10]:
-            st.markdown(f'<div class="news-line">{h}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="news-line">{_horizon_tag(classify_news_horizon(h))}{h}</div>',
+                        unsafe_allow_html=True)
     else:
         st.caption("暫無最新新聞")
     if len(all_news) > 10:
