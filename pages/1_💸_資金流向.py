@@ -16,6 +16,9 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import flow_core as fc  # noqa: E402
 import flow_race  # noqa: E402
+from dip_watch import market_drop  # noqa: E402
+
+LENS_PATH = Path(__file__).resolve().parent.parent / "data" / "master_lenses.json"
 
 st.set_page_config(page_title="即時資金流向", page_icon="💸", layout="wide")
 
@@ -57,6 +60,37 @@ def load():
     if loc and rem:   # 取比較新的
         return loc if (loc["date"], loc.get("updated") or "") >= (rem["date"], rem.get("updated") or "") else rem
     return loc or rem
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def load_market() -> dict:
+    """加權指數單日漲跌 / 距 20 日高點 — 與精選頁同一套急跌判斷"""
+    try:
+        from widget import fetch_taiex_prices
+        return market_drop(fetch_taiex_prices(period="3mo"))
+    except Exception:
+        return market_drop(None)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_lenses() -> dict:
+    """大師鏡頭（每週由 GitHub Action 更新），只涵蓋精選頁的股票池"""
+    try:
+        return json.loads(LENS_PATH.read_text("utf-8")).get("tickers", {})
+    except Exception:
+        return {}
+
+
+def lens_label(code: str, lenses: dict) -> str:
+    L = lenses.get(f"{code}.TW", {})
+    b = L.get("buffett", {}).get("score")
+    f = L.get("piotroski", {}).get("score")
+    return "—" if L.get("na") or b is None or f is None else f"🎩{b}/8 📋{f}/9"
+
+
+def is_quality(code: str, lenses: dict) -> bool:
+    L = lenses.get(f"{code}.TW", {})
+    return (L.get("buffett", {}).get("score") or 0) >= 6 or (L.get("piotroski", {}).get("score") or 0) >= 7
 
 
 def yi(million: float) -> str:
@@ -134,8 +168,9 @@ def rotation_heatmap(snap, sel_idx, sectors, bucket, height):
     return fig
 
 
-def stock_table(rows: pd.DataFrame, hist: dict = None) -> pd.DataFrame:
+def stock_table(rows: pd.DataFrame, hist: dict = None, lenses: dict = None) -> pd.DataFrame:
     t = rows.copy()
+    t["大師鏡頭"] = [lens_label(c, lenses or {}) for c in t["code"]]
     if hist is not None:
         prev, prev_rank = hist.get("prev", {}), hist.get("prev_rank", {})
         t["本輪變化(億)"] = [(n - prev[c]) / 100 if c in prev else None for c, n in zip(t["code"], t["net"])]
@@ -145,9 +180,10 @@ def stock_table(rows: pd.DataFrame, hist: dict = None) -> pd.DataFrame:
     t["流出(億)"] = t["out"] / 100
     t["NT$10,000 可買"] = t["price"].apply(lambda p: "—" if not p else (f"{int(10000 // p):,} 股" if p <= 10000 else f"不足 1 股（需 NT${p:,.0f}）"))
     t["股票"] = t["code"] + " " + t["name"]
-    cols = ["股票", "ind", "price", "chg", "淨額(億)", "流入(億)", "流出(億)", "NT$10,000 可買"]
+    cols = ["股票", "ind", "price", "chg", "淨額(億)", "流入(億)", "流出(億)", "NT$10,000 可買", "大師鏡頭"]
     if hist is not None:
-        cols = ["排名", "股票", "ind", "price", "chg", "淨額(億)", "本輪變化(億)", "流入(億)", "流出(億)", "NT$10,000 可買"]
+        cols = ["排名", "股票", "ind", "price", "chg", "淨額(億)", "本輪變化(億)", "流入(億)", "流出(億)",
+                "NT$10,000 可買", "大師鏡頭"]
     return t[cols].rename(
         columns={"ind": "產業", "price": "股價", "chg": "漲跌%"})
 
@@ -229,6 +265,16 @@ if snap.get("source") == "demo":
 
 live = market_open() and snap["date"] == fc.now_tw().strftime("%Y-%m-%d")
 
+_mk = load_market()
+if _mk["alert"]:
+    st.markdown(
+        f'<div class="flow-tile" style="border-color:#b8860b;margin-bottom:10px">'
+        f'<b style="color:#ffc107">⚠️ 大盤急跌日</b>　加權指數 '
+        f'<b style="color:{RED if _mk["chg1d"] > 0 else GREEN}">{_mk["chg1d"]:+.2f}%</b>'
+        f'　距 20 日高點 <b style="color:{GREEN}">{_mk["drawdown"]:+.2f}%</b>'
+        f'<div class="sub" style="color:{MUTED}">看哪些產業逆勢流入，以及下方「優質股遭賣壓」。'
+        f'跌深不等於會反彈。</div></div>', unsafe_allow_html=True)
+
 # 動畫放在 fragment 外面才不會被重整打斷；新資料由下面 fragment 的隱藏元素提供
 flow_race.render(snap, live)
 
@@ -294,6 +340,7 @@ def _details(snap):
     # ── 個股 ────────────────────────────────────────────────────────────────────
     st.markdown("#### 個股資金流向")
     stocks = pd.DataFrame(snap["stocks"])
+    lenses = load_lenses()
     sel = stocks_in_window(snap, stocks, win)
     full_day = win[0] == minutes[0] and win[1] == minutes[-1]
     d1, d2, d3 = st.columns([2, 2, 1])
@@ -315,7 +362,22 @@ def _details(snap):
             hist["cur_rank"] = {c: k for k, c in enumerate(sel["code"], 1)}
             st.caption("🔴 即時更新中（約每 15–30 秒）。『本輪變化』= 上一輪更新後這檔新增的淨流入；"
                        "排名箭頭 = 相對上一輪的名次升降。")
-        st.dataframe(stock_table(sel, hist), hide_index=True, column_config=TABLE_CFG)
+        st.dataframe(stock_table(sel, hist, lenses), hide_index=True, column_config=TABLE_CFG)
+    st.caption("大師鏡頭：🎩 巴菲特品質 x/8、📋 Piotroski 財報改善 x/9（年報約 4 年，每週更新；"
+               "只涵蓋精選頁股票池，其餘顯示 —）。")
+
+    # ── 急跌日：優質股遭賣壓（別人恐懼時，看看哪些好公司被一起賣掉）──────────
+    mk = load_market()
+    if mk["alert"]:
+        day = stocks.assign(net=stocks["in"] - stocks["out"])
+        hit = day[(day["net"] < 0) & day["code"].map(lambda c: is_quality(c, lenses))].nsmallest(10, "net")
+        st.markdown("#### 🛟 急跌日：優質股遭賣壓（全日）")
+        st.caption("巴菲特 ≥6/8 或 F-Score ≥7/9、今天資金淨流出的股票。這是觀察名單、不是買進訊號——"
+                   "跌深不等於會反彈，反彈候補仍在前向測試；要進場請分批、小額。")
+        if hit.empty:
+            st.info("今天沒有優質股出現明顯淨流出。")
+        else:
+            st.dataframe(stock_table(hit, None, lenses), hide_index=True, column_config=TABLE_CFG)
 
     st.caption("說明：成交價在前一刻委賣價以上 = 主動買進（流入），在委買價以下 = 主動賣出（流出）。"
                "每 ~20 秒掃描一次，同一段時間內多筆成交會合併判斷，數字為估算、看方向比看絕對金額準。"
