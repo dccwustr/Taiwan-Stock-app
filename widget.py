@@ -20,6 +20,15 @@ warnings.filterwarnings("ignore")
 try:
     import yfinance as yf
     HAS_YF = True
+    # yfinance<1.0 的 yf.download 用全域 shared._DFS，同時呼叫會互相覆蓋 → 加鎖依序執行，
+    # 讓 app.py 可以安全地把 Yahoo 以外的資料來源並行抓取。
+    import threading as _threading
+    _YF_DL_LOCK = _threading.RLock()
+    _yf_download_orig = yf.download
+    def _yf_download_locked(*args, **kwargs):
+        with _YF_DL_LOCK:
+            return _yf_download_orig(*args, **kwargs)
+    yf.download = _yf_download_locked
 except Exception:
     HAS_YF = False
     yf = None  # type: ignore

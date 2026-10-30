@@ -806,35 +806,49 @@ def load_data(epoch: str):                       # epoch = "YYYY-MM-DD-SLOT", ch
     # Suppress yfinance stdout/stderr chatter inside the cached function
     # (yfinance prints "N Failed downloads:" etc. which can confuse some Streamlit Cloud versions)
     _buf = io.StringIO()
+    # 全部資料來源彼此獨立 → 並行抓取（原本逐一等待，冷啟動要 2 分鐘）
+    from concurrent.futures import ThreadPoolExecutor
+    def _twse_seq():
+        return {
+            "foreign":   fetch_twse_foreign_buying(),
+            "f_multi":   fetch_twse_foreign_multi_day(5),
+            "three_inv": fetch_twse_three_investors(),
+            "t_multi":   fetch_twse_trust_multi_day(5),
+            "margin":    fetch_twse_margin_balance(),
+            "market":    fetch_twse_market_summary(),
+        }
     with contextlib.redirect_stdout(_buf), contextlib.redirect_stderr(_buf):
-        prices   = fetch_prices_batch(tickers, period="1y")
-        us_data  = fetch_us_overnight()
-        g_news   = fetch_global_news()
-    # ── 廣域新聞抓取（含科技新報 + Google News 訂單/合作專項搜尋）──────────────
-    news_cnyes    = fetch_cnyes_news(100)
-    news_moneydj  = fetch_moneydj_news()
-    news_technews = fetch_technews_rss()
-    news_google   = fetch_google_news_tw_orders()
-    news_yahoo    = fetch_yahoo_tw_news()      # Yahoo奇摩股市 — 月營收/法人評等/產業動態
-    news_ltn      = fetch_ltn_news()           # 自由財經 — 財經重大新聞/法人買賣
-    news = news_cnyes + news_moneydj + news_technews + news_google + news_yahoo + news_ltn
+        with ThreadPoolExecutor(max_workers=10) as _ex:
+            _f = {
+                "prices":    _ex.submit(fetch_prices_batch, tickers, "1y"),
+                "us":        _ex.submit(fetch_us_overnight),
+                "g_news":    _ex.submit(fetch_global_news),
+                "cnyes":     _ex.submit(fetch_cnyes_news, 100),
+                "moneydj":   _ex.submit(fetch_moneydj_news),
+                "technews":  _ex.submit(fetch_technews_rss),
+                "google":    _ex.submit(fetch_google_news_tw_orders),
+                "yahoo":     _ex.submit(fetch_yahoo_tw_news),
+                "ltn":       _ex.submit(fetch_ltn_news),
+                "twse":      _ex.submit(_twse_seq),   # TWSE 會限流 → 同一站的請求維持依序
+                "taiex":     _ex.submit(fetch_taiex_prices),
+            }
+            _r = {k: v.result() for k, v in _f.items()}
+    _r.update(_r.pop("twse"))
+    prices, us_data, g_news = _r["prices"], _r["us"], _r["g_news"]
+    # ── 廣域新聞（cnyes + moneydj + 科技新報 + Google News 訂單專項 + Yahoo奇摩 + 自由財經）──
+    news = (_r["cnyes"] + _r["moneydj"] + _r["technews"]
+            + _r["google"] + _r["yahoo"] + _r["ltn"])
     cat_sc, headlines = analyze_catalysts(news)
     # ── 訂單/合作/認證情報偵測（早盤最重要的情報）──────────────────────────────
     order_signals = detect_order_signals(news)
-    # ── 外資買賣超（今日 + 連續天數）────────────────────────────────────────────
-    foreign       = fetch_twse_foreign_buying()
-    foreign_multi = fetch_twse_foreign_multi_day(days=5)
-    fi_streak     = calc_foreign_streak(foreign_multi)
-    # ── 三大法人（投信 + 自營 + 外資合計）─────────────────────────────────────────
-    three_inv   = fetch_twse_three_investors()
-    # ── 投信連續買超天數（台灣最強短線信號）──────────────────────────────────────
-    trust_multi = fetch_twse_trust_multi_day(days=5)
-    trust_streak = calc_trust_streak(trust_multi)
-    # ── 融資融券餘額 — 散戶籌碼逆向指標 (carsonchou/tw-stock-radar) ────────────
-    margin_bal = fetch_twse_margin_balance()
-    # ── TAIEX 歷史收盤 — 計算個股 O'Neil 相對強度 (RS) ─────────────────────────
-    taiex_close = fetch_taiex_prices()
-    market   = fetch_twse_market_summary()
+    # ── 外資買賣超（今日 + 連續天數）、三大法人、投信連續買超、融資融券、TAIEX、大盤 ──
+    foreign       = _r["foreign"]
+    fi_streak     = calc_foreign_streak(_r["f_multi"])
+    three_inv     = _r["three_inv"]
+    trust_streak  = calc_trust_streak(_r["t_multi"])
+    margin_bal    = _r["margin"]
+    taiex_close   = _r["taiex"]
+    market        = _r["market"]
     ts = _now_tw().strftime("%H:%M")
     return dict(news=news, headlines=headlines, catalyst=cat_sc,
                 foreign=foreign, fi_streak=fi_streak,
@@ -1094,6 +1108,18 @@ if st.session_state.get("_close_sidebar"):
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 _epoch = _trading_epoch()
+_epoch_day = _now_tw().strftime("%Y-%m-%d")
+# 基本面（每日一次、最慢）與主資料並行：背景先跑，之後 load_fundamentals() 直接命中快取
+import threading as _th
+from streamlit.runtime.scriptrunner import add_script_run_ctx as _add_ctx
+def _prefetch_fund():
+    try:
+        load_fundamentals(_epoch_day)
+    except Exception:
+        pass
+_fund_thread = _th.Thread(target=_prefetch_fund, daemon=True)
+_add_ctx(_fund_thread)
+_fund_thread.start()
 with st.spinner("載入中…"):
     try:
         data = load_data(_epoch)
@@ -1129,7 +1155,6 @@ mkt_dir       = calc_market_direction(taiex_close)
 _mkt_penalty  = mkt_dir["penalty"]          # 0 (bull) / -8 (neutral) / -20 (bear)
 
 # ── Fundamental data (yfinance quarterly: revenue/earnings growth, margins) ───
-_epoch_day   = _now_tw().strftime("%Y-%m-%d")
 _fund_cache  = load_fundamentals(_epoch_day)
 fund_map     = _fund_cache.get("fund", {})
 meeting_map  = _fund_cache.get("meetings", {})
