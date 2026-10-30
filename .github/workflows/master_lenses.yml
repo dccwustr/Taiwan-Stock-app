@@ -1,0 +1,42 @@
+name: 大師鏡頭（每週）
+
+on:
+  schedule:
+    - cron: '0 1 * * 6'   # 週六 09:00 台灣時間 — 年報一季才變一次，每週跑一次就夠
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  master-lenses:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip -q
+          pip install "yfinance>=1.0.0" "requests>=2.31.0" "pandas>=2.0.0" "numpy>=1.24.0" "beautifulsoup4>=4.12.0" "lxml>=4.9.0" "rich>=13.0.0" -q
+
+      - name: Run master lenses
+        run: python master_lenses.py
+        timeout-minutes: 30
+
+      - name: Commit and push
+        run: |
+          git config user.name  "台股早安精選 Bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data/master_lenses.json data/lens_log.csv
+          git diff --staged --quiet || git commit -m "chore: master lenses $(TZ=Asia/Taipei date +%Y-%m-%d)"
+          git pull --rebase -q
+          git push

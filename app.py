@@ -233,6 +233,10 @@ st.markdown("""
     background: #1e0a0a; border: 1px solid #5c1a1a;
     border-radius: 12px; padding: 2px 8px; color: #e57373;
   }
+  .fund-tag-neutral {
+    background: #16181d; border: 1px solid #333a45;
+    border-radius: 12px; padding: 2px 8px; color: #aab4c3;
+  }
   .meeting-tag {
     background: #0a1229; border: 1px solid #1a3a6e;
     border-radius: 12px; padding: 2px 8px; color: #7eb3ff;
@@ -1637,6 +1641,74 @@ def _build_fund_row(p: dict) -> str:
         return ""
     inner = "".join(tags)
     return f'<div class="fund-row">{inner}</div>'
+
+# ── 大師鏡頭 (data/master_lenses.json, 每週由 GitHub Action 更新) ──────────────
+@st.cache_data(ttl=3600, show_spinner=False)
+def _load_master_lenses() -> dict:
+    try:
+        with open(os.path.join("data", "master_lenses.json"), encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _lens(ticker: str) -> dict:
+    return _load_master_lenses().get("tickers", {}).get(ticker, {})
+
+
+def _build_lens_row(p: dict) -> str:
+    """巴菲特 / Piotroski / Lynch 三個長期鏡頭，各自顯示、不加總。"""
+    L = _lens(p["ticker"])
+    if not L or L.get("na"):
+        return ""
+    tags = []
+    b, f, ly = L.get("buffett", {}), L.get("piotroski", {}), L.get("lynch", {})
+    if b.get("score") is not None:
+        cls = "fund-tag" if b["score"] >= 6 else "fund-tag-warn" if b["score"] <= 2 else "fund-tag-neutral"
+        tags.append(f'<span class="{cls}">🎩 巴菲特 {b["score"]}/8</span>')
+    if f.get("score") is not None:
+        cls = "fund-tag" if f["score"] >= 7 else "fund-tag-warn" if f["score"] <= 3 else "fund-tag-neutral"
+        tags.append(f'<span class="{cls}">📋 F-Score {f["score"]}/9</span>')
+    cat = ly.get("category")
+    if cat:
+        if ly.get("peg") is not None:
+            extra = f'　PEG {ly["peg"]:.2f}'
+        elif cat == "景氣循環股" and ly.get("pb"):
+            extra = f'　P/B {ly["pb"]:.1f}'
+        else:
+            extra = ""
+        cls = "fund-tag" if ly.get("pass") else "fund-tag-neutral"
+        tags.append(f'<span class="{cls}">🔎 Lynch：{cat}{extra}</span>')
+    if not tags:
+        return ""
+    yrs = L.get("years", [])
+    note = f'<span style="color:#555;font-size:10px">　年報 {len(yrs)} 年</span>' if yrs else ""
+    return f'<div class="fund-row">{"".join(tags)}{note}</div>'
+
+
+def _render_lens_detail(ticker: str):
+    """展開明細：每一項檢查是否通過。"""
+    L = _lens(ticker)
+    if not L or L.get("na") or not L.get("buffett", {}).get("checks"):
+        return
+    code = ticker.replace(".TW", "")
+    with st.expander(f"🎓 {code} 大師鏡頭明細（點擊展開）", expanded=False):
+        _c1, _c2 = st.columns(2)
+        for col, key, title in ((_c1, "buffett", "🎩 巴菲特"), (_c2, "piotroski", "📋 Piotroski F-Score")):
+            d = L[key]
+            lines = "".join(f'<div>{"✅" if ok else "❌"} {k}</div>' for k, ok in d["checks"].items())
+            col.markdown(f'<div style="font-size:12px"><b>{title} {d["score"]}/{len(d["checks"])}</b>{lines}</div>',
+                         unsafe_allow_html=True)
+        ly = L.get("lynch", {})
+        g = ly.get("growth_pct")
+        st.caption(
+            f'🔎 Lynch：{ly.get("category", "—")}'
+            + (f'｜淨利年化成長 {g:+.1f}%' if g is not None else "")
+            + (f'｜PEG {ly["peg"]:.2f}（<1 才算便宜）' if ly.get("peg") is not None else "")
+            + ("｜景氣循環股低本益比常是獲利高峰，改看 P/B 與營收趨勢" if ly.get("category") == "景氣循環股" else "")
+        )
+        st.caption(f'資料：yfinance 年報 {", ".join(map(str, L.get("years", [])))}（巴菲特看 10 年，這裡只有約 4 年）。'
+                   f'各鏡頭尚在前向測試，僅供參考。')
 
 
 def _build_why_buy(p: dict) -> str:
@@ -3366,6 +3438,7 @@ def render_category_cards(picks, prices, show_chart):
             f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k_str}</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)
+            + _build_lens_row(p)
             + _build_kbar_fi_row(p)
             + _build_flow_panel(_cat_flow, is_open)
             + _build_signal_badge(p)
@@ -4187,6 +4260,7 @@ def render_stock_cards(picks, prices, show_chart):
             f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k_str}</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)
+            + _build_lens_row(p)
             + _build_kbar_fi_row(p)
             + _build_flow_panel(_pick_flow, is_open)
             + _build_signal_badge(p)
@@ -4203,6 +4277,8 @@ def render_stock_cards(picks, prices, show_chart):
         if p.get("plan"):
             with st.expander(f"📊 {p['ticker'].replace('.TW','')} 交易計劃 + 支撐壓力區（點擊展開）", expanded=False):
                 st.markdown(_build_trading_plan_html(p), unsafe_allow_html=True)
+
+        _render_lens_detail(p["ticker"])
 
         # ── 新手操作建議（即時更新，每10秒隨股價重算）────────────────────────
         _ref = d["price"] if d and d["price"] > 0 else p["last_price"]
