@@ -1,0 +1,6083 @@
+{
+ "generated_at": "2026-10-31 14:38 TST",
+ "tickers": {
+  "2330.TW": {
+   "name": "台積電",
+   "sector": "晶圓代工",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 9,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "穩健成長股",
+    "growth_pct": 19.6,
+    "peg": 1.24,
+    "pb": 8.73,
+    "pass": false
+   }
+  },
+  "2303.TW": {
+   "name": "聯電",
+   "sector": "晶圓代工",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -23.3,
+    "peg": null,
+    "pb": 3.7,
+    "pass": false
+   }
+  },
+  "6770.TW": {
+   "name": "力積電",
+   "sector": "晶圓代工",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 2.43,
+    "pass": false
+   }
+  },
+  "2454.TW": {
+   "name": "聯發科",
+   "sector": "IC設計",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -3.8,
+    "peg": null,
+    "pb": 15.6,
+    "pass": false
+   }
+  },
+  "3034.TW": {
+   "name": "聯詠",
+   "sector": "IC設計",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": -16.4,
+    "peg": null,
+    "pb": 5.07,
+    "pass": false
+   }
+  },
+  "2379.TW": {
+   "name": "瑞昱",
+   "sector": "IC設計",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -3.1,
+    "peg": null,
+    "pb": 8.21,
+    "pass": false
+   }
+  },
+  "6415.TW": {
+   "name": "矽力-KY",
+   "sector": "IC設計",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 2,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -25.7,
+    "peg": null,
+    "pb": 4.83,
+    "pass": false
+   }
+  },
+  "2458.TW": {
+   "name": "義隆電",
+   "sector": "IC設計",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 7,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": 4.3,
+    "peg": 2.69,
+    "pb": 3.19,
+    "pass": false
+   }
+  },
+  "2401.TW": {
+   "name": "凌陽",
+   "sector": "IC設計",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 1.66,
+    "pass": false
+   }
+  },
+  "2344.TW": {
+   "name": "華邦電",
+   "sector": "記憶體",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 9,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -32.6,
+    "peg": null,
+    "pb": 4.49,
+    "pass": false
+   }
+  },
+  "2408.TW": {
+   "name": "南亞科",
+   "sector": "DRAM",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -23.2,
+    "peg": null,
+    "pb": 4.86,
+    "pass": false
+   }
+  },
+  "8299.TW": {
+   "name": "群聯",
+   "sector": "NAND控制器",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 17.4,
+    "peg": null,
+    "pb": 4.18,
+    "pass": false
+   }
+  },
+  "6488.TW": {
+   "name": "環球晶",
+   "sector": "矽晶圓",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -21.9,
+    "peg": null,
+    "pb": 3.74,
+    "pass": false
+   }
+  },
+  "5483.TW": {
+   "name": "中美晶",
+   "sector": "矽晶圓",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -22.1,
+    "peg": null,
+    "pb": 2.09,
+    "pass": false
+   }
+  },
+  "3532.TW": {
+   "name": "台勝科",
+   "sector": "矽晶圓",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -49.7,
+    "peg": null,
+    "pb": 5.68,
+    "pass": false
+   }
+  },
+  "3711.TW": {
+   "name": "日月光投控",
+   "sector": "封測",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -13.3,
+    "peg": null,
+    "pb": 7.55,
+    "pass": false
+   }
+  },
+  "2449.TW": {
+   "name": "京元電子",
+   "sector": "IC測試",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "穩健成長股",
+    "growth_pct": 17.2,
+    "peg": 2.03,
+    "pb": 5.19,
+    "pass": false
+   }
+  },
+  "6239.TW": {
+   "name": "力成科技",
+   "sector": "記憶體封測",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -13.9,
+    "peg": null,
+    "pb": 3.31,
+    "pass": false
+   }
+  },
+  "3037.TW": {
+   "name": "欣興",
+   "sector": "IC載板",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -39.2,
+    "peg": null,
+    "pb": 8.79,
+    "pass": false
+   }
+  },
+  "3044.TW": {
+   "name": "健鼎",
+   "sector": "PCB",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 18.1,
+    "peg": null,
+    "pb": 4.83,
+    "pass": false
+   }
+  },
+  "4958.TW": {
+   "name": "臻鼎-KY",
+   "sector": "高階PCB",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -21.8,
+    "peg": null,
+    "pb": 3.49,
+    "pass": false
+   }
+  },
+  "3189.TW": {
+   "name": "景碩科技",
+   "sector": "IC載板",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -38.8,
+    "peg": null,
+    "pb": 11.04,
+    "pass": false
+   }
+  },
+  "6213.TW": {
+   "name": "聯茂電子",
+   "sector": "PCB材料",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -6.6,
+    "peg": null,
+    "pb": 11.05,
+    "pass": false
+   }
+  },
+  "1802.TW": {
+   "name": "台灣玻璃",
+   "sector": "玻纖布",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 3.51,
+    "pass": false
+   }
+  },
+  "1815.TW": {
+   "name": "富喬工業",
+   "sector": "玻纖布",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 200.6,
+    "peg": null,
+    "pb": 5.67,
+    "pass": false
+   }
+  },
+  "5475.TW": {
+   "name": "德宏工業",
+   "sector": "玻纖布",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": false,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 20.66,
+    "pass": false
+   }
+  },
+  "6669.TW": {
+   "name": "緯穎",
+   "sector": "AI伺服器",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": false,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 53.4,
+    "peg": 0.35,
+    "pb": 7.35,
+    "pass": true
+   }
+  },
+  "2382.TW": {
+   "name": "廣達",
+   "sector": "伺服器ODM",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 37.3,
+    "peg": 0.39,
+    "pb": 5.03,
+    "pass": true
+   }
+  },
+  "3231.TW": {
+   "name": "緯創",
+   "sector": "ODM",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 2,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 34.9,
+    "peg": 0.45,
+    "pb": 3.01,
+    "pass": true
+   }
+  },
+  "4938.TW": {
+   "name": "和碩",
+   "sector": "ODM",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": -1.6,
+    "peg": null,
+    "pb": 1.33,
+    "pass": false
+   }
+  },
+  "2317.TW": {
+   "name": "鴻海",
+   "sector": "EMS/ODM",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "穩健成長股",
+    "growth_pct": 10.2,
+    "peg": 1.6,
+    "pb": 1.8,
+    "pass": false
+   }
+  },
+  "2324.TW": {
+   "name": "仁寶",
+   "sector": "ODM",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -6.1,
+    "peg": null,
+    "pb": 1.11,
+    "pass": false
+   }
+  },
+  "2327.TW": {
+   "name": "國巨",
+   "sector": "被動元件",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 1.3,
+    "peg": null,
+    "pb": 5.84,
+    "pass": false
+   }
+  },
+  "2492.TW": {
+   "name": "華新科",
+   "sector": "被動元件",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 11.7,
+    "peg": null,
+    "pb": 2.78,
+    "pass": false
+   }
+  },
+  "3236.TW": {
+   "name": "千如電機",
+   "sector": "被動元件",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 9,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -45.5,
+    "peg": null,
+    "pb": 2.67,
+    "pass": false
+   }
+  },
+  "2472.TW": {
+   "name": "立隆電子",
+   "sector": "被動元件",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 5.3,
+    "peg": null,
+    "pb": 3.28,
+    "pass": false
+   }
+  },
+  "3533.TW": {
+   "name": "嘉澤",
+   "sector": "連接器",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 421.2,
+    "peg": 0.05,
+    "pb": 5.1,
+    "pass": true
+   }
+  },
+  "3008.TW": {
+   "name": "大立光",
+   "sector": "光學鏡頭",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": -2.0,
+    "peg": null,
+    "pb": 3.71,
+    "pass": false
+   }
+  },
+  "3406.TW": {
+   "name": "玉晶光",
+   "sector": "光學鏡頭",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": 4.2,
+    "peg": 7.02,
+    "pb": 4.52,
+    "pass": false
+   }
+  },
+  "2308.TW": {
+   "name": "台達電",
+   "sector": "電源散熱",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 7,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 22.5,
+    "peg": 1.89,
+    "pb": 11.81,
+    "pass": false
+   }
+  },
+  "3017.TW": {
+   "name": "奇鋐科技",
+   "sector": "散熱模組",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 66.4,
+    "peg": 0.63,
+    "pb": 22.01,
+    "pass": true
+   }
+  },
+  "3324.TW": {
+   "name": "雙鴻科技",
+   "sector": "散熱模組",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 3,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 26.7,
+    "peg": 1.29,
+    "pb": 9.33,
+    "pass": false
+   }
+  },
+  "8163.TW": {
+   "name": "達方電子",
+   "sector": "散熱/鍵盤",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -50.4,
+    "peg": null,
+    "pb": 0.72,
+    "pass": false
+   }
+  },
+  "1626.TW": {
+   "name": "艾美特",
+   "sector": "散熱風扇",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": false,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 0.54,
+    "pass": false
+   }
+  },
+  "2369.TW": {
+   "name": "菱生精密",
+   "sector": "精密零件",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 2.08,
+    "pass": false
+   }
+  },
+  "3016.TW": {
+   "name": "嘉晶電子",
+   "sector": "化合物半導體",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -68.9,
+    "peg": null,
+    "pb": 6.99,
+    "pass": false
+   }
+  },
+  "8261.TW": {
+   "name": "富鼎先進",
+   "sector": "功率IC",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -9.0,
+    "peg": null,
+    "pb": 2.8,
+    "pass": false
+   }
+  },
+  "3661.TW": {
+   "name": "世芯-KY",
+   "sector": "ASIC設計",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 45.1,
+    "peg": 1.1,
+    "pb": 4.89,
+    "pass": false
+   }
+  },
+  "3443.TW": {
+   "name": "創意電子",
+   "sector": "ASIC設計",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": false,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": 0.5,
+    "peg": 371.19,
+    "pb": 65.06,
+    "pass": false
+   }
+  },
+  "5274.TW": {
+   "name": "信驊科技",
+   "sector": "伺服器IC",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 7,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 9,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 23.1,
+    "peg": null,
+    "pb": 85.23,
+    "pass": false
+   }
+  },
+  "4966.TW": {
+   "name": "譜瑞-KY",
+   "sector": "顯示IC",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 9,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -17.7,
+    "peg": null,
+    "pb": 1.59,
+    "pass": false
+   }
+  },
+  "4919.TW": {
+   "name": "新唐科技",
+   "sector": "MCU/嵌入式",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 3,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 3.37,
+    "pass": false
+   }
+  },
+  "6138.TW": {
+   "name": "茂達",
+   "sector": "電源IC",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 7,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -0.4,
+    "peg": null,
+    "pb": 4.79,
+    "pass": false
+   }
+  },
+  "8046.TW": {
+   "name": "南電",
+   "sector": "IC載板",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 9,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -53.5,
+    "peg": null,
+    "pb": 15.61,
+    "pass": false
+   }
+  },
+  "3707.TW": {
+   "name": "漢磊",
+   "sector": "化合物半導體",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 2.98,
+    "pass": false
+   }
+  },
+  "3363.TW": {
+   "name": "上詮",
+   "sector": "矽光子/CPO",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": false,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "轉機股",
+    "growth_pct": -29.9,
+    "peg": null,
+    "pb": 9.43,
+    "pass": false
+   }
+  },
+  "5289.TW": {
+   "name": "宜鼎",
+   "sector": "邊緣AI儲存",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": false,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 3.2,
+    "peg": null,
+    "pb": 4.73,
+    "pass": false
+   }
+  },
+  "4931.TW": {
+   "name": "新盛力",
+   "sector": "BBU儲能",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 2.4,
+    "peg": null,
+    "pb": 7.9,
+    "pass": false
+   }
+  },
+  "6282.TW": {
+   "name": "康舒",
+   "sector": "伺服器電源",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "轉機股",
+    "growth_pct": -37.8,
+    "peg": null,
+    "pb": 1.47,
+    "pass": false
+   }
+  },
+  "6230.TW": {
+   "name": "尼得科超眾",
+   "sector": "液冷散熱",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 1.54,
+    "pass": false
+   }
+  },
+  "2356.TW": {
+   "name": "英業達",
+   "sector": "伺服器ODM",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "穩健成長股",
+    "growth_pct": 12.4,
+    "peg": 1.56,
+    "pb": 2.75,
+    "pass": false
+   }
+  },
+  "2301.TW": {
+   "name": "光寶科技",
+   "sector": "電源/伺服器",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": 2.2,
+    "peg": 13.34,
+    "pb": 5.7,
+    "pass": false
+   }
+  },
+  "8150.TW": {
+   "name": "南茂科技",
+   "sector": "IC封測",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -45.7,
+    "peg": null,
+    "pb": 2.56,
+    "pass": false
+   }
+  },
+  "6271.TW": {
+   "name": "同欣電子",
+   "sector": "IC封測",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -20.2,
+    "peg": null,
+    "pb": 1.51,
+    "pass": false
+   }
+  },
+  "5347.TW": {
+   "name": "世界先進",
+   "sector": "晶圓代工",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -19.7,
+    "peg": null,
+    "pb": 4.3,
+    "pass": false
+   }
+  },
+  "2345.TW": {
+   "name": "智邦科技",
+   "sector": "網通設備",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 47.8,
+    "peg": 0.53,
+    "pb": 13.07,
+    "pass": true
+   }
+  },
+  "6277.TW": {
+   "name": "宏正自動",
+   "sector": "KVM/網通",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": -20.4,
+    "peg": null,
+    "pb": 2.23,
+    "pass": false
+   }
+  },
+  "2332.TW": {
+   "name": "友訊科技",
+   "sector": "網通設備",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 3,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 1.41,
+    "pass": false
+   }
+  },
+  "3062.TW": {
+   "name": "建漢科技",
+   "sector": "網通ODM",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": false,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "虧損中",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 1.69,
+    "pass": false
+   }
+  },
+  "3706.TW": {
+   "name": "神基科技",
+   "sector": "網通/電腦",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -9.7,
+    "peg": null,
+    "pb": 1.47,
+    "pass": false
+   }
+  },
+  "5478.TW": {
+   "name": "智冠科技",
+   "sector": "遊戲發行",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 7,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "穩健成長股",
+    "growth_pct": 12.4,
+    "peg": 0.92,
+    "pb": 1.66,
+    "pass": true
+   }
+  },
+  "6180.TW": {
+   "name": "加奇數位",
+   "sector": "手遊",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 3,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 1.7,
+    "pass": false
+   }
+  },
+  "6111.TW": {
+   "name": "大宇資訊",
+   "sector": "電腦遊戲",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 2,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 1.69,
+    "pass": false
+   }
+  },
+  "4943.TW": {
+   "name": "康控-KY",
+   "sector": "精密電子",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 3,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "虧損中",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 19.85,
+    "pass": false
+   }
+  },
+  "6510.TW": {
+   "name": "精誠資訊",
+   "sector": "IT服務",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 9,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 9.0,
+    "peg": null,
+    "pb": 8.72,
+    "pass": false
+   }
+  },
+  "6104.TW": {
+   "name": "創惟科技",
+   "sector": "USB/橋接IC",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 7.1,
+    "peg": null,
+    "pb": 3.63,
+    "pass": false
+   }
+  },
+  "2353.TW": {
+   "name": "宏碁",
+   "sector": "3C品牌",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -8.9,
+    "peg": null,
+    "pb": 1.18,
+    "pass": false
+   }
+  },
+  "1590.TW": {
+   "name": "亞德客-KY",
+   "sector": "氣動元件",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "穩健成長股",
+    "growth_pct": 11.8,
+    "peg": 1.75,
+    "pb": 3.92,
+    "pass": false
+   }
+  },
+  "1537.TW": {
+   "name": "廣隆電池",
+   "sector": "EV電池",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -9.5,
+    "peg": null,
+    "pb": 2.15,
+    "pass": false
+   }
+  },
+  "5536.TW": {
+   "name": "聖暉工程",
+   "sector": "EV充電基礎",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 7,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 22.2,
+    "peg": 0.86,
+    "pb": 5.68,
+    "pass": true
+   }
+  },
+  "3576.TW": {
+   "name": "聯合再生",
+   "sector": "太陽能",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": false,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 2.06,
+    "pass": false
+   }
+  },
+  "6443.TW": {
+   "name": "元晶太陽能",
+   "sector": "太陽能電池",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 3,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 3.62,
+    "pass": false
+   }
+  },
+  "6412.TW": {
+   "name": "奇士達",
+   "sector": "電源模組",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -13.7,
+    "peg": null,
+    "pb": 1.75,
+    "pass": false
+   }
+  },
+  "1519.TW": {
+   "name": "華城電機",
+   "sector": "電力系統",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 74.0,
+    "peg": 0.54,
+    "pb": 20.8,
+    "pass": true
+   }
+  },
+  "4743.TW": {
+   "name": "合一生技",
+   "sector": "生技",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 3,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 2.14,
+    "pass": false
+   }
+  },
+  "6547.TW": {
+   "name": "高端疫苗",
+   "sector": "疫苗/生技",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "虧損中",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 4.52,
+    "pass": false
+   }
+  },
+  "4119.TW": {
+   "name": "旭富製藥",
+   "sector": "原料藥",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -29.7,
+    "peg": null,
+    "pb": 1.15,
+    "pass": false
+   }
+  },
+  "1786.TW": {
+   "name": "科妍生醫",
+   "sector": "醫美/生技",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 3,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 4.6,
+    "peg": null,
+    "pb": 1.99,
+    "pass": false
+   }
+  },
+  "4166.TW": {
+   "name": "智擎生技",
+   "sector": "新藥",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "虧損中",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 2.13,
+    "pass": false
+   }
+  },
+  "6285.TW": {
+   "name": "華通電腦",
+   "sector": "無線模組",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": -0.6,
+    "peg": null,
+    "pb": 2.88,
+    "pass": false
+   }
+  },
+  "2409.TW": {
+   "name": "友達",
+   "sector": "面板",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 1.52,
+    "pass": false
+   }
+  },
+  "3481.TW": {
+   "name": "群創",
+   "sector": "面板",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 1.51,
+    "pass": false
+   }
+  },
+  "2474.TW": {
+   "name": "可成",
+   "sector": "金屬機殼",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -13.1,
+    "peg": null,
+    "pb": 0.75,
+    "pass": false
+   }
+  },
+  "2376.TW": {
+   "name": "技嘉",
+   "sector": "主機板",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 23.1,
+    "peg": 0.6,
+    "pb": 3.38,
+    "pass": true
+   }
+  },
+  "2357.TW": {
+   "name": "華碩",
+   "sector": "3C品牌",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 44.8,
+    "peg": 0.3,
+    "pb": 2.23,
+    "pass": true
+   }
+  },
+  "2395.TW": {
+   "name": "研華",
+   "sector": "工業電腦",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": -0.5,
+    "peg": null,
+    "pb": 9.44,
+    "pass": false
+   }
+  },
+  "0052.TW": {
+   "name": "富邦科技",
+   "na": true,
+   "sector": "ETF"
+  },
+  "2881.TW": {
+   "name": "富邦金",
+   "na": true,
+   "sector": "金融"
+  },
+  "2882.TW": {
+   "name": "國泰金",
+   "na": true,
+   "sector": "金融"
+  },
+  "2884.TW": {
+   "name": "玉山金",
+   "na": true,
+   "sector": "金融"
+  },
+  "2891.TW": {
+   "name": "中信金",
+   "na": true,
+   "sector": "金融"
+  },
+  "2886.TW": {
+   "name": "兆豐金",
+   "na": true,
+   "sector": "金融"
+  },
+  "2892.TW": {
+   "name": "第一金",
+   "na": true,
+   "sector": "金融"
+  },
+  "2880.TW": {
+   "name": "華南金",
+   "na": true,
+   "sector": "金融"
+  },
+  "2883.TW": {
+   "name": "開發金",
+   "na": true,
+   "sector": "金融"
+  },
+  "2603.TW": {
+   "name": "長榮",
+   "sector": "航運",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -41.0,
+    "peg": null,
+    "pb": 1.05,
+    "pass": false
+   }
+  },
+  "2609.TW": {
+   "name": "陽明",
+   "sector": "航運",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -54.4,
+    "peg": null,
+    "pb": 0.68,
+    "pass": false
+   }
+  },
+  "2615.TW": {
+   "name": "萬海",
+   "sector": "航運",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -30.3,
+    "peg": null,
+    "pb": 1.17,
+    "pass": false
+   }
+  },
+  "2610.TW": {
+   "name": "華航",
+   "sector": "航空",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 72.6,
+    "peg": null,
+    "pb": 1.24,
+    "pass": false
+   }
+  },
+  "2618.TW": {
+   "name": "長榮航",
+   "sector": "航空",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 54.5,
+    "peg": null,
+    "pb": 1.65,
+    "pass": false
+   }
+  },
+  "8033.TW": {
+   "name": "雷虎科技",
+   "sector": "無人機",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": false,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 115.6,
+    "peg": null,
+    "pb": 7.92,
+    "pass": false
+   }
+  },
+  "2634.TW": {
+   "name": "漢翔航空",
+   "sector": "航太/國防",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 3,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -23.3,
+    "peg": null,
+    "pb": 3.02,
+    "pass": false
+   }
+  },
+  "2630.TW": {
+   "name": "亞洲航空",
+   "sector": "國防航太",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 149.6,
+    "peg": 0.47,
+    "pb": 2.45,
+    "pass": true
+   }
+  },
+  "5222.TW": {
+   "name": "全訊科技",
+   "sector": "微波/國防",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -3.4,
+    "peg": null,
+    "pb": 3.09,
+    "pass": false
+   }
+  },
+  "6753.TW": {
+   "name": "龍德造船",
+   "sector": "造船/國防",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 33.5,
+    "peg": 0.35,
+    "pb": 2.62,
+    "pass": true
+   }
+  },
+  "2002.TW": {
+   "name": "中鋼",
+   "sector": "鋼鐵",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 0.99,
+    "pass": false
+   }
+  },
+  "2015.TW": {
+   "name": "豐興",
+   "sector": "鋼鐵",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -9.8,
+    "peg": null,
+    "pb": 1.63,
+    "pass": false
+   }
+  },
+  "2023.TW": {
+   "name": "燁聯",
+   "sector": "鋼鐵",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 0.88,
+    "pass": false
+   }
+  },
+  "1301.TW": {
+   "name": "台塑",
+   "sector": "石化",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 0.8,
+    "pass": false
+   }
+  },
+  "1303.TW": {
+   "name": "南亞",
+   "sector": "石化",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 9,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -48.0,
+    "peg": null,
+    "pb": 4.91,
+    "pass": false
+   }
+  },
+  "1326.TW": {
+   "name": "台化",
+   "sector": "石化",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 1,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 0.82,
+    "pass": false
+   }
+  },
+  "2412.TW": {
+   "name": "中華電",
+   "sector": "電信",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": 2.1,
+    "peg": 14.92,
+    "pb": 3.39,
+    "pass": false
+   }
+  },
+  "3045.TW": {
+   "name": "台灣大",
+   "sector": "電信",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": 9.4,
+    "peg": 2.71,
+    "pb": 4.84,
+    "pass": false
+   }
+  },
+  "4904.TW": {
+   "name": "遠傳",
+   "sector": "電信",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 7,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "穩健成長股",
+    "growth_pct": 12.6,
+    "peg": 2.22,
+    "pb": 4.77,
+    "pass": false
+   }
+  },
+  "2912.TW": {
+   "name": "統一超",
+   "sector": "零售",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 8,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": 6.5,
+    "peg": 3.14,
+    "pb": 5.3,
+    "pass": false
+   }
+  },
+  "5903.TW": {
+   "name": "全家",
+   "sector": "零售",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 7,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -2.7,
+    "peg": null,
+    "pb": 4.69,
+    "pass": false
+   }
+  },
+  "5904.TW": {
+   "name": "寶雅",
+   "sector": "零售",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 8,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "穩健成長股",
+    "growth_pct": 15.0,
+    "peg": 1.44,
+    "pb": 9.38,
+    "pass": false
+   }
+  },
+  "2758.TW": {
+   "name": "路易莎",
+   "sector": "餐飲",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -23.1,
+    "peg": null,
+    "pb": 2.19,
+    "pass": false
+   }
+  },
+  "2207.TW": {
+   "name": "和泰車",
+   "sector": "汽車",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "虧損中",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 3.47,
+    "pass": false
+   }
+  },
+  "5522.TW": {
+   "name": "遠雄",
+   "sector": "建設",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 1.9,
+    "peg": null,
+    "pb": 1.0,
+    "pass": false
+   }
+  },
+  "2542.TW": {
+   "name": "興富發",
+   "sector": "建設",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 3,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 5.9,
+    "peg": null,
+    "pb": 1.68,
+    "pass": false
+   }
+  },
+  "2504.TW": {
+   "name": "國產",
+   "sector": "建設",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -2.0,
+    "peg": null,
+    "pb": 1.46,
+    "pass": false
+   }
+  },
+  "6446.TW": {
+   "name": "藥華藥",
+   "sector": "生技",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "虧損中",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 13.4,
+    "pass": false
+   }
+  },
+  "6472.TW": {
+   "name": "保瑞",
+   "sector": "生技",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 28.9,
+    "peg": 0.92,
+    "pb": 3.19,
+    "pass": true
+   }
+  },
+  "1789.TW": {
+   "name": "神隆",
+   "sector": "生技",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -27.1,
+    "peg": null,
+    "pb": 1.51,
+    "pass": false
+   }
+  },
+  "1707.TW": {
+   "name": "葡萄王",
+   "sector": "保健",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": -5.8,
+    "peg": null,
+    "pb": 1.19,
+    "pass": false
+   }
+  },
+  "4171.TW": {
+   "name": "瑞基",
+   "sector": "生技",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 2,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 5,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": false,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 1.62,
+    "pass": false
+   }
+  },
+  "1513.TW": {
+   "name": "中興電",
+   "sector": "電機",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 17.9,
+    "peg": null,
+    "pb": 3.63,
+    "pass": false
+   }
+  },
+  "1504.TW": {
+   "name": "東元",
+   "sector": "電機",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 3,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": false,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": false,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "穩健成長股",
+    "growth_pct": 14.9,
+    "peg": 1.65,
+    "pb": 1.68,
+    "pass": false
+   }
+  },
+  "1101.TW": {
+   "name": "台泥",
+   "sector": "水泥/綠能",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 0,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 4,
+    "checks": {
+     "ROA >0": false,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 0.9,
+    "pass": false
+   }
+  },
+  "1216.TW": {
+   "name": "統一",
+   "sector": "食品",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "慢速成長股",
+    "growth_pct": 4.6,
+    "peg": 4.27,
+    "pb": 3.34,
+    "pass": false
+   }
+  },
+  "1210.TW": {
+   "name": "大成",
+   "sector": "食品",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 3,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": false,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "穩健成長股",
+    "growth_pct": 18.2,
+    "peg": 0.69,
+    "pb": 1.69,
+    "pass": true
+   }
+  },
+  "2707.TW": {
+   "name": "晶華",
+   "sector": "觀光",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 8,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "穩健成長股",
+    "growth_pct": 17.3,
+    "peg": 0.71,
+    "pb": 5.73,
+    "pass": true
+   }
+  },
+  "2727.TW": {
+   "name": "王品",
+   "sector": "餐飲",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 7,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 50.3,
+    "peg": 0.28,
+    "pb": 4.79,
+    "pass": true
+   }
+  },
+  "2731.TW": {
+   "name": "雄獅",
+   "sector": "觀光",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 5,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": null,
+    "peg": null,
+    "pb": 2.98,
+    "pass": false
+   }
+  },
+  "1102.TW": {
+   "name": "亞泥",
+   "sector": "水泥",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": false,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": false,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": -5.8,
+    "peg": null,
+    "pb": 0.73,
+    "pass": false
+   }
+  }
+ },
+ "failed": [
+  "3519.TW",
+  "4110.TW",
+  "5371.TW"
+ ]
+}
