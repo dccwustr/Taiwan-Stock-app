@@ -14,10 +14,37 @@ import requests
 import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Streamlit Cloud 拉新程式碼時不會重啟 Python：舊模組還留在 sys.modules，
+# 新程式就會 ImportError（波段 App 2026-11-03 實際發生）。原始檔變了就丟掉舊模組重新載入。
+_LOCAL_MODULES = ("flow_core", "flow_race", "dip_watch", "trade_check")
+
+
+def _refresh_local_modules():
+    for _name in _LOCAL_MODULES:
+        _mod = sys.modules.get(_name)
+        _file = getattr(_mod, "__file__", None)
+        try:
+            _changed = _mod is not None and getattr(_mod, "_src_mtime", None) != os.path.getmtime(_file)
+        except (OSError, TypeError):
+            _changed = True
+        if _changed:
+            sys.modules.pop(_name, None)
+
+
+def _stamp_local_modules():
+    for _name in _LOCAL_MODULES:
+        _mod = sys.modules.get(_name)
+        if _mod is not None and getattr(_mod, "__file__", None):
+            _mod._src_mtime = os.path.getmtime(_mod.__file__)
+
+
+_refresh_local_modules()
 import flow_core as fc  # noqa: E402
 import flow_race  # noqa: E402
 from dip_watch import market_drop  # noqa: E402
 from trade_check import simulate_odds, history_same_distance, render_html  # noqa: E402
+
+_stamp_local_modules()
 
 LENS_PATH = Path(__file__).resolve().parent.parent / "data" / "master_lenses.json"
 

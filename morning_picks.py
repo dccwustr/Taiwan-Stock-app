@@ -12,7 +12,7 @@ warnings.filterwarnings("ignore")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from widget import (
-    TECH_UNIVERSE,
+    TECH_UNIVERSE, PICKS_EXCLUDE,
     fetch_prices_batch,
     fetch_cnyes_news,
     fetch_twse_foreign_buying,
@@ -92,6 +92,8 @@ def run_morning_analysis(verbose: bool = True) -> dict:
     scored = []
 
     for ticker in TECH_UNIVERSE:
+        if ticker in PICKS_EXCLUDE:
+            continue
         df = prices.get(ticker)
         if df is None or len(df) < 22:
             continue

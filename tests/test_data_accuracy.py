@@ -190,6 +190,10 @@ class PickLog(unittest.TestCase):
 
 
 class Universe(unittest.TestCase):
+    def test_not_buyable_stays_watchable(self):
+        self.assertIn("2758.TW", w.PICKS_EXCLUDE)
+        self.assertIn("2758.TW", w.TECH_UNIVERSE)
+
     def test_known_names(self):
         for t, n in [("6285.TW", "啟碁"), ("6412.TW", "群電"), ("6214.TW", "精誠"), ("3617.TW", "碩天"),
                      ("4162.TW", "智擎"), ("4105.TW", "東洋"), ("2883.TW", "凱基金")]:

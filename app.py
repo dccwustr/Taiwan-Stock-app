@@ -93,10 +93,35 @@ from plotly.subplots import make_subplots
 
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Streamlit Cloud 拉新程式碼時不會重啟 Python：舊模組還留在 sys.modules，
+# 新程式就會 ImportError（波段 App 2026-11-03 實際發生）。原始檔變了就丟掉舊模組重新載入。
+_LOCAL_MODULES = ("widget", "trade_check", "dip_watch", "flow_core", "flow_race", "master_lenses")
+
+
+def _refresh_local_modules():
+    for _name in _LOCAL_MODULES:
+        _mod = sys.modules.get(_name)
+        _file = getattr(_mod, "__file__", None)
+        try:
+            _changed = _mod is not None and getattr(_mod, "_src_mtime", None) != os.path.getmtime(_file)
+        except (OSError, TypeError):
+            _changed = True
+        if _changed:
+            sys.modules.pop(_name, None)
+
+
+def _stamp_local_modules():
+    for _name in _LOCAL_MODULES:
+        _mod = sys.modules.get(_name)
+        if _mod is not None and getattr(_mod, "__file__", None):
+            _mod._src_mtime = os.path.getmtime(_mod.__file__)
+
+
+_refresh_local_modules()
 from trade_check import check_trade, simulate_odds, history_same_distance, render_html
 try:
     from widget import (
-        TECH_UNIVERSE, MY_HOLDINGS,
+        TECH_UNIVERSE, MY_HOLDINGS, PICKS_EXCLUDE,
         fetch_cnyes_news, fetch_moneydj_news, fetch_twse_foreign_buying,
         fetch_twse_market_summary, fetch_prices_batch, analyze_catalysts,
         get_catalyst_labels, score_stock, analyze_holdings, fetch_live_prices,
@@ -130,6 +155,7 @@ except Exception as _widget_err:
     st.error(f"⚠️ 模組載入失敗 [{type(_widget_err).__name__}]: {_widget_err}")
     st.code(_tb.format_exc())
     st.stop()
+_stamp_local_modules()
 
 warnings.filterwarnings("ignore")
 
@@ -1383,7 +1409,7 @@ def _score_sort_key(x: dict):
     return (x["score"], x.get("raw_score", 0))
 
 
-skip = set(MY_HOLDINGS.keys())
+skip = set(MY_HOLDINGS.keys()) | PICKS_EXCLUDE
 scored = []
 for ticker in TECH_UNIVERSE:
     if ticker in skip:
