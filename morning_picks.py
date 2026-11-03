@@ -19,7 +19,8 @@ from widget import (
     fetch_twse_foreign_multi_day, calc_foreign_streak,
     fetch_twse_trust_multi_day,   calc_trust_streak,
     fetch_twse_margin_balance,
-    fetch_twse_monthly_revenue,
+    merge_monthly_revenue,
+    fetch_twse_three_investors, calc_three_investors_bonus, insti_asof,
     calc_market_direction,
     fetch_taiex_prices,
     score_stock,
@@ -61,7 +62,8 @@ def run_morning_analysis(verbose: bool = True) -> dict:
     trust_multi   = fetch_twse_trust_multi_day(days=5)
     trust_streak  = calc_trust_streak(trust_multi)
     margin_bal    = fetch_twse_margin_balance()
-    log(f"  → 外資 {len(foreign)} 筆 | 投信連買 {sum(1 for v in trust_streak.values() if v>0)} 支 | 融資券 {len(margin_bal)} 筆")
+    three_inv     = fetch_twse_three_investors()
+    log(f"  → 法人資料日 {insti_asof() or '無'} | 外資 {len(foreign)} 筆 | 投信連買 {sum(1 for v in trust_streak.values() if v>0)} 支 | 融資券 {len(margin_bal)} 筆")
 
     # ── 3. 大盤方向 (CANSLIM M factor) ────────────────────────────────────────
     log("計算大盤方向...")
@@ -82,10 +84,8 @@ def run_morning_analysis(verbose: bool = True) -> dict:
     # ── 5. 基本面 (yfinance + MOPS月營收) ─────────────────────────────────────
     log("抓取基本面 (yfinance + MOPS)...")
     fund_raw    = fetch_yf_fundamentals_batch(list(TECH_UNIVERSE.keys()))
-    monthly_rev = fetch_twse_monthly_revenue()
-    for tk, yoy in monthly_rev.items():
-        fund_raw.setdefault(tk, {})["monthly_rev_yoy"] = yoy
-    log(f"  → 季報 {len(fund_raw)} 筆 | 月營收 {len(monthly_rev)} 筆")
+    n_rev = merge_monthly_revenue(fund_raw)
+    log(f"  → 季報 {len(fund_raw)} 筆 | 月營收 {n_rev} 筆")
 
     # ── 6. 評分 ────────────────────────────────────────────────────────────────
     log("評分中...")
@@ -126,14 +126,21 @@ def run_morning_analysis(verbose: bool = True) -> dict:
         fund = calc_fundamental_bonus(ticker, fund_raw, {})
         final_score = max(0, min(100, res["score"] + adj + fund["bonus"]))
 
+        # 三大法人共識（和 app 卡片同一套計分，兩邊分數才對得起來）
+        _3d = three_inv.get(ticker, {})
+        _3b = calc_three_investors_bonus(_3d.get("trust", 0.0), _3d.get("dealer", 0.0), _3d.get("foreign", 0.0))
+        final_score = max(0, min(100, final_score + _3b["bonus"]))
+
         # 相對強度 (RS)
         rs_bonus = 0
+        raw_score = res.get("raw_score", res["score"]) + adj + fund["bonus"] + _3b["bonus"]
         try:
             _cl = df["Close"] if "Close" in df.columns else None
             rs  = calc_relative_strength(_cl, taiex_close)
             rs_bonus    = rs.get("bonus", 0)
             rs_composite = rs.get("rs_composite", 0.0)
             final_score = max(0, min(100, final_score + rs_bonus))
+            raw_score += rs_bonus
         except Exception:
             rs_composite = 0.0
 
@@ -152,7 +159,11 @@ def run_morning_analysis(verbose: bool = True) -> dict:
             "name":               res.get("name", ticker),
             "sector":             TECH_UNIVERSE.get(ticker, {}).get("sector", ""),
             "score":              final_score,
-            "last_price":         price,
+            "raw_score":          raw_score,
+            "last_price":         round(float(price), 2),
+            "foreign_net":        round(_3d.get("foreign", 0.0)),
+            "trust_net":          round(_3d.get("trust", 0.0)),
+            "dealer_net":         round(_3d.get("dealer", 0.0)),
             "rsi":                round(res["rsi"], 1),
             "stage":              res.get("stage", 0),
             "stage_label":        res.get("stage_label", ""),
@@ -176,10 +187,25 @@ def run_morning_analysis(verbose: bool = True) -> dict:
             "affordability":      int(10000 / price) if price > 0 else 0,
         })
 
-    scored.sort(key=lambda x: x["score"], reverse=True)
+    # 分數封頂 100，同分時用未封頂的原始分排序（否則只是股票池的順序）
+    scored.sort(key=lambda x: (x["score"], x["raw_score"]), reverse=True)
     log(f"  → {len(scored)} 支完成評分 | 前3名: {', '.join(p['ticker'] for p in scored[:3])}")
 
+    # 資料健康檢查：任何來源掛掉都要看得到（之前外資/投信/月營收壞了好幾個月都沒人發現）
+    health = {
+        "prices": len(prices), "insti_date": insti_asof(), "foreign": len(foreign),
+        "margin": len(margin_bal), "monthly_revenue": n_rev,
+        "fundamentals": sum(1 for v in fund_raw.values() if v.get("trailing_eps") is not None),
+        "news": len(news), "taiex": taiex_close is not None,
+    }
+    problems = [k for k in ("prices", "foreign", "margin", "monthly_revenue", "fundamentals", "taiex")
+                if not health[k]]
+    health["problems"] = problems
+    if problems:
+        print(f"::warning::資料來源異常: {', '.join(problems)}", flush=True)
+
     output = {
+        "data_health":      health,
         "generated_at":     tw_now.strftime("%Y-%m-%d %H:%M TST"),
         "date":             tw_now.strftime("%Y-%m-%d"),
         "market_direction": {

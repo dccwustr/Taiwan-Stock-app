@@ -51,6 +51,42 @@ def _first(s: str) -> Optional[float]:
     return _f((s or "").split("_")[0])
 
 
+def est_price(z, pz, ask, bid, open_px=None) -> Optional[float]:
+    """本輪成交價估計。MIS 的 z 在多數更新都是 "-"，只有撮合當下才有值 → 退回 pz → 買賣中間價。"""
+    if _f(z):
+        return _f(z)
+    if _f(pz):
+        return _f(pz)
+    if ask and bid:
+        return (ask + bid) / 2
+    return bid or ask or _f(open_px)
+
+
+def classify(has_trade_px: bool, px: float, prev: Dict, ask, bid, closing: bool) -> int:
+    """
+    新增成交量的方向。+1 主動買、-1 主動賣、0 無法判斷（沿用上一次）。
+    有成交價：內外盤法 + tick rule。
+    只有報價（z="-"）：看五檔移動 — 買價升到前一刻賣價以上 = 買方吃掉賣單；賣價降到前一刻買價以下 = 賣方砸掉買單；
+    否則比較中間價變化。
+    """
+    pa, pb, pz = prev.get("ask"), prev.get("bid"), prev.get("z")
+    if closing and pz:
+        return (px > pz) - (px < pz)
+    if has_trade_px:
+        if pa and px >= pa:
+            return 1
+        if pb and px <= pb:
+            return -1
+    else:
+        if pa and bid and bid >= pa:
+            return 1
+        if pb and ask and ask <= pb:
+            return -1
+    if pz and px != pz:
+        return 1 if px > pz else -1
+    return 0
+
+
 class Collector:
     def __init__(self, universe: List[Dict]):
         self.meta = {s["code"]: s for s in universe}
@@ -123,8 +159,9 @@ class Collector:
             if not code or code not in self.meta or m.get("d") != self.today:
                 continue
             v = int(m.get("v") or 0)
-            z = _f(m.get("z")) or _f(m.get("pz"))
             ask, bid, ref = _first(m.get("a")), _first(m.get("b")), _f(m.get("y"))
+            has_trade_px = bool(_f(m.get("z")) or _f(m.get("pz")))
+            z = est_price(m.get("z"), m.get("pz"), ask, bid, m.get("o"))
             t = (m.get("t") or "")[:5]
             p = self.prev.get(code)
             if p is None:
@@ -138,16 +175,8 @@ class Collector:
             else:
                 dv = v - p["v"]
                 if dv > 0 and z:
-                    if t >= "13:30" and p["z"]:                 # 收盤集合競價
-                        sign = (z > p["z"]) - (z < p["z"])
-                    elif p["ask"] and z >= p["ask"]:
-                        sign = 1                                 # 外盤
-                    elif p["bid"] and z <= p["bid"]:
-                        sign = -1                                # 內盤
-                    elif p["z"] and z != p["z"]:
-                        sign = 1 if z > p["z"] else -1           # tick rule
-                    else:
-                        sign = p["sign"]
+                    # 舊版在 z="-" 時整段成交量直接丟掉 → 2026-10 實測只算到官方成交額的 14–17%
+                    sign = classify(has_trade_px, z, p, ask, bid, t >= "13:30") or p["sign"]
                     amt = dv * 1000 * z
                     if sign:
                         flows.append((t, code, amt if sign > 0 else 0.0, amt if sign < 0 else 0.0))

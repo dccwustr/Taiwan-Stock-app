@@ -105,7 +105,7 @@ try:
         fetch_us_overnight, us_macro_stock_bonus, fetch_global_news,
         fetch_market_alerts,
         fetch_yf_fundamentals_batch, fetch_twse_shareholder_meetings,
-        fetch_twse_monthly_revenue,
+        fetch_twse_monthly_revenue, merge_monthly_revenue, insti_asof,
         calc_fundamental_bonus,
         fetch_intraday_flow,
         # ── 早盤情報系統 ─────────────────────────────────────────────────────────
@@ -462,7 +462,7 @@ CATEGORY_UNIVERSE = {
         "desc": "ERP・IT服務・雲端應用・企業管理系統",
         "why": "AI賦能軟體訂閱轉型，台灣IT服務股基本面改善、本益比修復空間大",
         # 3658 missing, 3686=Danen(PCB not software), 4916=Parpro(plastics) removed
-        "tickers": ["6510.TW","6104.TW","2353.TW","2395.TW","2376.TW"],
+        "tickers": ["6214.TW","6104.TW","2353.TW","2395.TW","2376.TW"],
     },
     "ev": {
         "emoji": "🔋", "name": "電動車", "en": "EV Components",
@@ -475,15 +475,15 @@ CATEGORY_UNIVERSE = {
         "emoji": "☀️", "name": "綠能太陽能", "en": "Green Energy",
         "desc": "太陽能模組・離岸風電・儲能系統・電網",
         "why": "RE100採購+政府2050淨零目標；台灣離岸風電裝機量持續上升，政策多頭",
-        # 3533=Lotes(AI connectors,not green) removed; 3519(missing) removed
+        # 3533=Lotes(AI connectors,not green) removed
         "tickers": ["3576.TW","6443.TW","6412.TW","1513.TW","1519.TW"],
     },
     "biotech": {
         "emoji": "💊", "name": "生技醫療", "en": "Biotech / Healthcare",
         "desc": "新藥研發・醫療器材・體外診斷・AI醫療",
         "why": "高齡化社會+AI加速新藥研發；台灣生技股授權金題材具備爆發力",
-        # 4110=東洋製藥(missing from yfinance data) removed
-        "tickers": ["4743.TW","6547.TW","4119.TW","1786.TW","4166.TW","6446.TW"],
+        # 東洋 = 4105（舊資料誤植 4110）
+        "tickers": ["4743.TW","6547.TW","4119.TW","1786.TW","4162.TW","6446.TW"],
     },
     "mobile": {
         "emoji": "📱", "name": "手機零組件", "en": "Mobile Supply Chain",
@@ -507,7 +507,7 @@ CATEGORY_UNIVERSE = {
         "emoji": "🛡️", "name": "國防無人機", "en": "Defense / UAV",
         "desc": "無人機製造・航太國防・飛彈系統・軍艦",
         "why": "政府2026-2031年逾2兆國防特別預算，台灣首度建立自產無人機國家隊；美DoD藍軍認證創造出口門檻",
-        "tickers": ["8033.TW","2634.TW","2630.TW","5371.TW","5222.TW","6753.TW"],
+        "tickers": ["8033.TW","2634.TW","2630.TW","3718.TW","5222.TW","6753.TW"],
     },
     "petrochem": {
         "emoji": "🏭", "name": "石化傳產", "en": "Petrochemicals / Value",
@@ -851,7 +851,7 @@ def load_data(epoch: str):                       # epoch = "YYYY-MM-DD-SLOT", ch
     taiex_close   = _r["taiex"]
     market        = _r["market"]
     ts = _now_tw().strftime("%H:%M")
-    return dict(news=news, headlines=headlines, catalyst=cat_sc,
+    return dict(insti_date=insti_asof(), news=news, headlines=headlines, catalyst=cat_sc,
                 foreign=foreign, fi_streak=fi_streak,
                 trust_streak=trust_streak,
                 margin_bal=margin_bal,
@@ -884,11 +884,7 @@ def load_fundamentals(epoch_day: str) -> dict:
     fund_map = fetch_yf_fundamentals_batch(all_tickers)
     meetings = fetch_twse_shareholder_meetings()   # returns {} when API unavailable
     # 月營收年增率 from MOPS — one HTML request, all companies, more current than quarterly yfinance
-    monthly_rev = fetch_twse_monthly_revenue()
-    for tk, yoy in monthly_rev.items():
-        if tk not in fund_map:
-            fund_map[tk] = {}
-        fund_map[tk]["monthly_rev_yoy"] = yoy
+    merge_monthly_revenue(fund_map)
     return {"fund": fund_map, "meetings": meetings}
 
 # ── Session state init ────────────────────────────────────────────────────────
@@ -1382,6 +1378,11 @@ total_pnl  = total_val - total_cost if total_cost > 0 else 0
 total_pct  = (total_pnl / total_cost * 100) if total_cost > 0 else 0
 
 # ── Score stocks (needed by sidebar compact list AND picks view) ──────────────
+def _score_sort_key(x: dict):
+    """分數封頂 100，同分時用未封頂的原始技術/籌碼分排序（否則只是股票池的順序）"""
+    return (x["score"], x.get("raw_score", 0))
+
+
 skip = set(MY_HOLDINGS.keys())
 scored = []
 for ticker in TECH_UNIVERSE:
@@ -1450,7 +1451,7 @@ for ticker in TECH_UNIVERSE:
             if   _smr >= 30: _margin_lbls.append(f"券資比{_smr:.0f}% 潛在軋空")
             res["catalysts"] = (_fund["labels"] + _3inv["labels"] + _margin_lbls + _tech_labels)[:5]
             scored.append(res)
-scored.sort(key=lambda x: x["score"], reverse=True)
+scored.sort(key=_score_sort_key, reverse=True)
 
 # ── Live intraday scoring update (market hours only) ──────────────────────────
 # ONE batch TWSE call fetches live price + yesterday's close for every scored ticker.
@@ -1517,7 +1518,7 @@ if _is_market_open() and scored:
             _r["near_limit"] = True
 
     # Re-sort with live-updated scores
-    scored.sort(key=lambda x: x["score"], reverse=True)
+    scored.sort(key=_score_sort_key, reverse=True)
 
 # ── Final picks split ──────────────────────────────────────────────────────────
 # 今日可進場：RSI合理 + 分數達標 + 今日未大漲 + 股價在小資範圍內（上限由側邊欄設定）
@@ -1662,7 +1663,7 @@ def _build_fund_row(p: dict) -> str:
             tags.append(f'<span class="meeting-tag">🗓 {lbl}</span>')
 
     if not tags:
-        if p.get("yf_error"):
+        if p.get("yf_error") and not p.get("fund_labels"):
             return '<div class="fund-row"><span style="color:#555;font-size:11px">基本面資料暫無（Yahoo Finance 連線不穩）</span></div>'
         return ""
     inner = "".join(tags)
@@ -1814,8 +1815,8 @@ def _build_why_buy(p: dict) -> str:
             )
 
     for lbl in fund_lbl:
-        if "高毛利" in lbl:
-            reasons.append(f"🏭 <b>高毛利</b>：{lbl.replace('高毛利 ', '')} 毛利率，代表產品競爭力強、定價權高，不易被競爭對手搶走客戶")
+        if "高淨利率" in lbl:
+            reasons.append(f"🏭 <b>高淨利率</b>：{lbl.replace('高淨利率 ', '')} 淨利率，代表每賺 100 元營收能留下較多獲利")
             break
 
     # ── 供應鏈與行業地位 ───────────────────────────────────────────────────────
@@ -1828,9 +1829,9 @@ def _build_why_buy(p: dict) -> str:
 
     # ── 法人動向 ────────────────────────────────────────────────────────────────
     if fi >= 500:
-        reasons.append(f"🌐 <b>外資大買超</b>：近期外資淨買入 {fi:.0f}千張，代表國際法人對這支股票高度信心")
+        reasons.append(f"🌐 <b>外資大買超</b>：近期外資淨買入 {fi:,.0f} 張，代表國際法人對這支股票高度信心")
     elif fi >= 150:
-        reasons.append(f"🌐 <b>外資持續買入</b>：外資淨買入 {fi:.0f}千張，法人籌碼持續累積")
+        reasons.append(f"🌐 <b>外資持續買入</b>：外資淨買入 {fi:,.0f} 張，法人籌碼持續累積")
 
     # ── 大師技術指標 ─────────────────────────────────────────────────────────────
     kd_sig  = p.get("kd_signal", "")
@@ -2330,9 +2331,9 @@ def _build_kbar_fi_row(sres: dict) -> str:
 
     # ── 外資動向 ─────────────────────────────────────────────────────────
     if   fi_net >= 2000: fi_html = f'<span style="color:#ef5350;font-weight:600">外資大買▲{fi_net/1000:.0f}億</span>'
-    elif fi_net >= 500:  fi_html = f'<span style="color:#ef5350">外資買+{fi_net:.0f}千張</span>'
+    elif fi_net >= 500:  fi_html = f'<span style="color:#ef5350">外資買+{fi_net:,.0f}張</span>'
     elif fi_net <= -2000:fi_html = f'<span style="color:#4caf7d;font-weight:600">外資大賣▼{abs(fi_net)/1000:.0f}億</span>'
-    elif fi_net <= -500: fi_html = f'<span style="color:#4caf7d">外資賣{fi_net:.0f}千張</span>'
+    elif fi_net <= -500: fi_html = f'<span style="color:#4caf7d">外資賣{abs(fi_net):,.0f}張</span>'
     elif fi_net > 0:     fi_html = f'<span style="color:#ff9800">外資小買</span>'
     elif fi_net < 0:     fi_html = f'<span style="color:#607d8b">外資小賣</span>'
     else:                fi_html = f'<span style="color:#444">外資中立</span>'
@@ -3402,8 +3403,8 @@ def render_category_cards(picks, prices, show_chart):
         else:
             acq = "👀 觀察中：等量能與趨勢確認"
 
-        if   fi > 100:  fi_str = f"外資買超 {fi:.0f}千張 📥"
-        elif fi < -100: fi_str = f"外資賣超 {abs(fi):.0f}千張 📤"
+        if   fi > 100:  fi_str = f"外資買超 {fi:,.0f} 張 📥"
+        elif fi < -100: fi_str = f"外資賣超 {abs(fi):,.0f} 張 📤"
         else:           fi_str = ""
 
         _cat_mom20 = p.get("mom20d", 0)
@@ -3746,7 +3747,7 @@ if st.session_state.view_mode == "categories":
                 _cr["score"]      = max(0, _cr["score"] - 22)
                 _cr["near_limit"] = True
 
-    _cat_scored.sort(key=lambda x: x["score"], reverse=True)
+    _cat_scored.sort(key=_score_sort_key, reverse=True)
     # Category view: show top 5 by score regardless of absolute threshold —
     # the user chose this category intentionally.  Only hard-filter:
     #   • RSI ≥ 73  (technically overbought — wait for pullback)
@@ -4080,9 +4081,12 @@ if _mp_today and _mp.get("top_picks"):
     _mp_mkt = _mp.get("market_direction", {})
     _mp_penalty = _mp_mkt.get("penalty", 0)
     _mp_mkt_color = "#ef5350" if _mp_penalty <= -20 else ("#ffd54f" if _mp_penalty < 0 else "#69f0ae")
+    # GitHub 排程實測常晚 4–6 小時；不是盤前產生的就不能叫「早安」，價格也已是當日盤中/收盤價
+    _mp_hhmm = _mp.get("generated_at", "")[11:16]
+    _mp_title = "☀️ 早安精選" if _mp_hhmm and _mp_hhmm < "09:00" else "📋 今日精選（盤中/盤後產生）"
     _mp_picks_html = ""
     for _i, _pk in enumerate(_mp["top_picks"][:5], 1):
-        _pk_code = _pk["ticker"].replace(".TW","").replace(".TWO","")
+        _pk_code = _pk["ticker"].split(".")[0]
         _pk_labels = " · ".join(_pk.get("labels", [])[:2])
         _afford = f"NT$10,000≈{_pk['affordability']}股" if _pk.get("affordability", 0) > 0 else ""
         _mp_picks_html += (
@@ -4102,7 +4106,7 @@ if _mp_today and _mp.get("top_picks"):
         f'<div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:8px;'
         f'padding:10px 14px;margin-bottom:12px">'
         f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-        f'<span style="font-size:13px;color:#69f0ae;font-weight:700">☀️ 早安精選</span>'
+        f'<span style="font-size:13px;color:#69f0ae;font-weight:700">{_mp_title}</span>'
         f'<span style="font-size:11px;color:#555">{_mp["generated_at"]} 自動分析</span>'
         f'<span style="background:#1a2a1a;color:{_mp_mkt_color};border-radius:4px;'
         f'padding:1px 8px;font-size:11px;margin-left:auto">'
@@ -4128,7 +4132,8 @@ st.markdown(
     f'　分析時間：{data["ts"]}　｜　下次更新：{_next_lbl}{_live_rsi_note}'
     f'</span>'
     f'<span style="margin-left:auto;font-size:11px;color:#333">'
-    f'今日精選由系統自動計算，每個時段重新評分排序</span>'
+    f'今日精選由系統自動計算，每個時段重新評分排序'
+    f'｜法人資料日：{data.get("insti_date") or "⚠️ 目前抓不到"}</span>'
     f'</div>'
     f'<div style="display:flex;align-items:center;gap:6px;padding:6px 14px 10px;'
     f'font-size:11px;color:#444">'
@@ -4209,8 +4214,8 @@ def render_stock_cards(picks, prices, show_chart):
         else:
             acq = "👀 觀察中：等量能與趨勢確認"
 
-        if fi > 100:    fi_str = f"外資買超 {fi:.0f}千張 📥"
-        elif fi < -100: fi_str = f"外資賣超 {abs(fi):.0f}千張 📤"
+        if fi > 100:    fi_str = f"外資買超 {fi:,.0f} 張 📥"
+        elif fi < -100: fi_str = f"外資賣超 {abs(fi):,.0f} 張 📤"
         else:           fi_str = ""
 
         _mom20 = p.get("mom20d", 0)

@@ -3,10 +3,11 @@
 """
 前向測試 — 把 data/pick_log.csv 的每筆精選對照其後的實際走勢。
 
-進場參考價 = 精選當時的 last_price（前一交易日收盤）。
-  ret_5d / ret_20d : 精選日起第 5 / 20 個交易日收盤報酬 (%)
-  ex_5d / ex_20d   : 減去同期加權指數報酬 (%)
-  outcome          : 20 個交易日內先碰停損 / 先碰目標 / 皆未碰（同日兩者都碰以停損計，較保守）
+進場 = 盤前（09:00 前）產生的精選用當日開盤價；其餘用下一個交易日開盤價
+       （GitHub 排程曾晚到 12:46–14:56 才發布，last_price 已是當日價，用當日 K 棒會偷看未來）。
+  ret_5d / ret_20d : 進場後第 5 / 20 個交易日收盤報酬 (%)，已扣來回成本 0.585%
+  ex_5d / ex_20d   : 減去同期加權指數（同樣開盤到收盤、不扣成本）
+  outcome          : 進場後 20 個交易日內先碰停損 / 先碰目標 / 皆未碰（同日兩者都碰以停損計，較保守）
 尚未走滿的天數留空，不計入統計。
 
   python forward_test.py        # 輸出 data/forward_test.csv 並印出摘要
@@ -41,16 +42,30 @@ def _download(tickers, start):
     return out
 
 
-def _ret(df, date, n, base):
-    """% return from base to the close of the n-th trading day on/after date."""
-    fwd = df[df.index >= pd.Timestamp(date)]
-    if len(fwd) < n or base <= 0:
+COST_PCT = 0.585   # 手續費 0.1425%×2 + 證交稅 0.3%
+
+
+def _is_premarket(generated_at):
+    """generated_at = 'YYYY-MM-DD HH:MM TST'；舊紀錄沒有這欄 → 視為非盤前。"""
+    return bool(generated_at) and generated_at[11:16] < "09:00"
+
+
+def _forward(df, date, premarket=False):
+    """可實際進場之後的 K 棒。"""
+    ts = pd.Timestamp(date)
+    return df[df.index >= ts] if premarket else df[df.index > ts]
+
+
+def _ret(df, date, n, cost=0.0, premarket=False):
+    """% return from the entry session's open to the close of the n-th session."""
+    fwd = _forward(df, date, premarket)
+    if len(fwd) < n or float(fwd["Open"].iloc[0]) <= 0:
         return None
-    return (float(fwd["Close"].iloc[n - 1]) / base - 1) * 100
+    return (float(fwd["Close"].iloc[n - 1]) / float(fwd["Open"].iloc[0]) - 1) * 100 - cost
 
 
-def _outcome(df, date, stop, target):
-    fwd = df[df.index >= pd.Timestamp(date)].head(20)
+def _outcome(df, date, stop, target, premarket=False):
+    fwd = _forward(df, date, premarket).head(20)
     for _, bar in fwd.iterrows():
         if stop and float(bar["Low"]) <= stop:
             return "stop"
@@ -73,15 +88,15 @@ def run(log_path=LOG_PATH, out_path=OUT_PATH):
         df = px.get(p["ticker"])
         if df is None:
             continue
-        base = float(p["last_price"] or 0)
         r = dict(p)
+        pre = _is_premarket(p.get("generated_at"))
         for n in (5, 20):
-            ret = _ret(df, p["date"], n, base)
-            mret = _ret(mkt, p["date"], n, _ret_base(mkt, p["date"])) if mkt is not None else None
+            ret = _ret(df, p["date"], n, COST_PCT, pre)
+            mret = _ret(mkt, p["date"], n, 0.0, pre) if mkt is not None else None
             r[f"ret_{n}d"] = round(ret, 2) if ret is not None else ""
             r[f"ex_{n}d"] = round(ret - mret, 2) if ret is not None and mret is not None else ""
-        r["outcome"] = _outcome(df, p["date"],
-                                float(p["stop_loss"] or 0), float(p["target_price"] or 0))
+        r["outcome"] = _outcome(df, p["date"], float(p["stop_loss"] or 0),
+                                float(p["target_price"] or 0), pre)
         rows.append(r)
 
     if not rows:
@@ -91,12 +106,6 @@ def run(log_path=LOG_PATH, out_path=OUT_PATH):
         w.writeheader()
         w.writerows(rows)
     summarize(rows, out_path)
-
-
-def _ret_base(mkt, date):
-    """TAIEX close the trading day before `date`, matching the picks' reference price."""
-    prev = mkt[mkt.index < pd.Timestamp(date)]
-    return float(prev["Close"].iloc[-1]) if len(prev) else 0.0
 
 
 def _stats(label, rows, key):

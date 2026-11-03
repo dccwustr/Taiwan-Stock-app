@@ -13,7 +13,7 @@ LOG_PATH = os.path.join("data", "pick_log.csv")
 FIELDS = [
     "date", "ticker", "name", "sector", "rank", "score", "last_price",
     "stop_loss", "target_price", "target_pct", "rsi", "stage", "rs_composite",
-    "mom5d", "mom20d", "rev_yoy", "mkt_label", "mkt_penalty",
+    "mom5d", "mom20d", "rev_yoy", "mkt_label", "mkt_penalty", "generated_at",
 ]
 
 
@@ -23,7 +23,8 @@ def _rows(result: dict, fields: list = FIELDS) -> list:
     for rank, pk in enumerate(result.get("top_picks", []), 1):
         row = {k: pk.get(k, "") for k in fields}
         row.update(date=result["date"], rank=rank,
-                   mkt_label=mkt.get("label", ""), mkt_penalty=mkt.get("penalty", ""))
+                   mkt_label=mkt.get("label", ""), mkt_penalty=mkt.get("penalty", ""),
+                   generated_at=result.get("generated_at", ""))
         rows.append(row)
     return rows
 
@@ -33,14 +34,27 @@ def append_picks(result: dict, path: str = LOG_PATH, fields: list = FIELDS) -> i
     existing = set()
     if os.path.exists(path):
         with open(path, encoding="utf-8", newline="") as f:
-            existing = {(r["date"], r["ticker"]) for r in csv.DictReader(f)}
+            reader = csv.DictReader(f)
+            old_rows = list(reader)
+            old_fields = reader.fieldnames or []
+        existing = {(r["date"], r["ticker"]) for r in old_rows}
+        # 新增欄位時補上舊檔的表頭，否則新資料會和舊欄位錯位
+        missing = [c for c in fields if c not in old_fields]
+        if missing:
+            fields = old_fields + missing
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                w = csv.DictWriter(f, fieldnames=fields, restval="")
+                w.writeheader()
+                w.writerows(old_rows)
+        else:
+            fields = old_fields
     new = [r for r in _rows(result, fields) if (r["date"], r["ticker"]) not in existing]
     if not new:
         return 0
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     write_header = not os.path.exists(path)
     with open(path, "a", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fields)
+        w = csv.DictWriter(f, fieldnames=fields, restval="", extrasaction="ignore")
         if write_header:
             w.writeheader()
         w.writerows(new)
