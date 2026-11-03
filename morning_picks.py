@@ -198,8 +198,10 @@ def run_morning_analysis(verbose: bool = True) -> dict:
         "fundamentals": sum(1 for v in fund_raw.values() if v.get("trailing_eps") is not None),
         "news": len(news), "taiex": taiex_close is not None,
     }
-    problems = [k for k in ("prices", "foreign", "margin", "monthly_revenue", "fundamentals", "taiex")
-                if not health[k]]
+    problems = [k for k in ("foreign", "margin", "monthly_revenue", "taiex") if not health[k]]
+    # 這兩項 Yahoo 限流時只會剩少數幾檔，不是 0 → 用覆蓋率判斷
+    _n_uni = len(TECH_UNIVERSE)
+    problems += [k for k in ("prices", "fundamentals") if health[k] < _n_uni * 0.5]
     health["problems"] = problems
     if problems:
         print(f"::warning::資料來源異常: {', '.join(problems)}", flush=True)
