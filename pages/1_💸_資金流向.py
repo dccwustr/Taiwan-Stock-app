@@ -13,6 +13,8 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 
+import os  # noqa: E402
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # Streamlit Cloud 拉新程式碼時不會重啟 Python：舊模組還留在 sys.modules，
 # 新程式就會 ImportError（波段 App 2026-11-03 實際發生）。原始檔變了就丟掉舊模組重新載入。

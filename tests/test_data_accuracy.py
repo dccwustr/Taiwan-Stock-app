@@ -189,6 +189,21 @@ class PickLog(unittest.TestCase):
         self.assertAlmostEqual(ft._ret(df, "2026-11-03", 1, 0.0, False), 5.0)    # next-day open→close
 
 
+class EntryPoints(unittest.TestCase):
+    """Every deployed entry file must at least compile with its names resolved."""
+    def test_guard_names_are_imported(self):
+        import ast
+        for f in [ROOT / "app.py"] + list((ROOT / "pages").glob("*.py")):
+            src = f.read_text("utf-8")
+            if "_refresh_local_modules" not in src:
+                continue
+            names = set()
+            for n in ast.walk(ast.parse(src)):
+                if isinstance(n, ast.Import):
+                    names |= {a.asname or a.name.split(".")[0] for a in n.names}
+            self.assertLessEqual({"os", "sys"}, names, f.name)
+
+
 class Universe(unittest.TestCase):
     def test_not_buyable_stays_watchable(self):
         self.assertIn("2758.TW", w.PICKS_EXCLUDE)
