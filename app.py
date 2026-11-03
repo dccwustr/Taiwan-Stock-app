@@ -93,6 +93,7 @@ from plotly.subplots import make_subplots
 
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from trade_check import check_trade, simulate_odds, history_same_distance, render_html
 try:
     from widget import (
         TECH_UNIVERSE, MY_HOLDINGS,
@@ -2428,6 +2429,24 @@ def _build_kbar_fi_row(sres: dict) -> str:
     )
 
 
+@st.cache_data(ttl=1800, show_spinner=False)
+def _trade_check_cached(ticker: str, entry: float, stop: float, target: float, _df) -> str:
+    return render_html(
+        check_trade(entry, stop, target),
+        simulate_odds(_df, entry, stop, target),
+        history_same_distance(_df, entry, stop, target),
+    )
+
+
+def _build_trade_check(p: dict, prices: dict) -> str:
+    """交易前檢查：風險檢查、零股股數、勝算模擬。只顯示，不影響分數與排序。"""
+    try:
+        return _trade_check_cached(p["ticker"], p["last_price"], p["stop_loss"], p["target_price"],
+                                   (prices or {}).get(p["ticker"]))
+    except Exception:
+        return '<div style="font-size:11px;color:#888;margin:6px 0">🛡 交易前檢查暫時無法計算</div>'
+
+
 def _build_signal_badge(p: dict, show_rr: bool = True) -> str:
     """交易訊號徽章：BUY / HOLD / SELL + 勝率統計一覽"""
     sig   = p.get("signal", "HOLD")
@@ -3481,6 +3500,7 @@ def render_category_cards(picks, prices, show_chart):
             + _build_kbar_fi_row(p)
             + _build_flow_panel(_cat_flow, is_open)
             + _build_signal_badge(p)
+            + _build_trade_check(p, prices)
             + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'
@@ -4336,6 +4356,7 @@ def render_stock_cards(picks, prices, show_chart):
             + _build_kbar_fi_row(p)
             + _build_flow_panel(_pick_flow, is_open)
             + _build_signal_badge(p, show_rr=False)
+            + _build_trade_check(p, prices)
             + f'<div class="catalyst">📌 {cat_str}</div>'
             f'<div class="{"near-limit-warn" if _live_chg_now >= 7.0 else "sell-note"}">{acq}</div>'
             f'<div class="conf-wrap"><div class="conf-bar" style="width:{bar_w}%;background:{bar_color}"></div></div>'

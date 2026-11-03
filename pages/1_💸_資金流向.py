@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import flow_core as fc  # noqa: E402
 import flow_race  # noqa: E402
 from dip_watch import market_drop  # noqa: E402
+from trade_check import simulate_odds, history_same_distance, render_html  # noqa: E402
 
 LENS_PATH = Path(__file__).resolve().parent.parent / "data" / "master_lenses.json"
 
@@ -60,6 +61,43 @@ def load():
     if loc and rem:   # 取比較新的
         return loc if (loc["date"], loc.get("updated") or "") >= (rem["date"], rem.get("updated") or "") else rem
     return loc or rem
+
+
+@st.cache_data(ttl=21600, show_spinner=False)
+def load_daily(code: str, mkt: str):
+    """個股一年日 K（只在使用者選股時抓）"""
+    import yfinance as yf
+    df = yf.Ticker(code + (".TWO" if mkt == "otc" else ".TW")).history(period="1y")
+    return None if df.empty else df[["Open", "High", "Low", "Close"]]
+
+
+def odds_panel(rows: pd.DataFrame) -> None:
+    """勝算試算：資金流向沒有買賣計畫，用 ATR 設一組試算用的停損與目標。"""
+    labels = (rows["code"] + " " + rows["name"]).tolist()
+    pick = st.selectbox("🎲 勝算試算（選一檔）", ["—"] + labels, key="odds_pick")
+    if pick == "—":
+        return
+    row = rows.iloc[labels.index(pick)]
+    try:
+        df = load_daily(row["code"], row.get("mkt", "tse"))
+    except Exception:
+        df = None
+    if df is None or len(df) < 15:
+        st.info("暫時抓不到這檔的歷史日 K，無法試算。")
+        return
+    prev = df["Close"].shift(1)
+    tr = pd.concat([df["High"] - df["Low"], (df["High"] - prev).abs(), (df["Low"] - prev).abs()], axis=1).max(axis=1)
+    atr = float(tr.tail(14).mean())
+    entry = float(row["price"] or 0) or float(df["Close"].iloc[-1])
+    stop, target = round(entry - 2 * atr, 2), round(entry + 3 * atr, 2)
+    odds = simulate_odds(df, entry, stop, target)
+    panel = render_html(None, odds, history_same_distance(df, entry, stop, target))
+    if not panel:
+        st.info("資料不足，無法試算。")
+        return
+    st.markdown(panel, unsafe_allow_html=True)
+    st.caption(f"試算假設：進場 NT${entry:,.2f}、停損 NT${stop:,.2f}（2 倍 ATR）、目標 NT${target:,.2f}（3 倍 ATR），"
+               "不是買賣建議。")
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -363,6 +401,7 @@ def _details(snap):
             st.caption("🔴 即時更新中（約每 15–30 秒）。『本輪變化』= 上一輪更新後這檔新增的淨流入；"
                        "排名箭頭 = 相對上一輪的名次升降。")
         st.dataframe(stock_table(sel, hist, lenses), hide_index=True, column_config=TABLE_CFG)
+        odds_panel(sel)
     st.caption("大師鏡頭：🎩 巴菲特品質 x/8、📋 Piotroski 財報改善 x/9（年報約 4 年，每週更新；"
                "只涵蓋精選頁股票池，其餘顯示 —）。")
 
