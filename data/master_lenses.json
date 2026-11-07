@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-31 14:38 TST",
+ "generated_at": "2026-11-07 14:51 TST",
  "tickers": {
   "2330.TW": {
    "name": "台積電",
@@ -40,8 +40,8 @@
    "lynch": {
     "category": "穩健成長股",
     "growth_pct": 19.6,
-    "peg": 1.24,
-    "pb": 8.73,
+    "peg": 1.12,
+    "pb": 7.86,
     "pass": false
    }
   },
@@ -85,7 +85,7 @@
     "category": "景氣循環股",
     "growth_pct": -23.3,
     "peg": null,
-    "pb": 3.7,
+    "pb": 2.45,
     "pass": false
    }
   },
@@ -129,7 +129,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 2.43,
+    "pb": 1.93,
     "pass": false
    }
   },
@@ -173,7 +173,7 @@
     "category": "景氣循環股",
     "growth_pct": -3.8,
     "peg": null,
-    "pb": 15.6,
+    "pb": 11.6,
     "pass": false
    }
   },
@@ -217,7 +217,7 @@
     "category": "慢速成長股",
     "growth_pct": -16.4,
     "peg": null,
-    "pb": 5.07,
+    "pb": 4.03,
     "pass": false
    }
   },
@@ -231,7 +231,7 @@
     2025
    ],
    "buffett": {
-    "score": 6,
+    "score": 7,
     "checks": {
      "ROE 每年 ≥15%": true,
      "長期負債 ≤ 3 年淨利": true,
@@ -240,7 +240,7 @@
      "自由現金流每年 >0": true,
      "淨利每年 >0 且成長": false,
      "資本支出 ≤ 營業現金流一半": true,
-     "業主盈餘殖利率 ≥5%": false
+     "業主盈餘殖利率 ≥5%": true
     }
    },
    "piotroski": {
@@ -261,7 +261,7 @@
     "category": "景氣循環股",
     "growth_pct": -3.1,
     "peg": null,
-    "pb": 8.21,
+    "pb": 7.24,
     "pass": false
    }
   },
@@ -305,7 +305,7 @@
     "category": "景氣循環股",
     "growth_pct": -25.7,
     "peg": null,
-    "pb": 4.83,
+    "pb": 3.74,
     "pass": false
    }
   },
@@ -348,8 +348,8 @@
    "lynch": {
     "category": "慢速成長股",
     "growth_pct": 4.3,
-    "peg": 2.69,
-    "pb": 3.19,
+    "peg": 2.49,
+    "pb": 2.95,
     "pass": false
    }
   },
@@ -393,7 +393,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 1.66,
+    "pb": 1.43,
     "pass": false
    }
   },
@@ -437,7 +437,7 @@
     "category": "景氣循環股",
     "growth_pct": -32.6,
     "peg": null,
-    "pb": 4.49,
+    "pb": 2.59,
     "pass": false
    }
   },
@@ -481,7 +481,7 @@
     "category": "景氣循環股",
     "growth_pct": -23.2,
     "peg": null,
-    "pb": 4.86,
+    "pb": 2.89,
     "pass": false
    }
   },
@@ -525,7 +525,7 @@
     "category": "景氣循環股",
     "growth_pct": 17.4,
     "peg": null,
-    "pb": 4.18,
+    "pb": 3.25,
     "pass": false
    }
   },
@@ -569,7 +569,7 @@
     "category": "景氣循環股",
     "growth_pct": -21.9,
     "peg": null,
-    "pb": 3.74,
+    "pb": 2.53,
     "pass": false
    }
   },
@@ -613,7 +613,7 @@
     "category": "景氣循環股",
     "growth_pct": -22.1,
     "peg": null,
-    "pb": 2.09,
+    "pb": 1.74,
     "pass": false
    }
   },
@@ -657,7 +657,7 @@
     "category": "景氣循環股",
     "growth_pct": -49.7,
     "peg": null,
-    "pb": 5.68,
+    "pb": 4.09,
     "pass": false
    }
   },
@@ -701,7 +701,7 @@
     "category": "景氣循環股",
     "growth_pct": -13.3,
     "peg": null,
-    "pb": 7.55,
+    "pb": 5.49,
     "pass": false
    }
   },
@@ -744,8 +744,8 @@
    "lynch": {
     "category": "穩健成長股",
     "growth_pct": 17.2,
-    "peg": 2.03,
-    "pb": 5.19,
+    "peg": 1.65,
+    "pb": 4.22,
     "pass": false
    }
   },
@@ -789,7 +789,7 @@
     "category": "景氣循環股",
     "growth_pct": -13.9,
     "peg": null,
-    "pb": 3.31,
+    "pb": 2.63,
     "pass": false
    }
   },
@@ -833,7 +833,7 @@
     "category": "景氣循環股",
     "growth_pct": -39.2,
     "peg": null,
-    "pb": 8.79,
+    "pb": 6.72,
     "pass": false
    }
   },
@@ -877,7 +877,7 @@
     "category": "景氣循環股",
     "growth_pct": 18.1,
     "peg": null,
-    "pb": 4.83,
+    "pb": 3.9,
     "pass": false
    }
   },
@@ -921,7 +921,7 @@
     "category": "景氣循環股",
     "growth_pct": -21.8,
     "peg": null,
-    "pb": 3.49,
+    "pb": 2.68,
     "pass": false
    }
   },
@@ -965,7 +965,7 @@
     "category": "景氣循環股",
     "growth_pct": -38.8,
     "peg": null,
-    "pb": 11.04,
+    "pb": 7.42,
     "pass": false
    }
   },
@@ -1009,7 +1009,7 @@
     "category": "景氣循環股",
     "growth_pct": -6.6,
     "peg": null,
-    "pb": 11.05,
+    "pb": 7.98,
     "pass": false
    }
   },
@@ -1053,7 +1053,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 3.51,
+    "pb": 3.25,
     "pass": false
    }
   },
@@ -1097,7 +1097,7 @@
     "category": "景氣循環股",
     "growth_pct": 200.6,
     "peg": null,
-    "pb": 5.67,
+    "pb": 5.27,
     "pass": false
    }
   },
@@ -1141,7 +1141,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 20.66,
+    "pb": 19.79,
     "pass": false
    }
   },
@@ -1184,8 +1184,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 53.4,
-    "peg": 0.35,
-    "pb": 7.35,
+    "peg": 0.3,
+    "pb": 6.31,
     "pass": true
    }
   },
@@ -1228,8 +1228,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 37.3,
-    "peg": 0.39,
-    "pb": 5.03,
+    "peg": 0.35,
+    "pb": 4.6,
     "pass": true
    }
   },
@@ -1272,8 +1272,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 34.9,
-    "peg": 0.45,
-    "pb": 3.01,
+    "peg": 0.39,
+    "pb": 2.62,
     "pass": true
    }
   },
@@ -1317,7 +1317,7 @@
     "category": "慢速成長股",
     "growth_pct": -1.6,
     "peg": null,
-    "pb": 1.33,
+    "pb": 1.2,
     "pass": false
    }
   },
@@ -1360,8 +1360,8 @@
    "lynch": {
     "category": "穩健成長股",
     "growth_pct": 10.2,
-    "peg": 1.6,
-    "pb": 1.8,
+    "peg": 1.46,
+    "pb": 1.65,
     "pass": false
    }
   },
@@ -1405,7 +1405,7 @@
     "category": "景氣循環股",
     "growth_pct": -6.1,
     "peg": null,
-    "pb": 1.11,
+    "pb": 0.99,
     "pass": false
    }
   },
@@ -1449,7 +1449,7 @@
     "category": "景氣循環股",
     "growth_pct": 1.3,
     "peg": null,
-    "pb": 5.84,
+    "pb": 4.35,
     "pass": false
    }
   },
@@ -1493,7 +1493,7 @@
     "category": "景氣循環股",
     "growth_pct": 11.7,
     "peg": null,
-    "pb": 2.78,
+    "pb": 1.89,
     "pass": false
    }
   },
@@ -1537,7 +1537,7 @@
     "category": "景氣循環股",
     "growth_pct": -45.5,
     "peg": null,
-    "pb": 2.67,
+    "pb": 2.15,
     "pass": false
    }
   },
@@ -1581,7 +1581,7 @@
     "category": "景氣循環股",
     "growth_pct": 5.3,
     "peg": null,
-    "pb": 3.28,
+    "pb": 2.6,
     "pass": false
    }
   },
@@ -1625,7 +1625,7 @@
     "category": "快速成長股",
     "growth_pct": 421.2,
     "peg": 0.05,
-    "pb": 5.1,
+    "pb": 4.35,
     "pass": true
    }
   },
@@ -1669,7 +1669,7 @@
     "category": "慢速成長股",
     "growth_pct": -2.0,
     "peg": null,
-    "pb": 3.71,
+    "pb": 3.06,
     "pass": false
    }
   },
@@ -1683,7 +1683,7 @@
     2025
    ],
    "buffett": {
-    "score": 6,
+    "score": 7,
     "checks": {
      "ROE 每年 ≥15%": false,
      "長期負債 ≤ 3 年淨利": true,
@@ -1692,7 +1692,7 @@
      "自由現金流每年 >0": true,
      "淨利每年 >0 且成長": true,
      "資本支出 ≤ 營業現金流一半": true,
-     "業主盈餘殖利率 ≥5%": false
+     "業主盈餘殖利率 ≥5%": true
     }
    },
    "piotroski": {
@@ -1712,8 +1712,8 @@
    "lynch": {
     "category": "慢速成長股",
     "growth_pct": 4.2,
-    "peg": 7.02,
-    "pb": 4.52,
+    "peg": 5.34,
+    "pb": 3.44,
     "pass": false
    }
   },
@@ -1756,8 +1756,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 22.5,
-    "peg": 1.89,
-    "pb": 11.81,
+    "peg": 1.41,
+    "pb": 8.61,
     "pass": false
    }
   },
@@ -1800,8 +1800,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 66.4,
-    "peg": 0.63,
-    "pb": 22.01,
+    "peg": 0.47,
+    "pb": 16.43,
     "pass": true
    }
   },
@@ -1844,9 +1844,9 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 26.7,
-    "peg": 1.29,
-    "pb": 9.33,
-    "pass": false
+    "peg": 0.93,
+    "pb": 7.4,
+    "pass": true
    }
   },
   "8163.TW": {
@@ -1889,7 +1889,7 @@
     "category": "景氣循環股",
     "growth_pct": -50.4,
     "peg": null,
-    "pb": 0.72,
+    "pb": 0.67,
     "pass": false
    }
   },
@@ -1977,7 +1977,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 2.08,
+    "pb": 1.76,
     "pass": false
    }
   },
@@ -2021,7 +2021,7 @@
     "category": "景氣循環股",
     "growth_pct": -68.9,
     "peg": null,
-    "pb": 6.99,
+    "pb": 5.43,
     "pass": false
    }
   },
@@ -2065,7 +2065,7 @@
     "category": "景氣循環股",
     "growth_pct": -9.0,
     "peg": null,
-    "pb": 2.8,
+    "pb": 2.21,
     "pass": false
    }
   },
@@ -2079,7 +2079,7 @@
     2025
    ],
    "buffett": {
-    "score": 3,
+    "score": 4,
     "checks": {
      "ROE 每年 ≥15%": false,
      "長期負債 ≤ 3 年淨利": true,
@@ -2088,7 +2088,7 @@
      "自由現金流每年 >0": false,
      "淨利每年 >0 且成長": true,
      "資本支出 ≤ 營業現金流一半": true,
-     "業主盈餘殖利率 ≥5%": false
+     "業主盈餘殖利率 ≥5%": true
     }
    },
    "piotroski": {
@@ -2108,9 +2108,9 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 45.1,
-    "peg": 1.1,
-    "pb": 4.89,
-    "pass": false
+    "peg": 0.91,
+    "pb": 4.04,
+    "pass": true
    }
   },
   "3443.TW": {
@@ -2152,8 +2152,8 @@
    "lynch": {
     "category": "慢速成長股",
     "growth_pct": 0.5,
-    "peg": 371.19,
-    "pb": 65.06,
+    "peg": 237.64,
+    "pb": 52.86,
     "pass": false
    }
   },
@@ -2197,7 +2197,7 @@
     "category": "景氣循環股",
     "growth_pct": 23.1,
     "peg": null,
-    "pb": 85.23,
+    "pb": 60.71,
     "pass": false
    }
   },
@@ -2241,7 +2241,7 @@
     "category": "景氣循環股",
     "growth_pct": -17.7,
     "peg": null,
-    "pb": 1.59,
+    "pb": 1.3,
     "pass": false
    }
   },
@@ -2285,7 +2285,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 3.37,
+    "pb": 2.84,
     "pass": false
    }
   },
@@ -2329,7 +2329,7 @@
     "category": "景氣循環股",
     "growth_pct": -0.4,
     "peg": null,
-    "pb": 4.79,
+    "pb": 3.97,
     "pass": false
    }
   },
@@ -2373,7 +2373,7 @@
     "category": "景氣循環股",
     "growth_pct": -53.5,
     "peg": null,
-    "pb": 15.61,
+    "pb": 11.48,
     "pass": false
    }
   },
@@ -2417,7 +2417,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 2.98,
+    "pb": 2.34,
     "pass": false
    }
   },
@@ -2461,7 +2461,7 @@
     "category": "轉機股",
     "growth_pct": -29.9,
     "peg": null,
-    "pb": 9.43,
+    "pb": 7.17,
     "pass": false
    }
   },
@@ -2505,7 +2505,7 @@
     "category": "景氣循環股",
     "growth_pct": 3.2,
     "peg": null,
-    "pb": 4.73,
+    "pb": 3.92,
     "pass": false
    }
   },
@@ -2549,7 +2549,7 @@
     "category": "景氣循環股",
     "growth_pct": 2.4,
     "peg": null,
-    "pb": 7.9,
+    "pb": 6.49,
     "pass": false
    }
   },
@@ -2593,7 +2593,7 @@
     "category": "轉機股",
     "growth_pct": -37.8,
     "peg": null,
-    "pb": 1.47,
+    "pb": 1.22,
     "pass": false
    }
   },
@@ -2637,7 +2637,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 1.54,
+    "pb": 1.36,
     "pass": false
    }
   },
@@ -2680,8 +2680,8 @@
    "lynch": {
     "category": "穩健成長股",
     "growth_pct": 12.4,
-    "peg": 1.56,
-    "pb": 2.75,
+    "peg": 1.38,
+    "pb": 2.43,
     "pass": false
    }
   },
@@ -2724,8 +2724,8 @@
    "lynch": {
     "category": "慢速成長股",
     "growth_pct": 2.2,
-    "peg": 13.34,
-    "pb": 5.7,
+    "peg": 10.48,
+    "pb": 4.53,
     "pass": false
    }
   },
@@ -2769,7 +2769,7 @@
     "category": "景氣循環股",
     "growth_pct": -45.7,
     "peg": null,
-    "pb": 2.56,
+    "pb": 1.97,
     "pass": false
    }
   },
@@ -2813,7 +2813,7 @@
     "category": "景氣循環股",
     "growth_pct": -20.2,
     "peg": null,
-    "pb": 1.51,
+    "pb": 1.27,
     "pass": false
    }
   },
@@ -2857,7 +2857,7 @@
     "category": "景氣循環股",
     "growth_pct": -19.7,
     "peg": null,
-    "pb": 4.3,
+    "pb": 3.51,
     "pass": false
    }
   },
@@ -2900,8 +2900,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 47.8,
-    "peg": 0.53,
-    "pb": 13.07,
+    "peg": 0.42,
+    "pb": 10.36,
     "pass": true
    }
   },
@@ -2945,7 +2945,7 @@
     "category": "慢速成長股",
     "growth_pct": -20.4,
     "peg": null,
-    "pb": 2.23,
+    "pb": 1.9,
     "pass": false
    }
   },
@@ -2989,7 +2989,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 1.41,
+    "pb": 1.18,
     "pass": false
    }
   },
@@ -3033,12 +3033,12 @@
     "category": "虧損中",
     "growth_pct": null,
     "peg": null,
-    "pb": 1.69,
+    "pb": 1.45,
     "pass": false
    }
   },
   "3706.TW": {
-   "name": "神基科技",
+   "name": "神達",
    "sector": "網通/電腦",
    "years": [
     2022,
@@ -3077,7 +3077,7 @@
     "category": "景氣循環股",
     "growth_pct": -9.7,
     "peg": null,
-    "pb": 1.47,
+    "pb": 1.3,
     "pass": false
    }
   },
@@ -3120,13 +3120,13 @@
    "lynch": {
     "category": "穩健成長股",
     "growth_pct": 12.4,
-    "peg": 0.92,
-    "pb": 1.66,
+    "peg": 0.9,
+    "pb": 1.62,
     "pass": true
    }
   },
   "6180.TW": {
-   "name": "加奇數位",
+   "name": "橘子",
    "sector": "手遊",
    "years": [
     2022,
@@ -3165,12 +3165,12 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 1.7,
+    "pb": 1.71,
     "pass": false
    }
   },
   "6111.TW": {
-   "name": "大宇資訊",
+   "name": "光聚晶電",
    "sector": "電腦遊戲",
    "years": [
     2022,
@@ -3209,7 +3209,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 1.69,
+    "pb": 1.45,
     "pass": false
    }
   },
@@ -3253,7 +3253,7 @@
     "category": "虧損中",
     "growth_pct": null,
     "peg": null,
-    "pb": 19.85,
+    "pb": 18.98,
     "pass": false
    }
   },
@@ -3341,7 +3341,7 @@
     "category": "景氣循環股",
     "growth_pct": 7.1,
     "peg": null,
-    "pb": 3.63,
+    "pb": 3.14,
     "pass": false
    }
   },
@@ -3385,7 +3385,7 @@
     "category": "景氣循環股",
     "growth_pct": -8.9,
     "peg": null,
-    "pb": 1.18,
+    "pb": 1.13,
     "pass": false
    }
   },
@@ -3428,8 +3428,8 @@
    "lynch": {
     "category": "穩健成長股",
     "growth_pct": 11.8,
-    "peg": 1.75,
-    "pb": 3.92,
+    "peg": 1.65,
+    "pb": 3.69,
     "pass": false
    }
   },
@@ -3473,7 +3473,7 @@
     "category": "景氣循環股",
     "growth_pct": -9.5,
     "peg": null,
-    "pb": 2.15,
+    "pb": 2.12,
     "pass": false
    }
   },
@@ -3516,8 +3516,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 22.2,
-    "peg": 0.86,
-    "pb": 5.68,
+    "peg": 0.72,
+    "pb": 4.75,
     "pass": true
    }
   },
@@ -3561,7 +3561,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 2.06,
+    "pb": 2.24,
     "pass": false
    }
   },
@@ -3605,12 +3605,12 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 3.62,
+    "pb": 3.99,
     "pass": false
    }
   },
   "6412.TW": {
-   "name": "奇士達",
+   "name": "群電",
    "sector": "電源模組",
    "years": [
     2022,
@@ -3649,7 +3649,7 @@
     "category": "景氣循環股",
     "growth_pct": -13.7,
     "peg": null,
-    "pb": 1.75,
+    "pb": 1.43,
     "pass": false
    }
   },
@@ -3692,8 +3692,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 74.0,
-    "peg": 0.54,
-    "pb": 20.8,
+    "peg": 0.44,
+    "pb": 17.06,
     "pass": true
    }
   },
@@ -3737,7 +3737,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 2.14,
+    "pb": 2.1,
     "pass": false
    }
   },
@@ -3781,7 +3781,7 @@
     "category": "虧損中",
     "growth_pct": null,
     "peg": null,
-    "pb": 4.52,
+    "pb": 4.34,
     "pass": false
    }
   },
@@ -3825,7 +3825,7 @@
     "category": "景氣循環股",
     "growth_pct": -29.7,
     "peg": null,
-    "pb": 1.15,
+    "pb": 1.12,
     "pass": false
    }
   },
@@ -3869,7 +3869,7 @@
     "category": "景氣循環股",
     "growth_pct": 4.6,
     "peg": null,
-    "pb": 1.99,
+    "pb": 1.97,
     "pass": false
    }
   },
@@ -3918,7 +3918,7 @@
    }
   },
   "6285.TW": {
-   "name": "華通電腦",
+   "name": "啟碁",
    "sector": "無線模組",
    "years": [
     2022,
@@ -3957,7 +3957,7 @@
     "category": "慢速成長股",
     "growth_pct": -0.6,
     "peg": null,
-    "pb": 2.88,
+    "pb": 2.04,
     "pass": false
    }
   },
@@ -4001,7 +4001,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 1.52,
+    "pb": 1.32,
     "pass": false
    }
   },
@@ -4045,7 +4045,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 1.51,
+    "pb": 1.28,
     "pass": false
    }
   },
@@ -4089,7 +4089,7 @@
     "category": "景氣循環股",
     "growth_pct": -13.1,
     "peg": null,
-    "pb": 0.75,
+    "pb": 0.71,
     "pass": false
    }
   },
@@ -4132,8 +4132,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 23.1,
-    "peg": 0.6,
-    "pb": 3.38,
+    "peg": 0.52,
+    "pb": 3.0,
     "pass": true
    }
   },
@@ -4176,8 +4176,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 44.8,
-    "peg": 0.3,
-    "pb": 2.23,
+    "peg": 0.28,
+    "pb": 2.12,
     "pass": true
    }
   },
@@ -4221,7 +4221,7 @@
     "category": "慢速成長股",
     "growth_pct": -0.5,
     "peg": null,
-    "pb": 9.44,
+    "pb": 7.66,
     "pass": false
    }
   },
@@ -4266,7 +4266,7 @@
    "sector": "金融"
   },
   "2883.TW": {
-   "name": "開發金",
+   "name": "凱基金",
    "na": true,
    "sector": "金融"
   },
@@ -4310,7 +4310,7 @@
     "category": "景氣循環股",
     "growth_pct": -41.0,
     "peg": null,
-    "pb": 1.05,
+    "pb": 0.95,
     "pass": false
    }
   },
@@ -4354,7 +4354,7 @@
     "category": "景氣循環股",
     "growth_pct": -54.4,
     "peg": null,
-    "pb": 0.68,
+    "pb": 0.61,
     "pass": false
    }
   },
@@ -4398,7 +4398,7 @@
     "category": "景氣循環股",
     "growth_pct": -30.3,
     "peg": null,
-    "pb": 1.17,
+    "pb": 1.05,
     "pass": false
    }
   },
@@ -4442,7 +4442,7 @@
     "category": "景氣循環股",
     "growth_pct": 72.6,
     "peg": null,
-    "pb": 1.24,
+    "pb": 1.3,
     "pass": false
    }
   },
@@ -4486,7 +4486,7 @@
     "category": "景氣循環股",
     "growth_pct": 54.5,
     "peg": null,
-    "pb": 1.65,
+    "pb": 1.69,
     "pass": false
    }
   },
@@ -4530,7 +4530,7 @@
     "category": "景氣循環股",
     "growth_pct": 115.6,
     "peg": null,
-    "pb": 7.92,
+    "pb": 6.57,
     "pass": false
    }
   },
@@ -4574,7 +4574,7 @@
     "category": "景氣循環股",
     "growth_pct": -23.3,
     "peg": null,
-    "pb": 3.02,
+    "pb": 2.63,
     "pass": false
    }
   },
@@ -4617,8 +4617,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 149.6,
-    "peg": 0.47,
-    "pb": 2.45,
+    "peg": 0.38,
+    "pb": 1.98,
     "pass": true
    }
   },
@@ -4662,7 +4662,7 @@
     "category": "景氣循環股",
     "growth_pct": -3.4,
     "peg": null,
-    "pb": 3.09,
+    "pb": 2.75,
     "pass": false
    }
   },
@@ -4705,8 +4705,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 33.5,
-    "peg": 0.35,
-    "pb": 2.62,
+    "peg": 0.31,
+    "pb": 2.29,
     "pass": true
    }
   },
@@ -4750,7 +4750,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 0.99,
+    "pb": 0.97,
     "pass": false
    }
   },
@@ -4794,12 +4794,12 @@
     "category": "景氣循環股",
     "growth_pct": -9.8,
     "peg": null,
-    "pb": 1.63,
+    "pb": 1.62,
     "pass": false
    }
   },
   "2023.TW": {
-   "name": "燁聯",
+   "name": "燁輝",
    "sector": "鋼鐵",
    "years": [
     2022,
@@ -4838,7 +4838,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 0.88,
+    "pb": 0.89,
     "pass": false
    }
   },
@@ -4882,7 +4882,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 0.8,
+    "pb": 0.7,
     "pass": false
    }
   },
@@ -4926,7 +4926,7 @@
     "category": "景氣循環股",
     "growth_pct": -48.0,
     "peg": null,
-    "pb": 4.91,
+    "pb": 3.98,
     "pass": false
    }
   },
@@ -4970,7 +4970,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 0.82,
+    "pb": 0.71,
     "pass": false
    }
   },
@@ -5013,8 +5013,8 @@
    "lynch": {
     "category": "慢速成長股",
     "growth_pct": 2.1,
-    "peg": 14.92,
-    "pb": 3.39,
+    "peg": 15.24,
+    "pb": 3.37,
     "pass": false
    }
   },
@@ -5057,8 +5057,8 @@
    "lynch": {
     "category": "慢速成長股",
     "growth_pct": 9.4,
-    "peg": 2.71,
-    "pb": 4.84,
+    "peg": 2.7,
+    "pb": 4.82,
     "pass": false
    }
   },
@@ -5101,8 +5101,8 @@
    "lynch": {
     "category": "穩健成長股",
     "growth_pct": 12.6,
-    "peg": 2.22,
-    "pb": 4.77,
+    "peg": 2.16,
+    "pb": 4.49,
     "pass": false
    }
   },
@@ -5145,8 +5145,8 @@
    "lynch": {
     "category": "慢速成長股",
     "growth_pct": 6.5,
-    "peg": 3.14,
-    "pb": 5.3,
+    "peg": 2.91,
+    "pb": 4.94,
     "pass": false
    }
   },
@@ -5190,7 +5190,7 @@
     "category": "景氣循環股",
     "growth_pct": -2.7,
     "peg": null,
-    "pb": 4.69,
+    "pb": 4.37,
     "pass": false
    }
   },
@@ -5233,8 +5233,8 @@
    "lynch": {
     "category": "穩健成長股",
     "growth_pct": 15.0,
-    "peg": 1.44,
-    "pb": 9.38,
+    "peg": 1.38,
+    "pb": 9.57,
     "pass": false
    }
   },
@@ -5278,7 +5278,7 @@
     "category": "景氣循環股",
     "growth_pct": -23.1,
     "peg": null,
-    "pb": 2.19,
+    "pb": 1.87,
     "pass": false
    }
   },
@@ -5322,7 +5322,7 @@
     "category": "虧損中",
     "growth_pct": null,
     "peg": null,
-    "pb": 3.47,
+    "pb": 3.43,
     "pass": false
    }
   },
@@ -5366,7 +5366,7 @@
     "category": "景氣循環股",
     "growth_pct": 1.9,
     "peg": null,
-    "pb": 1.0,
+    "pb": 0.93,
     "pass": false
    }
   },
@@ -5410,7 +5410,7 @@
     "category": "景氣循環股",
     "growth_pct": 5.9,
     "peg": null,
-    "pb": 1.68,
+    "pb": 1.61,
     "pass": false
    }
   },
@@ -5454,7 +5454,7 @@
     "category": "景氣循環股",
     "growth_pct": -2.0,
     "peg": null,
-    "pb": 1.46,
+    "pb": 1.36,
     "pass": false
    }
   },
@@ -5498,7 +5498,7 @@
     "category": "虧損中",
     "growth_pct": null,
     "peg": null,
-    "pb": 13.4,
+    "pb": 14.3,
     "pass": false
    }
   },
@@ -5541,8 +5541,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 28.9,
-    "peg": 0.92,
-    "pb": 3.19,
+    "peg": 0.97,
+    "pb": 3.36,
     "pass": true
    }
   },
@@ -5586,7 +5586,7 @@
     "category": "景氣循環股",
     "growth_pct": -27.1,
     "peg": null,
-    "pb": 1.51,
+    "pb": 1.01,
     "pass": false
    }
   },
@@ -5630,7 +5630,7 @@
     "category": "慢速成長股",
     "growth_pct": -5.8,
     "peg": null,
-    "pb": 1.19,
+    "pb": 1.16,
     "pass": false
    }
   },
@@ -5674,7 +5674,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 1.62,
+    "pb": 1.49,
     "pass": false
    }
   },
@@ -5718,7 +5718,7 @@
     "category": "景氣循環股",
     "growth_pct": 17.9,
     "peg": null,
-    "pb": 3.63,
+    "pb": 3.29,
     "pass": false
    }
   },
@@ -5761,8 +5761,8 @@
    "lynch": {
     "category": "穩健成長股",
     "growth_pct": 14.9,
-    "peg": 1.65,
-    "pb": 1.68,
+    "peg": 1.42,
+    "pb": 1.46,
     "pass": false
    }
   },
@@ -5806,7 +5806,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 0.9,
+    "pb": 0.85,
     "pass": false
    }
   },
@@ -5849,8 +5849,8 @@
    "lynch": {
     "category": "慢速成長股",
     "growth_pct": 4.6,
-    "peg": 4.27,
-    "pb": 3.34,
+    "peg": 4.09,
+    "pb": 3.21,
     "pass": false
    }
   },
@@ -5893,8 +5893,8 @@
    "lynch": {
     "category": "穩健成長股",
     "growth_pct": 18.2,
-    "peg": 0.69,
-    "pb": 1.69,
+    "peg": 0.68,
+    "pb": 1.64,
     "pass": true
    }
   },
@@ -5937,8 +5937,8 @@
    "lynch": {
     "category": "穩健成長股",
     "growth_pct": 17.3,
-    "peg": 0.71,
-    "pb": 5.73,
+    "peg": 0.7,
+    "pb": 5.68,
     "pass": true
    }
   },
@@ -5981,8 +5981,8 @@
    "lynch": {
     "category": "快速成長股",
     "growth_pct": 50.3,
-    "peg": 0.28,
-    "pb": 4.79,
+    "peg": 0.26,
+    "pb": 4.38,
     "pass": true
    }
   },
@@ -6026,7 +6026,7 @@
     "category": "景氣循環股",
     "growth_pct": null,
     "peg": null,
-    "pb": 2.98,
+    "pb": 2.83,
     "pass": false
    }
   },
@@ -6070,14 +6070,188 @@
     "category": "景氣循環股",
     "growth_pct": -5.8,
     "peg": null,
-    "pb": 0.73,
+    "pb": 0.7,
     "pass": false
+   }
+  },
+  "6214.TW": {
+   "name": "精誠",
+   "sector": "IT服務",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 4,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": false,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": false,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": false
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": false,
+     "長期負債比下降": true,
+     "流動比率提升": false,
+     "沒有增發股票": false,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "快速成長股",
+    "growth_pct": 25.3,
+    "peg": 0.71,
+    "pb": 2.84,
+    "pass": true
+   }
+  },
+  "3617.TW": {
+   "name": "碩天",
+   "sector": "UPS/電源",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 6,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": false,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 7,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": false,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": true,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 6.0,
+    "peg": null,
+    "pb": 2.04,
+    "pass": false
+   }
+  },
+  "4162.TW": {
+   "name": "智擎",
+   "sector": "新藥",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 7,
+    "checks": {
+     "ROE 每年 ≥15%": false,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 6,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": false,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": false
+    }
+   },
+   "lynch": {
+    "category": "景氣循環股",
+    "growth_pct": 6.7,
+    "peg": null,
+    "pb": 1.55,
+    "pass": false
+   }
+  },
+  "4105.TW": {
+   "name": "東洋",
+   "sector": "學名藥",
+   "years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "buffett": {
+    "score": 8,
+    "checks": {
+     "ROE 每年 ≥15%": true,
+     "長期負債 ≤ 3 年淨利": true,
+     "毛利率 ≥30%": true,
+     "毛利率穩定 (±5%)": true,
+     "自由現金流每年 >0": true,
+     "淨利每年 >0 且成長": true,
+     "資本支出 ≤ 營業現金流一半": true,
+     "業主盈餘殖利率 ≥5%": true
+    }
+   },
+   "piotroski": {
+    "score": 8,
+    "checks": {
+     "ROA >0": true,
+     "營業現金流 >0": true,
+     "ROA 提升": true,
+     "現金流 > 淨利": true,
+     "長期負債比下降": true,
+     "流動比率提升": true,
+     "沒有增發股票": true,
+     "毛利率提升": false,
+     "資產週轉率提升": true
+    }
+   },
+   "lynch": {
+    "category": "穩健成長股",
+    "growth_pct": 12.5,
+    "peg": 0.91,
+    "pb": 2.63,
+    "pass": true
    }
   }
  },
  "failed": [
-  "3519.TW",
-  "4110.TW",
-  "5371.TW"
+  "3718.TW"
  ]
 }
