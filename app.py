@@ -1064,8 +1064,9 @@ with st.sidebar:
     st.divider()
     top_n          = st.slider("推薦數量", 3, 8, 5)
     min_score      = st.slider("最低評分門檻", 30, 75, 40)
-    max_price_filter = st.slider("零股最高股價 (NT$)", 500, 5000, 2500, step=100,
-                                 help="超過此價位的股票不列入精選，避免零股資金門檻過高")
+    _px_cap = st.slider("最高股價 (NT$)", 500, 20000, 20000, step=500,
+                        help="預設不限（拉到最右＝不限）。2026-11-10 取消小資上限，部位改用風險法計算")
+    max_price_filter = float("inf") if _px_cap >= 20000 else _px_cap
     show_chart     = st.checkbox("顯示K線圖", value=False)
     st.divider()
 
