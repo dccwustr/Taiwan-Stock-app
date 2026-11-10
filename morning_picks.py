@@ -10,6 +10,7 @@ from datetime import datetime, timezone, timedelta
 
 warnings.filterwarnings("ignore")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from trade_check import size_odd_lot  # 風險法部位（取消 NT$10,000 上限）
 
 from widget import (
     TECH_UNIVERSE, PICKS_EXCLUDE,
@@ -186,12 +187,28 @@ def run_morning_analysis(verbose: bool = True) -> dict:
             "stop_loss":          round(res.get("stop_loss", 0.0), 2),
             "target_price":       round(res.get("target_price", 0.0), 2),
             "target_pct":         res.get("target_pct", 5.0),
-            "affordability":      int(10000 / price) if price > 0 else 0,
+            "position_shares":    (size_odd_lot(price, res.get("stop_loss", 0.0))["shares"]
+                                   if price > 0 and 0 < res.get("stop_loss", 0.0) < price else 0),
         })
 
     # 分數封頂 100，同分時用未封頂的原始分排序（否則只是股票池的順序）
     scored.sort(key=lambda x: (x["score"], x["raw_score"]), reverse=True)
     log(f"  → {len(scored)} 支完成評分 | 前3名: {', '.join(p['ticker'] for p in scored[:3])}")
+
+    # ── 盤前情境：前一晚美股 + 台指夜盤 + 日韓 08:00 開盤 → 個股預估開盤漲跌，影響排名 ──
+    log("盤前情境（美股收盤 + 台指夜盤 + 日韓開盤）...")
+    try:
+        from premarket import premarket_context, adjust
+        premarket = premarket_context(prices, taiex_close,
+                                      {t: v.get("sector", "") for t, v in TECH_UNIVERSE.items()})
+        for p in scored:
+            p["premarket_adj"] = adjust(p, premarket["est"].get(p["ticker"]))
+        scored.sort(key=lambda x: (x["score"] + x.get("premarket_adj", 0), x["raw_score"]), reverse=True)
+        log(f"  → 預估加權 {premarket['taiex_est_pct']:+.2f}%（{premarket['source']}）| 日韓已開盤 {premarket['asia_open']} "
+            f"| 新前3名: {', '.join(p['ticker'] for p in scored[:3])}")
+    except Exception as e:
+        premarket = {"error": str(e)[:200]}
+        log(f"  → 盤前情境失敗：{e}")
 
     # 資料健康檢查：任何來源掛掉都要看得到（之前外資/投信/月營收壞了好幾個月都沒人發現）
     health = {
@@ -219,6 +236,7 @@ def run_morning_analysis(verbose: bool = True) -> dict:
             "taiex_vs_ma50":  _pct_vs(mkt_dir.get("last"), mkt_dir.get("ma50")),
             "taiex_vs_ma200": _pct_vs(mkt_dir.get("last"), mkt_dir.get("ma200")),
         },
+        "premarket":       {k: v for k, v in premarket.items() if k != "est"},
         "top_picks":       scored[:10],
         "total_scored":    len(scored),
         "top_headlines":   headlines[:5],

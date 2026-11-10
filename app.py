@@ -118,13 +118,24 @@ def _stamp_local_modules():
 
 
 _refresh_local_modules()
-from trade_check import check_trade, simulate_odds, history_same_distance, render_html
+@st.cache_data(ttl=4, show_spinner=False)
+def _live_cache(tickers_t: tuple) -> dict:
+    return _fetch_live_prices_raw(list(tickers_t))
+
+
+def fetch_live_prices(tickers) -> dict:
+    """即時報價（MIS → Yahoo 即時 → 1 分 K），4 秒共用快取。"""
+    return _live_cache(tuple(sorted(set(tickers)))) if tickers else {}
+
+
+from trade_check import (check_trade, simulate_odds, history_same_distance, render_html,
+                         size_odd_lot, fmt_shares, DEFAULT_MAX_LOSS, DEFAULT_BUDGET)
 try:
     from widget import (
         TECH_UNIVERSE, MY_HOLDINGS, PICKS_EXCLUDE,
         fetch_cnyes_news, fetch_moneydj_news, fetch_twse_foreign_buying,
         fetch_twse_market_summary, fetch_prices_batch, analyze_catalysts,
-        get_catalyst_labels, score_stock, analyze_holdings, fetch_live_prices,
+        get_catalyst_labels, score_stock, analyze_holdings, fetch_live_prices as _fetch_live_prices_raw,
         analyze_holding_sell, get_beginner_advice,
         calc_rsi, calc_live_rsi, _TW_STOCK_NAMES,
         fetch_us_overnight, us_macro_stock_bonus, fetch_global_news,
@@ -2834,7 +2845,7 @@ def _analyze_holding_with_live(df, live_price: float):
         return analyze_holding_sell(df)
 
 
-@st.fragment(run_every="10s")
+@st.fragment(run_every="5s")
 def render_holdings_live(holdings_list: list, prices: dict, total_cost_: float):
     """
     Auto-refreshing holdings dashboard — every 10 s during market hours.
@@ -3106,7 +3117,7 @@ def render_news_alerts():
             : null, 1)""")
 
 
-@st.fragment(run_every="10s")
+@st.fragment(run_every="5s")
 def render_rsi_monitor(monitored_tickers: list, prices: dict):
     """
     Auto-refreshing RSI monitoring dashboard.
@@ -3400,7 +3411,7 @@ if st.session_state.view_mode == "watchlist":
 # ── Category cards fragment (must be defined BEFORE the category view block) ──
 # Separate function from render_stock_cards to avoid Streamlit fragment-identity
 # conflicts when both picks-view and category-view could call the same fragment.
-@st.fragment(run_every="10s")
+@st.fragment(run_every="5s")
 def render_category_cards(picks, prices, show_chart):
     """Live-refreshing stock cards for the category picks view."""
     tickers  = [p["ticker"] for p in picks]
@@ -3460,8 +3471,11 @@ def render_category_cards(picks, prices, show_chart):
             status_tag = ""
             if is_limit:     status_tag = '<span class="limit-up">漲停🔥</span>'
             elif near_limit: status_tag = '<span class="limit-near">近漲停⚡</span>'
-            live_badge = ('<span class="live-badge">● LIVE</span>' if is_open and d["live"]
+            _src = d.get("src", "")
+            live_badge = ((f'<span class="live-badge">● LIVE</span>' if _src != "Yahoo 1分K（延遲）"
+                           else '<span class="closed-badge">延遲</span>') if is_open and d["live"]
                           else '<span class="closed-badge">收盤價</span>')
+            live_badge += f'<span style="color:#666;font-size:10px;margin-left:4px">{_src}</span>' if _src else ""
             live_block = (
                 f'<div class="live-in-card">'
                 f'<span class="live-big" style="color:{lc}">{lp:.1f}</span>'
@@ -3485,9 +3499,11 @@ def render_category_cards(picks, prices, show_chart):
                    f"建議等股價回落、RSI 冷卻至 65 以下再考慮進場")
 
         ref_price  = (d["price"] if d and d["price"] > 0 else p["last_price"])
-        shares_10k = int(10000 / ref_price) if ref_price > 0 else 0
-        shares_10k_str = (f"{shares_10k} 股" if shares_10k > 0
-                          else "股價逾萬元，NT$10,000 不足買 1 股")
+        # 風險法部位：單筆最多虧 DEFAULT_MAX_LOSS、單檔最多 DEFAULT_BUDGET（取消 NT$10,000 上限）
+        _pos = (size_odd_lot(ref_price, p["stop_loss"])
+                if ref_price > 0 and 0 < p.get("stop_loss", 0) < ref_price else None)
+        pos_str = (f'{fmt_shares(_pos["shares"])}，約 NT${_pos["cost"]:,}，到止損約虧 NT${_pos["loss_at_stop"]:,}'
+                   if _pos and _pos["shares"] > 0 else "止損資料不足，暫不建議部位")
         bar_w      = int(sc)
         info_html  = '　'.join(f'<span>{x}</span>' for x in info_parts)
 
@@ -3520,7 +3536,7 @@ def render_category_cards(picks, prices, show_chart):
             f'<span class="pct-badge">+{p["target_pct"]:.0f}%</span>'
             f'</div>'
             f'<div class="stop-row">💰 參考買點 NT${p["last_price"]:.1f}　　🛡 止損 NT${p["stop_loss"]:.1f}　({p["stop_pct"]:.1f}%)</div>'
-            f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k_str}</div>'
+            f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">📐 建議部位（單筆風險 NT${DEFAULT_MAX_LOSS:,}・單檔上限 NT${DEFAULT_BUDGET:,}）：{pos_str}</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)
             + _build_lens_row(p)
@@ -4093,6 +4109,34 @@ _freshness_col  = "#00c853" if _is_mkt_open else "#555"
 _freshness_icon = "🟢" if _is_mkt_open else "⚫"
 _live_rsi_note  = "　●　已套用即時RSI" if _is_mkt_open else ""
 
+def _pc(v):
+    if v is None:
+        return '<span style="color:#555">—</span>'
+    return f'<span style="color:{"#ef5350" if v >= 0 else "#00c853"}">{v:+.1f}%</span>'
+
+
+def _pm_est_html(pk: dict) -> str:
+    v = pk.get("premarket_est_pct")
+    return "" if v is None else f'<span style="font-size:11px">預估開盤 {_pc(v)}</span>'
+
+
+def _premarket_html(pm: dict) -> str:
+    """盤前情境：前一晚美股 + 台指夜盤 + 日韓開盤（morning_picks 08:20 產生）"""
+    if pm.get("taiex_est_pct") is None:
+        return ""
+    u, a, nf = pm.get("us", {}), pm.get("asia", {}), pm.get("night_futures") or {}
+    fut = (f'　｜　台指夜盤 {nf.get("last", 0):,.0f}（{_pc(nf.get("implied_pct"))}）' if nf else "")
+    return (
+        '<div style="font-size:11.5px;color:#aaa;padding:4px 0 8px;border-bottom:1px solid #1a3a1a;margin-bottom:4px">'
+        f'🌎 美股 {pm.get("us_date", "")}：費半 {_pc(u.get("sox"))}　那指 {_pc(u.get("ndx"))}　S&amp;P {_pc(u.get("spx"))}　'
+        f'台積ADR {_pc(u.get("tsm"))}　輝達 {_pc(u.get("nvda"))}<br>'
+        f'🌏 日韓開盤：日經 {_pc(a.get("nikkei"))}　KOSPI {_pc(a.get("kospi"))}　三星 {_pc(a.get("samsung"))}　'
+        f'海力士 {_pc(a.get("hynix"))}　東京威力 {_pc(a.get("tel"))}{fut}<br>'
+        f'→ <b>預估加權開盤 {_pc(pm["taiex_est_pct"])}</b>'
+        f'<span style="color:#555">（{pm.get("source", "")}，{pm.get("asof", "")}；排名已依預估開盤調整，跳空 ≥5% 不加分）</span>'
+        '</div>')
+
+
 # ── 早安精選 banner (from morning_picks.json generated at 08:30 by remote CCR) ──
 import json as _json_mod, os as _os_mod
 _mp_path = _os_mod.path.join(_os_mod.path.dirname(_os_mod.path.abspath(__file__)), "data", "morning_picks.json")
@@ -4114,7 +4158,8 @@ if _mp_today and _mp.get("top_picks"):
     for _i, _pk in enumerate(_mp["top_picks"][:5], 1):
         _pk_code = _pk["ticker"].split(".")[0]
         _pk_labels = " · ".join(_pk.get("labels", [])[:2])
-        _afford = f"NT$10,000≈{_pk['affordability']}股" if _pk.get("affordability", 0) > 0 else ""
+        _ps = _pk.get("position_shares") or 0
+        _afford = f"建議 {fmt_shares(_ps)}" if _ps > 0 else ""
         _mp_picks_html += (
             f'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;'
             f'border-bottom:1px solid #1a2035;font-size:12px">'
@@ -4125,9 +4170,11 @@ if _mp_today and _mp.get("top_picks"):
             f'<span style="color:#aaa">NT${_pk["last_price"]:,.0f}</span>'
             f'<span style="color:#555">RSI {_pk["rsi"]}</span>'
             f'<span style="color:#888;font-size:11px">{_pk_labels}</span>'
-            f'<span style="color:#444;margin-left:auto;font-size:11px">{_afford}</span>'
+            + _pm_est_html(_pk)
+            + f'<span style="color:#444;margin-left:auto;font-size:11px">{_afford}</span>'
             f'</div>'
         )
+    _mp_pm_html = _premarket_html(_mp.get("premarket") or {})
     st.markdown(
         f'<div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:8px;'
         f'padding:10px 14px;margin-bottom:12px">'
@@ -4138,6 +4185,7 @@ if _mp_today and _mp.get("top_picks"):
         f'padding:1px 8px;font-size:11px;margin-left:auto">'
         f'大盤 {_mp_mkt.get("label","")}</span>'
         f'</div>'
+        f'{_mp_pm_html}'
         f'{_mp_picks_html}'
         f'</div>',
         unsafe_allow_html=True
@@ -4146,7 +4194,7 @@ if _mp_today and _mp.get("top_picks"):
 st.markdown(
     "## ✅ 今日可進場股　"
     "<span style='font-size:12px;background:#1a3a5c;color:#7eb3ff;border-radius:5px;padding:2px 8px;vertical-align:middle'>"
-    "RSI 合理區間・零股小資</span>",
+    "RSI 合理區間・風險法部位</span>",
     unsafe_allow_html=True
 )
 st.markdown(
@@ -4212,7 +4260,7 @@ def _signal_type(p: dict) -> tuple:
 # ── Stock cards with embedded live prices (10s auto-refresh) ─────────────────
 # Always run every 10s — decorator is evaluated once at import so the
 # conditional would be frozen to whatever time the server started.
-@st.fragment(run_every="10s")
+@st.fragment(run_every="5s")
 def render_stock_cards(picks, prices, show_chart):
     tickers  = [p["ticker"] for p in picks]
     live     = fetch_live_prices(tickers)
@@ -4273,8 +4321,11 @@ def render_stock_cards(picks, prices, show_chart):
             if is_limit:    status_tag = '<span class="limit-up">漲停🔥</span>'
             elif near_limit:status_tag = '<span class="limit-near">近漲停⚡</span>'
 
-            live_badge = ('<span class="live-badge">● LIVE</span>' if is_open and d["live"]
-                         else '<span class="closed-badge">收盤價</span>')
+            _src = d.get("src", "")
+            live_badge = ((f'<span class="live-badge">● LIVE</span>' if _src != "Yahoo 1分K（延遲）"
+                           else '<span class="closed-badge">延遲</span>') if is_open and d["live"]
+                          else '<span class="closed-badge">收盤價</span>')
+            live_badge += f'<span style="color:#666;font-size:10px;margin-left:4px">{_src}</span>' if _src else ""
 
             live_block = (
                 f'<div class="live-in-card">'
@@ -4301,9 +4352,11 @@ def render_stock_cards(picks, prices, show_chart):
                    f"建議等股價回落、RSI 冷卻至 65 以下再考慮進場")
 
         ref_price  = (d["price"] if d and d["price"] > 0 else p["last_price"])
-        shares_10k = int(10000 / ref_price) if ref_price > 0 else 0
-        shares_10k_str = (f"{shares_10k} 股" if shares_10k > 0
-                          else "股價逾萬元，NT$10,000 不足買 1 股")
+        # 風險法部位：單筆最多虧 DEFAULT_MAX_LOSS、單檔最多 DEFAULT_BUDGET（取消 NT$10,000 上限）
+        _pos = (size_odd_lot(ref_price, p["stop_loss"])
+                if ref_price > 0 and 0 < p.get("stop_loss", 0) < ref_price else None)
+        pos_str = (f'{fmt_shares(_pos["shares"])}，約 NT${_pos["cost"]:,}，到止損約虧 NT${_pos["loss_at_stop"]:,}'
+                   if _pos and _pos["shares"] > 0 else "止損資料不足，暫不建議部位")
 
         bar_w  = int(sc)
         info_html = '　'.join(f'<span>{x}</span>' for x in info_parts)
@@ -4380,7 +4433,7 @@ def render_stock_cards(picks, prices, show_chart):
             f'<div class="tp-item"><span class="tp-label">獲利目標</span>'
             f'<span class="tp-val" style="color:#ef5350">NT${_target:.1f} (+{p["target_pct"]:.0f}%)</span></div>'
             f'</div>'
-            f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">🪙 NT$10,000 約可零股買入 {shares_10k_str}</div>'
+            f'<div style="font-size:12px;color:#7eb3ff;margin:2px 0 6px">📐 建議部位（單筆風險 NT${DEFAULT_MAX_LOSS:,}・單檔上限 NT${DEFAULT_BUDGET:,}）：{pos_str}</div>'
             f'<div class="info-row">{info_html}</div>'
             + _build_fund_row(p)
             + _build_lens_row(p)

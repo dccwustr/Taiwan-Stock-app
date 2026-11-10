@@ -39,6 +39,26 @@ logging.basicConfig(
 log = logging.getLogger("flow")
 
 
+def _is_local_net_error(e: Exception) -> bool:
+    """DNS 解析失敗或連不上網路 = 本機問題，不是證交所封鎖。"""
+    s = str(e)
+    return any(k in s for k in ("NameResolutionError", "nodename nor servname", "Failed to resolve",
+                                "Network is unreachable", "No route to host"))
+
+
+def _wait_for_network(max_wait: int = 3600) -> None:
+    """每 10 秒用 DNS 探測一次（不打證交所），恢復就立刻返回。"""
+    import socket
+    t0 = time.time()
+    while time.time() - t0 < max_wait:
+        try:
+            socket.getaddrinfo("mis.twse.com.tw", 443)
+            log.info("network back after %ds", int(time.time() - t0))
+            return
+        except OSError:
+            time.sleep(10)
+
+
 def _f(x) -> Optional[float]:
     try:
         v = float(x)
@@ -122,7 +142,8 @@ class Collector:
         return ranked[:HOT_N] + ranked[HOT_N:][self.n_sweep % COLD_PARTS::COLD_PARTS]
 
     def fetch(self) -> List[Dict]:
-        out, dead = [], 0
+        out, dead, local_net = [], 0, False
+        self.net_outage = False
         syms = self.targets()
         for i in range(0, len(syms), BATCH):
             chunk = "|".join(syms[i:i + BATCH])
@@ -137,8 +158,18 @@ class Collector:
                     break
                 except Exception as e:
                     log.warning("batch %d attempt %d failed: %s", i, attempt, e)
+                    local_net = _is_local_net_error(e)
                     time.sleep(5)
             dead = 0 if ok else dead + 1
+            if dead >= 2 and local_net:
+                # 本機斷網／DNS 失效（不是證交所封鎖）→ 不要盲睡 15 分鐘，網路一回來就繼續
+                log.error("local network down (DNS/connection) — waiting for it to return")
+                _wait_for_network()
+                self.net_outage = True   # 這輪空掃不算休市
+                self.sess = requests.Session()
+                self.sess.headers["User-Agent"] = "Mozilla/5.0"
+                self.cooldown = 0
+                return out
             if dead >= 2:
                 # 連續兩批都失敗 → 多半是被證交所暫時封鎖，整輪放棄並冷卻
                 self.cooldown = min(900, self.cooldown * 2) if self.cooldown else BLOCK_COOLDOWN
@@ -285,7 +316,7 @@ def main():
         except Exception:
             log.error("sweep error\n%s", traceback.format_exc())
             n = 0
-        if not col.cooldown:   # 被封鎖造成的空掃不算休市
+        if not col.cooldown and not getattr(col, "net_outage", False):   # 被封鎖／斷網造成的空掃不算休市
             empty_sweeps = empty_sweeps + 1 if n == 0 else 0
         if args.once:
             log.info("sweep: %d stocks in %.1fs", n, time.time() - t0)

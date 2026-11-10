@@ -44,7 +44,7 @@ _refresh_local_modules()
 import flow_core as fc  # noqa: E402
 import flow_race  # noqa: E402
 from dip_watch import market_drop  # noqa: E402
-from trade_check import simulate_odds, history_same_distance, render_html  # noqa: E402
+from trade_check import simulate_odds, history_same_distance, render_html, fmt_shares, DEFAULT_BUDGET  # noqa: E402
 
 _stamp_local_modules()
 
@@ -245,12 +245,13 @@ def stock_table(rows: pd.DataFrame, hist: dict = None, lenses: dict = None) -> p
     t["淨額(億)"] = (t["in"] - t["out"]) / 100
     t["流入(億)"] = t["in"] / 100
     t["流出(億)"] = t["out"] / 100
-    t["NT$10,000 可買"] = t["price"].apply(lambda p: "—" if not p else (f"{int(10000 // p):,} 股" if p <= 10000 else f"不足 1 股（需 NT${p:,.0f}）"))
+    # 單檔資金上限（資本 30%）可買多少；實際股數以卡片的風險法（依止損距離）為準
+    t["單檔上限可買"] = t["price"].apply(lambda p: "—" if not p else fmt_shares(int(DEFAULT_BUDGET // (p * 1.001425))))
     t["股票"] = t["code"] + " " + t["name"]
-    cols = ["股票", "ind", "price", "chg", "淨額(億)", "流入(億)", "流出(億)", "NT$10,000 可買", "大師鏡頭"]
+    cols = ["股票", "ind", "price", "chg", "淨額(億)", "流入(億)", "流出(億)", "單檔上限可買", "大師鏡頭"]
     if hist is not None:
         cols = ["排名", "股票", "ind", "price", "chg", "淨額(億)", "本輪變化(億)", "流入(億)", "流出(億)",
-                "NT$10,000 可買", "大師鏡頭"]
+                "單檔上限可買", "大師鏡頭"]
     return t[cols].rename(
         columns={"ind": "產業", "price": "股價", "chg": "漲跌%"})
 

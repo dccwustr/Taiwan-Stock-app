@@ -1,5 +1,5 @@
 #!/bin/bash
-# 本機產生早安精選並發布（launchd: com.stock.morning_picks，平日 08:45）。
+# 本機產生早安精選並發布（launchd: com.stock.morning_picks，平日 08:20，08:30 前發布：含美股收盤與日韓開盤）。
 # GitHub 排程常晚 4–6 小時，它留著當備援：這裡沒發布，它就會補上。
 #   ./run_morning_picks.sh --dry-run   # 跑完整流程但不 push，也不做時間與休市檢查
 set -u
@@ -18,6 +18,12 @@ notify() { /usr/bin/osascript -e "display notification \"$1\" with title \"台�
 fail() { log "FAIL: $1"; notify "$1；GitHub 備援稍後會補上"; exit 1; }
 
 log "=== start (dry=$DRY)"
+# 剛從睡眠喚醒時 DNS 常還沒好（2026-11-10 08:47 git fetch 因此失敗）→ 最多等 3 分鐘
+for i in $(seq 1 18); do
+  /usr/bin/host -W 3 github.com >/dev/null 2>&1 && break
+  [ $i = 1 ] && log "network not ready, waiting..."
+  sleep 10
+done
 if [ $DRY = 0 ]; then
   HHMM=$(TZ=Asia/Taipei date +%H%M)
   # Mac 睡過頭才醒：收盤後不再產生，交給 GitHub 備援
