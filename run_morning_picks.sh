@@ -54,14 +54,17 @@ git -C "$REPO" fetch -q origin || fail "git fetch 失敗"
 cd "$WT" || fail "找不到 worktree"
 git reset -q --hard origin/main || fail "git reset 失敗"
 
-"$PY" morning_picks.py --output data/morning_picks.json || fail "morning_picks.py 執行失敗"
-
-PROBLEMS=$("$PY" -c "import json;print(','.join(json.load(open('data/morning_picks.json')).get('data_health',{}).get('problems',[])))") \
-  || fail "輸出檔無法讀取"
-if [ -n "$PROBLEMS" ]; then
+# 喚醒後網路可能中途斷線（2026-11-11 08:20 開跑後 DNS 失效 → 4 個來源空白）→ 資料不全就等 90 秒重跑一次
+for attempt in 1 2; do
+  "$PY" morning_picks.py --output data/morning_picks.json || fail "morning_picks.py 執行失敗"
+  PROBLEMS=$("$PY" -c "import json;print(','.join(json.load(open('data/morning_picks.json')).get('data_health',{}).get('problems',[])))") \
+    || fail "輸出檔無法讀取"
+  [ -z "$PROBLEMS" ] && break
   git reset -q --hard origin/main
-  fail "資料來源異常（$PROBLEMS），不發布"
-fi
+  [ $attempt = 2 ] && fail "資料來源異常（$PROBLEMS），不發布"
+  log "data problems ($PROBLEMS), retry in 90s"
+  sleep 90
+done
 if [ $DRY = 1 ]; then
   log "dry-run ok: $("$PY" -c "import json;d=json.load(open('data/morning_picks.json'));print(d['generated_at'],[p['ticker'] for p in d['top_picks'][:3]])")"
   git reset -q --hard origin/main
