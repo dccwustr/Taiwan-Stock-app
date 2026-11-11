@@ -323,15 +323,29 @@ def tile(col, label, val, sub="", color=INK):
 # ── 頁面 ────────────────────────────────────────────────────────────────────
 st.markdown("## 💸 台股即時資金流向")
 
+def _today() -> str:
+    return fc.now_tw().strftime("%Y-%m-%d")
+
+
+@st.fragment(run_every=30)
+def _wait_for_data():
+    """還沒資料時每 30 秒檢查一次，資料一到就整頁重跑（不用手動重新整理）"""
+    s = load()
+    if s and s.get("minutes"):
+        st.rerun(scope="app")
+
+
 snap = load()
 if not snap or not snap.get("minutes"):
     st.info("今天還沒有盤中資料。開盤（09:00）後約 1 分鐘開始顯示，盤中約每 30 秒更新。")
+    _wait_for_data()
     st.stop()
 
 if snap.get("source") == "demo":
     st.warning("⚠️ 示範資料：股價、成交量、產業為今日真實收盤資料，但盤中流入/流出分配是模擬的，只用來預覽版面。")
 
-live = market_open() and snap["date"] == fc.now_tw().strftime("%Y-%m-%d")
+live = market_open() and snap["date"] == _today()
+_page_key = (snap["date"], live)
 
 _mk = load_market()
 if _mk["alert"]:
@@ -347,11 +361,15 @@ if _mk["alert"]:
 flow_race.render(snap, live)
 
 
-@st.fragment(run_every=15 if live else None)
+# 收盤後/盤前也要輪詢（60 秒）：頁面開著過夜時，隔天開盤或新的一天資料到了就整頁重建。
+# 以前非盤中是 None → 分頁從昨晚開著就永遠停在昨天的圖。
+@st.fragment(run_every=15 if live else 60)
 def details():
     snap = load() or {}
     if not snap.get("minutes"):
         return
+    if (snap["date"], market_open() and snap["date"] == _today()) != _page_key:
+        st.rerun(scope="app")   # 換日或盤中/收盤狀態改變 → 動畫與 run_every 都要用新狀態重建
     # 每 15 秒把最新快照放進隱藏元素，動畫元件每 2 秒讀一次（元件本身不重載，動畫不中斷）
     lite = flow_race.build_lite(snap)
     st.html(f'<div id="flow-live-data" style="display:none">'
